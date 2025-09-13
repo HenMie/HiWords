@@ -1,4 +1,6 @@
 import init, { TokenizerBuilder } from 'lindera-wasm-ko-dic';
+// @ts-ignore
+import wasmBytes from '../../lindera_wasm_bg.wasm';
 
 /**
  * 形态学分析结果
@@ -28,8 +30,10 @@ export class KoreanMorphologyService {
     private tokenizer: any | null = null;
     private isInitialized = false;
     private initPromise: Promise<void> | null = null;
+    private app: any;
 
-    constructor() {
+    constructor(app?: any) {
+        this.app = app;
         // 延迟初始化，避免阻塞插件启动
         this.initPromise = this.initialize();
     }
@@ -39,17 +43,94 @@ export class KoreanMorphologyService {
      */
     private async initialize(): Promise<void> {
         try {
-            // 直接使用默认初始化，让 lindera-wasm-ko-dic 自己处理 WASM 加载
-            await init();
+            console.log('开始初始化韩语形态学分析服务...');
             
-            const builder = new TokenizerBuilder();
+            // 方法1: 使用导入的WASM字节数组
+            let wasmInitialized = false;
+            try {
+                console.log('尝试使用导入的WASM字节数组...');
+                await init({ module_or_path: wasmBytes });
+                wasmInitialized = true;
+                console.log('WASM模块通过字节数组初始化成功');
+            } catch (error) {
+                console.log('方法1失败:', error.message);
+            }
             
-            // 设置内嵌韩语字典
-            builder.setDictionary('embedded://ko-dic');
+            // 方法2: 使用正确的插件相对路径
+            if (!wasmInitialized) {
+                try {
+                    console.log('尝试通过插件相对路径获取WASM文件...');
+                    // 在Obsidian中，使用app://local协议访问插件文件
+                    const pluginWasmUrl = 'app://local/.obsidian/plugins/HiWords/lindera_wasm_bg.wasm';
+                    const response = await fetch(pluginWasmUrl);
+                    if (response.ok) {
+                        const wasmBytes = await response.arrayBuffer();
+                        await init({ module_or_path: wasmBytes });
+                        wasmInitialized = true;
+                        console.log('WASM模块通过插件相对路径初始化成功');
+                    } else {
+                        console.log('插件相对路径fetch失败:', response.status);
+                    }
+                } catch (error) {
+                    console.log('方法2失败:', error.message);
+                }
+            }
             
-            this.tokenizer = builder.build();
+            // 方法3: 尝试无参数初始化（让库自己处理）
+            if (!wasmInitialized) {
+                try {
+                    console.log('尝试无参数初始化...');
+                    await init({});
+                    wasmInitialized = true;
+                    console.log('WASM模块无参数初始化成功');
+                } catch (error) {
+                    console.log('方法3失败:', error.message);
+                }
+            }
             
-            this.isInitialized = true;
+            // 方法4: 尝试通过Obsidian的资源加载器
+            if (!wasmInitialized) {
+                try {
+                    console.log('尝试通过Obsidian资源加载器...');
+                    // 使用Obsidian的资源协议
+                    const resourceUrl = `app://local/.obsidian/plugins/HiWords/lindera_wasm_bg.wasm`;
+                    console.log('资源URL:', resourceUrl);
+                    
+                    // 直接传递URL给init函数
+                    await init({ module_or_path: resourceUrl });
+                    wasmInitialized = true;
+                    console.log('WASM模块通过资源加载器初始化成功');
+                } catch (error) {
+                    console.log('方法4失败:', error.message);
+                }
+            }
+            
+            if (!wasmInitialized) {
+                console.warn('所有WASM初始化方法都失败，将使用后备分析方案');
+                this.isInitialized = false;
+                return;
+            }
+            
+            // 构建Tokenizer
+            try {
+                const builder = new TokenizerBuilder();
+                console.log('TokenizerBuilder创建成功');
+                
+                // 设置内嵌韩语字典
+                builder.setDictionary('embedded://ko-dic');
+                console.log('韩语字典设置成功');
+                
+                this.tokenizer = builder.build();
+                console.log('Tokenizer构建成功');
+                
+                this.isInitialized = true;
+                console.log('韩语形态学分析服务初始化完成');
+            } catch (error) {
+                console.error('Tokenizer构建失败:', error);
+                this.isInitialized = false;
+                return;
+            }
+            
         } catch (error) {
             console.error('韩语形态学分析服务初始化失败:', error);
             this.isInitialized = false;
@@ -89,19 +170,19 @@ export class KoreanMorphologyService {
             return null;
         }
 
-        console.log(`开始分析单词: ${word}`);
+        // console.log(`开始分析单词: ${word}`);
 
         // 如果 tokenizer 可用，使用它进行分析
         if (await this.ensureInitialized() && this.tokenizer) {
             try {
-                console.log('使用 Lindera 进行分析...');
+                // console.log('使用 Lindera 进行分析...');
                 // 使用 tokenizer 进行形态学分析
                 const tokens = this.tokenizer.tokenize(word.trim());
                 
-                console.log('Lindera 原始分析结果:', tokens);
+                // console.log('Lindera 原始分析结果:', tokens);
                 
                 if (!tokens || tokens.length === 0) {
-                    console.log('Lindera 分析结果为空，使用后备方案');
+                    // console.log('Lindera 分析结果为空，使用后备方案');
                     return this.fallbackAnalyze(word);
                 }
 
@@ -123,12 +204,12 @@ export class KoreanMorphologyService {
                         partOfSpeech = details[0] || 'UNKNOWN';
                         
                         // 从 details[7] 解析真正的原型
-                        // 格式如: "아니/VCN/*+니다/EC/*"
+                        // 格式如: "찾아가/VV/*+아/EC/*" 或 "*"
                         const morphemeInfo = details[7] || '';
                         console.log('形态素信息:', morphemeInfo);
                         
-                        if (morphemeInfo && typeof morphemeInfo === 'string') {
-                            // 提取第一个形态素的原型部分
+                        if (morphemeInfo && typeof morphemeInfo === 'string' && morphemeInfo !== '*') {
+                            // 有具体的形态素信息，提取第一个形态素的原型部分
                             const firstMorpheme = morphemeInfo.split('+')[0];
                             const baseFormMatch = firstMorpheme.match(/^([^\/]+)/);
                             if (baseFormMatch) {
@@ -144,7 +225,14 @@ export class KoreanMorphologyService {
                                 baseForm = surface;
                             }
                         } else {
-                            baseForm = surface;
+                            // 形态素信息是 "*" 或为空，根据词性处理
+                            if (partOfSpeech.includes('VV') || partOfSpeech.includes('VA') || partOfSpeech.includes('VCN')) {
+                                // 动词/形容词：使用 surface + 다
+                                baseForm = surface.endsWith('다') ? surface : surface + '다';
+                            } else {
+                                // 名词等其他词性：直接使用 surface
+                                baseForm = surface;
+                            }
                         }
                     } else {
                         partOfSpeech = 'UNKNOWN';
@@ -172,7 +260,7 @@ export class KoreanMorphologyService {
                     confidence: this.calculateConfidence(token)
                 };
                 
-                console.log('分析结果:', result);
+                // console.log('分析结果:', result);
                 return result;
             } catch (error) {
                 console.error('Lindera 分析失败，使用后备方案:', error);
@@ -188,7 +276,7 @@ export class KoreanMorphologyService {
      * 后备分析方案（简单的规则匹配）
      */
     private fallbackAnalyze(word: string): MorphologyAnalysisResult | null {
-        console.log(`使用后备方案分析: ${word}`);
+        // console.log(`使用后备方案分析: ${word}`);
         
         // 简单的韩语动词/形容词词尾识别
         const commonEndings = [
@@ -232,7 +320,7 @@ export class KoreanMorphologyService {
                     confidence: 0.6  // 后备方案置信度较低
                 };
                 
-                console.log('后备分析结果:', result);
+                // console.log('后备分析结果:', result);
                 return result;
             }
         }
@@ -277,8 +365,8 @@ export class KoreanMorphologyService {
                         
                         // 从 details[7] 解析真正的原型
                         const morphemeInfo = details[7] || '';
-                        if (morphemeInfo && typeof morphemeInfo === 'string') {
-                            // 提取第一个形态素的原型部分
+                        if (morphemeInfo && typeof morphemeInfo === 'string' && morphemeInfo !== '*') {
+                            // 有具体的形态素信息，提取第一个形态素的原型部分
                             const firstMorpheme = morphemeInfo.split('+')[0];
                             const baseFormMatch = firstMorpheme.match(/^([^\/]+)/);
                             if (baseFormMatch) {
@@ -294,7 +382,14 @@ export class KoreanMorphologyService {
                                 baseForm = surface;
                             }
                         } else {
-                            baseForm = surface;
+                            // 形态素信息是 "*" 或为空，根据词性处理
+                            if (partOfSpeech.includes('VV') || partOfSpeech.includes('VA') || partOfSpeech.includes('VCN')) {
+                                // 动词/形容词：使用 surface + 다
+                                baseForm = surface.endsWith('다') ? surface : surface + '다';
+                            } else {
+                                // 名词等其他词性：直接使用 surface
+                                baseForm = surface;
+                            }
                         }
                     } else {
                         partOfSpeech = 'UNKNOWN';

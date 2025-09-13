@@ -34,7 +34,7 @@ export class VocabularyManager {
         this.settings = settings;
         
         // 初始化形态学分析服务
-        this.morphologyService = new KoreanMorphologyService();
+        this.morphologyService = new KoreanMorphologyService(this.app);
         this.morphologyIndexManager = new MorphologyIndexManager(this.morphologyService);
         
         // 监听文件变化，自动更新形态学索引

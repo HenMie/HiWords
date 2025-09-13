@@ -41,35 +41,7 @@ const context = await esbuild.context({
 	minify: prod,
 	loader: {
 		'.wasm': 'binary'
-	},
-	plugins: [
-		{
-			name: 'wasm-plugin',
-			setup(build) {
-				// 处理 .wasm 文件导入
-				build.onResolve({ filter: /\.wasm$/ }, (args) => {
-					return { path: args.path, namespace: 'wasm' };
-				});
-				
-				build.onLoad({ filter: /.*/, namespace: 'wasm' }, async (args) => {
-					const fs = await import('fs');
-					const path = await import('path');
-					
-					// 构造完整路径
-					let wasmPath = args.path;
-					if (!path.isAbsolute(wasmPath)) {
-						wasmPath = path.resolve('node_modules/lindera-wasm-ko-dic', wasmPath);
-					}
-					
-					const contents = fs.readFileSync(wasmPath);
-					return {
-						contents: contents,
-						loader: 'binary',
-					};
-				});
-			}
-		}
-	]
+	}
 });
 
 if (prod) {

@@ -54,14 +54,27 @@ export class AddWordModal extends Modal {
             const loadingEl = contentEl.createEl('div', { cls: 'loading-indicator' });
             loadingEl.createEl('span', { text: '正在分析单词...' });
         }
-        
-        // 如果原始单词和当前单词不同，显示提示
-        if (!this.isEditMode && this.originalWord !== this.word) {
+        // 如果分析完成且原始单词和当前单词不同，显示提示
+        else if (!this.isEditMode && this.originalWord !== this.word) {
             const noteEl = contentEl.createEl('div', { cls: 'morphology-note' });
-            noteEl.createEl('span', { 
+            const noteContent = noteEl.createEl('div', { cls: 'morphology-note-content' });
+            
+            noteContent.createEl('span', { 
                 text: `原始单词："${this.originalWord}" → 识别为原型："${this.word}"`,
                 cls: 'note-text'
             });
+            
+            // 添加还原按钮
+            const restoreButton = noteContent.createEl('button', { 
+                text: '还原',
+                cls: 'morphology-restore-button'
+            });
+            
+            restoreButton.onclick = () => {
+                console.log(`还原单词: ${this.word} -> ${this.originalWord}`);
+                this.word = this.originalWord;
+                this.refreshModal();
+            };
         }
         
         // 单词输入框（允许用户修改）
@@ -322,6 +335,15 @@ export class AddWordModal extends Modal {
     }
     
     /**
+     * 检查字符串是否包含韩语字符
+     */
+    private isKoreanText(text: string): boolean {
+        // 韩语字符范围：한글 음절 (AC00–D7AF), 한글 자모 (1100–11FF, A960–A97F, D7B0–D7FF)
+        const koreanRegex = /[\uAC00-\uD7AF\u1100-\u11FF\uA960-\uA97F\uD7B0-\uD7FF]/;
+        return koreanRegex.test(text);
+    }
+
+    /**
      * 异步分析单词，获取原型
      */
     private async analyzeWordAsync(): Promise<void> {
@@ -336,23 +358,33 @@ export class AddWordModal extends Modal {
             const baseForm = await this.plugin.vocabularyManager.analyzeWordToBaseForm(this.originalWord);
             console.log(`分析结果: ${this.originalWord} -> ${baseForm}`);
             
-            if (baseForm !== this.originalWord) {
+            // 检查分析结果是否合理
+            // 如果原始单词是韩语，但分析结果不是韩语（如 "*"），则使用原始单词
+            if (this.isKoreanText(this.originalWord) && !this.isKoreanText(baseForm)) {
+                console.log('分析结果不是韩语字符，使用原始单词');
+                this.word = this.originalWord;
+            } else if (baseForm && baseForm !== this.originalWord) {
                 this.word = baseForm;
-                console.log('单词已更新，刷新模态框');
-                // 如果模态框已经打开，更新显示
-                this.refreshModal();
+                console.log('单词已更新');
             } else {
-                console.log('单词无变化，只更新状态');
-                // 即使没有变化，也要刷新以移除"正在分析"状态
-                this.refreshModal();
+                console.log('分析结果与原始单词相同或为空');
+                // 即使分析结果相同，也要确保使用分析结果（可能去除了语尾）
+                if (baseForm) {
+                    this.word = baseForm;
+                }
             }
         } catch (error) {
             console.error('分析单词失败:', error);
-            // 分析失败也要刷新界面移除加载状态
-            this.refreshModal();
+            // 分析失败时使用原始单词
+            this.word = this.originalWord;
         } finally {
+            // 先设置分析完成状态，再刷新UI
             this.isAnalyzing = false;
             console.log('分析完成，isAnalyzing = false');
+            
+            // 无论分析结果如何，都要刷新模态框以移除"正在分析"状态
+            console.log('刷新模态框，移除分析状态');
+            this.refreshModal();
         }
     }
     
@@ -360,9 +392,13 @@ export class AddWordModal extends Modal {
      * 刷新模态框显示
      */
     private refreshModal(): void {
+        console.log('refreshModal 被调用, isAnalyzing:', this.isAnalyzing, 'word:', this.word);
         if (this.contentEl) {
             this.contentEl.empty();
             this.onOpen();
+            console.log('模态框已刷新');
+        } else {
+            console.log('contentEl 不存在，无法刷新');
         }
     }
     

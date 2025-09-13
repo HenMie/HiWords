@@ -978,6 +978,84 @@
     background-color: color-mix(in srgb, var(--word-highlight-color, var(--text-muted)) 35%, transparent);
 }
 
+/* 加载指示器样式 */
+.loading-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    background-color: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+.loading-indicator::before {
+    content: '';
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--background-modifier-border);
+    border-top-color: var(--interactive-accent);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* 形态学分析提示样式 */
+.morphology-note {
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    background-color: color-mix(in srgb, var(--color-blue) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-blue) 25%, transparent);
+    border-radius: 6px;
+    border-left: 4px solid var(--color-blue);
+}
+
+.morphology-note-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.morphology-note .note-text {
+    color: var(--text-normal);
+    font-size: 14px;
+    line-height: 1.4;
+    flex: 1;
+}
+
+/* 还原按钮样式 */
+.morphology-restore-button {
+    background-color: var(--color-red);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.morphology-restore-button:hover {
+    background-color: color-mix(in srgb, var(--color-red) 85%, black);
+    transform: translateY(-1px);
+}
+
+.morphology-restore-button:active {
+    transform: translateY(0);
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
     /* PDF 高亮在移动设备上的优化 */

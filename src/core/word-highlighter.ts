@@ -115,7 +115,7 @@ export class WordHighlighter implements PluginValue {
         
         // 获取未掌握的原型单词（已掌握的单词不会被高亮）
         const baseWords = this.vocabularyManager.getAllWordsForHighlight();
-        console.log(`开始构建形态学索引，原型单词数量: ${baseWords.length}`);
+        // console.log(`开始构建形态学索引，原型单词数量: ${baseWords.length}`);
         
         let totalInflections = 0;
         
@@ -128,7 +128,7 @@ export class WordHighlighter implements PluginValue {
                 
                 // 获取并添加所有活用形
                 const inflectionForms = this.vocabularyManager.getAllInflectionForms(baseWord);
-                console.log(`原型 ${baseWord} 的活用形: [${Array.from(inflectionForms).join(', ')}]`);
+                // console.log(`原型 ${baseWord} 的活用形: [${Array.from(inflectionForms).join(', ')}]`);
                 
                 for (const inflectionForm of inflectionForms) {
                     if (inflectionForm !== baseWord) {
@@ -142,7 +142,7 @@ export class WordHighlighter implements PluginValue {
         
         const endTime = performance.now();
         console.log(`形态学索引构建完成，耗时 ${(endTime - startTime).toFixed(2)}ms`);
-        console.log(`添加了 ${baseWords.length} 个原型和 ${totalInflections} 个活用形到前缀树`);
+        // console.log(`添加了 ${baseWords.length} 个原型和 ${totalInflections} 个活用形到前缀树`);
     }
 
     update(update: ViewUpdate) {
