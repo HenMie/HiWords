@@ -1,5 +1,6 @@
 import type { HiWordsSettings } from '../utils';
 import { Trie, mapCanvasColorToCSSVar } from '../utils';
+import { removeOverlappingMatches } from '../utils/trie';
 import type { VocabularyManager } from '../core';
 
 /**
@@ -76,16 +77,8 @@ export function registerReadingModeHighlighter(plugin: {
       }>;
       if (!matches || matches.length === 0) continue;
 
-      // 左到右、优先更长的非重叠匹配
-      matches.sort((a, b) => a.from - b.from || (b.to - b.from) - (a.to - a.from));
-      const filtered: typeof matches = [];
-      let end = 0;
-      for (const m of matches) {
-        if (m.from >= end) {
-          filtered.push(m);
-          end = m.to;
-        }
-      }
+      // 使用优化的重叠处理函数，优先保留更长的匹配
+      const filtered = removeOverlappingMatches(matches);
       if (filtered.length === 0) continue;
 
       const frag = document.createDocumentFragment();

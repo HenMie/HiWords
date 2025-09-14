@@ -47,6 +47,9 @@ export class VocabularyManager {
     async loadAllVocabularyBooks(): Promise<void> {
         const startTime = performance.now();
         
+        console.log(`[HiWords] 开始加载生词本，设置中的生词本数量: ${this.settings.vocabularyBooks.length}`);
+        console.log(`[HiWords] 启用的生词本:`, this.settings.vocabularyBooks.filter(book => book.enabled).map(book => book.name));
+        
         this.definitions.clear();
         this.invalidateCache();
         
@@ -60,6 +63,7 @@ export class VocabularyManager {
         this.rebuildCache();
         
         const endTime = performance.now();
+        console.log(`[HiWords] 生词本加载完成，耗时 ${(endTime - startTime).toFixed(2)}ms`);
     }
 
     /**
@@ -68,28 +72,32 @@ export class VocabularyManager {
     async loadVocabularyBook(book: VocabularyBook): Promise<void> {
         const startTime = performance.now();
         
+        console.log(`[HiWords] 正在加载生词本: ${book.name} (${book.path})`);
+        
         const file = this.app.vault.getAbstractFileByPath(book.path);
         
         if (!file || !(file instanceof TFile)) {
-            console.warn(`Canvas file not found: ${book.path}`);
+            console.warn(`[HiWords] Canvas file not found: ${book.path}`);
             return;
         }
 
         if (!CanvasParser.isCanvasFile(file)) {
-            console.warn(`File is not a canvas: ${book.path}`);
+            console.warn(`[HiWords] File is not a canvas: ${book.path}`);
             return;
         }
 
         try {
             const definitions = await this.canvasParser.parseCanvasFile(file);
+            console.log(`[HiWords] 成功解析生词本 "${book.name}"，包含 ${definitions.length} 个单词`);
             this.definitions.set(book.path, definitions);
             
             // 使缓存失效
             this.invalidateCache();
             
             const endTime = performance.now();
+            console.log(`[HiWords] 生词本 "${book.name}" 加载完成，耗时 ${(endTime - startTime).toFixed(2)}ms`);
         } catch (error) {
-            console.error(`Failed to load vocabulary book ${book.name}:`, error);
+            console.error(`[HiWords] Failed to load vocabulary book ${book.name}:`, error);
         }
     }
 
@@ -801,15 +809,20 @@ export class VocabularyManager {
     async getAllWordDefinitions(): Promise<WordDefinition[]> {
         const allDefs: WordDefinition[] = [];
         
-        for (const bookWords of this.definitions.values()) {
+        console.log(`[HiWords] 词汇管理器 - 生词本数量: ${this.definitions.size}`);
+        
+        for (const [bookPath, bookWords] of this.definitions.entries()) {
+            console.log(`[HiWords] 生词本 "${bookPath}" 包含 ${bookWords.length} 个单词`);
             allDefs.push(...bookWords);
         }
         
         // 也包括仅内存中的词汇
-        for (const memoryWords of this.memoryOnlyWords.values()) {
+        for (const [bookPath, memoryWords] of this.memoryOnlyWords.entries()) {
+            console.log(`[HiWords] 内存生词本 "${bookPath}" 包含 ${memoryWords.length} 个单词`);
             allDefs.push(...memoryWords);
         }
         
+        console.log(`[HiWords] 总单词定义数量: ${allDefs.length}`);
         return allDefs;
     }
 

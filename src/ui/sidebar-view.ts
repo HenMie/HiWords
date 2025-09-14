@@ -195,7 +195,12 @@ export class HiWordsSidebarView extends ItemView {
                 content = await this.app.vault.read(this.currentFile);
             }
 
+            console.log(`[HiWords] 扫描文档: ${this.currentFile.path}`);
+            console.log(`[HiWords] 文档内容长度: ${content.length}`);
+            console.log(`[HiWords] 文档内容预览: ${content.substring(0, 200)}...`);
+
             const allWordDefinitions = await this.plugin.vocabularyManager.getAllWordDefinitions();
+            console.log(`[HiWords] 总词汇数量: ${allWordDefinitions.length}`);
 
             // 创建一个数组来存储找到的单词及其位置
             const foundWordsWithPosition: { wordDef: WordDefinition, position: number }[] = [];
@@ -209,9 +214,8 @@ export class HiWordsSidebarView extends ItemView {
                 let match = regex.exec(content);
                 let position = match ? match.index : -1;
                 
-                // 删除别名匹配逻辑
-                
                 if (position !== -1) {
+                    console.log(`[HiWords] 找到匹配: "${wordDef.word}" 在位置 ${position}`);
                     // 避免重复添加
                     if (!foundWordsWithPosition.some(w => w.wordDef.nodeId === wordDef.nodeId)) {
                         foundWordsWithPosition.push({
@@ -219,8 +223,15 @@ export class HiWordsSidebarView extends ItemView {
                             position: position
                         });
                     }
+                } else {
+                    // 对于前几个单词，显示为什么没有匹配
+                    if (allWordDefinitions.indexOf(wordDef) < 5) {
+                        console.log(`[HiWords] 未找到匹配: "${wordDef.word}"`);
+                    }
                 }
             }
+
+            console.log(`[HiWords] 找到的单词数量: ${foundWordsWithPosition.length}`);
 
             // 按照单词在文档中首次出现的位置排序
             foundWordsWithPosition.sort((a, b) => a.position - b.position);
@@ -679,14 +690,17 @@ export class HiWordsSidebarView extends ItemView {
     /**
      * 构建用于扫描文档的正则。
      * - 对仅包含拉丁字符的词：使用 \b 边界避免误匹配，如 "art" 不匹配 "start"。
-     * - 对包含日语/CJK 的词：不使用 \b（因为 CJK 文本常无空格），并使用 Unicode 标志。
+     * - 对包含日语/CJK/韩语的词：不使用 \b（因为 CJK 文本常无空格），并使用 Unicode 标志。
      */
     private buildSearchRegex(term: string): RegExp {
         const escaped = this.escapeRegExp(term);
-        // 检测是否包含 CJK 或日语脚本
-        const hasCJK = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/u.test(term);
+        // 检测是否包含 CJK、日语或韩语脚本
+        const hasCJK = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u.test(term);
         const pattern = hasCJK ? `${escaped}` : `\\b${escaped}\\b`;
         const flags = hasCJK ? 'giu' : 'gi';
+        
+        console.log(`[HiWords] 构建正则表达式: "${term}" -> 模式: "${pattern}", 标志: "${flags}", 包含CJK: ${hasCJK}`);
+        
         return new RegExp(pattern, flags);
     }
 

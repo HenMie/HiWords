@@ -16,6 +16,7 @@ import {
 } from '@codemirror/view';
 import { VocabularyManager } from './vocabulary-manager';
 import { WordMatch, WordDefinition, mapCanvasColorToCSSVar, Trie, TrieMatch } from '../utils';
+import { removeOverlappingMatches } from '../utils/trie';
 
 // 防抖延迟时间（毫秒）
 const DEBOUNCE_DELAY = 300;
@@ -312,28 +313,32 @@ export class WordHighlighter implements PluginValue {
     }
 
     /**
-     * 移除重叠的匹配项，使用游标算法高效处理
+     * 移除重叠的匹配项，优先保留更长的匹配
      */
     private removeOverlaps(matches: WordMatch[]): WordMatch[] {
-        // 如果用户设置允许重叠，则直接返回所有匹配
-        // 这里可以根据实际需求修改
-        const allowOverlaps = true;
-        if (allowOverlaps || matches.length === 0) {
+        if (matches.length === 0) {
             return matches;
         }
         
-        // 使用游标算法高效处理重叠
-        const result: WordMatch[] = [];
-        let cursor = 0;
+        // 转换为 TrieMatch 格式以使用通用的重叠处理函数
+        const trieMatches: TrieMatch[] = matches.map(match => ({
+            word: match.word,
+            from: match.from,
+            to: match.to,
+            payload: match.definition
+        }));
         
-        for (const match of matches) {
-            if (match.from >= cursor) {
-                result.push(match);
-                cursor = match.to;
-            }
-        }
+        // 使用优化的重叠处理函数
+        const filteredTrieMatches = removeOverlappingMatches(trieMatches);
         
-        return result;
+        // 转换回 WordMatch 格式
+        return filteredTrieMatches.map(trieMatch => ({
+            word: trieMatch.word,
+            definition: trieMatch.payload as WordDefinition,
+            from: trieMatch.from,
+            to: trieMatch.to,
+            color: mapCanvasColorToCSSVar((trieMatch.payload as WordDefinition).color, 'var(--color-accent)')
+        }));
     }
 
     /**
