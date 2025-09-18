@@ -99,8 +99,29 @@ export default class HiWordsPlugin extends Plugin {
         // 在布局准备好后自动刷新生词本
         this.app.workspace.onLayoutReady(async () => {
             await this.vocabularyManager.loadAllVocabularyBooks();
+
+            // 索引当前打开的文档
+            await this.indexCurrentDocument();
+
             this.refreshHighlighter();
         });
+    }
+
+    /**
+     * 索引当前文档
+     */
+    private async indexCurrentDocument(): Promise<void> {
+        try {
+            const activeFile = this.app.workspace.getActiveFile();
+            if (activeFile && activeFile.extension === 'md') {
+                const content = await this.app.vault.read(activeFile);
+                const morphologyIndexManager = this.vocabularyManager.getMorphologyIndexManager();
+                await morphologyIndexManager.indexNote(activeFile, content);
+                // console.log(`[HiWords] 索引当前文档: ${activeFile.name}`);
+            }
+        } catch (error) {
+            console.error('[HiWords] 索引当前文档失败:', error);
+        }
     }
 
     /**
@@ -222,6 +243,12 @@ export default class HiWordsPlugin extends Plugin {
                     } else {
                         // 当切换文件时，可能需要更新高亮
                         setTimeout(() => this.refreshHighlighter(), 100);
+
+                        // 索引新的当前文档
+                        setTimeout(async () => {
+                            await this.indexCurrentDocument();
+                            this.refreshHighlighter();
+                        }, 200);
                     }
                 }
             })

@@ -357,10 +357,10 @@ export class AddWordModal extends Modal {
         try {
             const baseForm = await this.plugin.vocabularyManager.analyzeWordToBaseForm(this.originalWord);
             console.log(`分析结果: ${this.originalWord} -> ${baseForm}`);
-            
+
             // 检查分析结果是否合理
             // 如果原始单词是韩语，但分析结果不是韩语（如 "*"），则使用原始单词
-            if (this.isKoreanText(this.originalWord) && !this.isKoreanText(baseForm)) {
+            if (this.isKoreanText(this.originalWord) && (!baseForm || !this.isKoreanText(baseForm))) {
                 console.log('分析结果不是韩语字符，使用原始单词');
                 this.word = this.originalWord;
             } else if (baseForm && baseForm !== this.originalWord) {

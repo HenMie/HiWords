@@ -898,22 +898,6 @@ export class VocabularyManager {
         return this.morphologyIndexManager;
     }
 
-    /**
-     * 分析单词，返回原型
-     */
-    async analyzeWordToBaseForm(word: string): Promise<string> {
-        if (!this.morphologyService.isKoreanText(word)) {
-            return word; // 非韩语单词直接返回
-        }
-
-        try {
-            const result = await this.morphologyService.analyzeWord(word);
-            return result ? result.baseForm : word;
-        } catch (error) {
-            console.error('分析单词失败:', error);
-            return word;
-        }
-    }
 
     /**
      * 获取指定原型在当前笔记中的所有活用形
@@ -932,6 +916,19 @@ export class VocabularyManager {
      */
     getAllInflectionForms(baseForm: string): Set<string> {
         return this.morphologyIndexManager.getAllInflectionForms(baseForm);
+    }
+
+    /**
+     * 通过形态素分析获取词汇的原型（用于悬浮卡片等场景）
+     */
+    async analyzeWordToBaseForm(word: string): Promise<string | null> {
+        try {
+            const result = await this.morphologyService.analyzeWord(word);
+            return result ? result.baseForm : null;
+        } catch (error) {
+            console.error('形态素分析失败:', error);
+            return null;
+        }
     }
 
     /**

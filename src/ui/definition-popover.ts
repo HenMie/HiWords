@@ -274,8 +274,35 @@ export class DefinitionPopover {
             const word = target.getAttribute('data-word');
             if (!word) return;
 
+            // 异步获取词汇定义
+            this.getWordDefinitionAsync(word, target);
+        }
+    }
+
+    /**
+     * 异步获取词汇定义并显示悬浮卡片
+     */
+    private async getWordDefinitionAsync(word: string, target: HTMLElement) {
+        try {
             // 获取完整的词汇定义，包括词源信息
-            const wordDefinition = this.vocabularyManager?.getDefinition(word);
+            // 首先尝试直接查找（原型词汇）
+            let wordDefinition = this.vocabularyManager?.getDefinition(word);
+
+            // 如果直接查找失败，尝试通过形态素分析找到原型
+            if (!wordDefinition && this.vocabularyManager) {
+                try {
+                    // 使用词汇管理器的公共方法进行形态素分析
+                    const baseForm = await this.vocabularyManager.analyzeWordToBaseForm(word);
+                    if (baseForm) {
+                        // 使用分析得到的原型查找定义
+                        wordDefinition = this.vocabularyManager.getDefinition(baseForm);
+                        console.log(`悬浮卡片：通过形态素分析 ${word} -> ${baseForm} 找到定义:`, !!wordDefinition);
+                    }
+                } catch (error) {
+                    console.error('悬浮卡片形态素分析失败:', error);
+                }
+            }
+
             if (!wordDefinition) return;
 
             // 悬停意图：延迟展示，避免快速划过时频繁创建
@@ -286,8 +313,11 @@ export class DefinitionPopover {
                     return; // 限流：距离上次显示太近
                 }
                 this.lastShowTs = now;
-                this.createTooltip(target, wordDefinition);
+                this.createTooltip(target, wordDefinition!);
             }, DefinitionPopover.SHOW_DELAY_MS);
+
+        } catch (error) {
+            console.error('获取词汇定义失败:', error);
         }
     }
 
