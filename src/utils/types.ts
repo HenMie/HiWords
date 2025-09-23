@@ -78,4 +78,5 @@ export interface WordMatch {
     from: number;
     to: number;
     color: string;
+    baseForm?: string; // 词汇的原型形式，用于悬浮卡片查找
 }

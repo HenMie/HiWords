@@ -241,12 +241,12 @@ export class WordHighlighter implements PluginValue {
             const highlightColor = mapCanvasColorToCSSVar(match.definition.color, 'var(--color-base-60)');
             
             builder.add(
-                match.from, 
-                match.to, 
+                match.from,
+                match.to,
                 Decoration.mark({
                     class: `hi-words-highlight`,
                     attributes: {
-                        'data-word': match.word,
+                        'data-word': match.baseForm || match.word, // 优先使用原型，回退到匹配的词汇
                         'data-definition': match.definition.definition,
                         'data-color': highlightColor,
                         'data-style': highlightStyle,
@@ -296,7 +296,8 @@ export class WordHighlighter implements PluginValue {
                         definition, // 定义始终指向原型的定义
                         from: offset + match.from,
                         to: offset + match.to,
-                        color: mapCanvasColorToCSSVar(definition.color, 'var(--color-accent)')
+                        color: mapCanvasColorToCSSVar(definition.color, 'var(--color-accent)'),
+                        baseForm: definition.word // 存储原型，用于悬浮卡片查找
                     });
                 }
             }
@@ -337,7 +338,8 @@ export class WordHighlighter implements PluginValue {
             definition: trieMatch.payload as WordDefinition,
             from: trieMatch.from,
             to: trieMatch.to,
-            color: mapCanvasColorToCSSVar((trieMatch.payload as WordDefinition).color, 'var(--color-accent)')
+            color: mapCanvasColorToCSSVar((trieMatch.payload as WordDefinition).color, 'var(--color-accent)'),
+            baseForm: (trieMatch.payload as WordDefinition).word // 存储原型，用于悬浮卡片查找
         }));
     }
 

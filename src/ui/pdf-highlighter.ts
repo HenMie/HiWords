@@ -92,7 +92,7 @@ export function registerPDFHighlighter(plugin: {
           const highlightSpan = document.createElement('span');
           
           highlightSpan.className = 'hi-words-highlight hi-words-pdf-highlight';
-          highlightSpan.setAttribute('data-word', match.word);
+          highlightSpan.setAttribute('data-word', def?.word || match.word); // 使用原型词汇，回退到匹配词汇
           if (def?.definition) highlightSpan.setAttribute('data-definition', def.definition);
           if (color) highlightSpan.setAttribute('data-color', color);
           highlightSpan.setAttribute('data-style', highlightStyle);

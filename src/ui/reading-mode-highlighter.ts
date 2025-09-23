@@ -89,7 +89,7 @@ export function registerReadingModeHighlighter(plugin: {
         const color = mapCanvasColorToCSSVar(def?.color, 'var(--color-base-60)');
         const span = document.createElement('span');
         span.className = 'hi-words-highlight';
-        span.setAttribute('data-word', m.word);
+        span.setAttribute('data-word', def?.word || m.word); // 使用原型词汇，回退到匹配词汇
         if (def?.definition) span.setAttribute('data-definition', def.definition);
         if (color) span.setAttribute('data-color', color);
         span.setAttribute('data-style', highlightStyle);
