@@ -1,4 +1,4 @@
-import { App, Plugin, TFile, Notice, WorkspaceLeaf } from 'obsidian';
+import { App, Plugin, TFile, Notice, WorkspaceLeaf, Editor, MarkdownView } from 'obsidian';
 import { Extension } from '@codemirror/state';
 // 使用新的模块化导入
 import { HiWordsSettings } from './src/utils';
@@ -159,22 +159,27 @@ export default class HiWordsPlugin extends Plugin {
             }
         });
 
-
-        // 重新索引所有文件的形态学信息
+        // 添加选中单词的快捷键命令
         this.addCommand({
-            id: 'reindex-morphology',
-            name: '重新索引韩语形态学信息',
-            callback: async () => {
-                const notice = new Notice('正在重新索引形态学信息...', 0);
-                try {
-                    await this.vocabularyManager.reindexAllFiles();
-                    notice.hide();
-                    new Notice('形态学索引重建完成');
-                } catch (error) {
-                    notice.hide();
-                    console.error('重新索引失败:', error);
-                    new Notice('重新索引失败，请查看控制台');
+            id: 'add-selected-word',
+            name: t('commands.add_selected_word'),
+            editorCallback: async (editor: Editor, view: MarkdownView) => {
+                const selectedText = editor.getSelection().trim();
+
+                if (!selectedText) {
+                    new Notice(t('notices.no_selection'));
+                    return;
                 }
+
+                // 打开添加单词模态框，传入选中的文本
+                const { AddWordModal } = await import('./src/ui/add-word-modal');
+                const modal = new AddWordModal(
+                    this.app,
+                    this,
+                    selectedText,
+                    false // isEditMode = false
+                );
+                modal.open();
             }
         });
     }

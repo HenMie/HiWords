@@ -43,23 +43,18 @@ export class KoreanMorphologyService {
      */
     private async initialize(): Promise<void> {
         try {
-            console.log('开始初始化韩语形态学分析服务...');
-            
             // 方法1: 使用导入的WASM字节数组
             let wasmInitialized = false;
             try {
-                console.log('尝试使用导入的WASM字节数组...');
                 await init({ module_or_path: wasmBytes });
                 wasmInitialized = true;
-                console.log('WASM模块通过字节数组初始化成功');
             } catch (error) {
-                console.log('方法1失败:', error.message);
+                // Silently try next method
             }
-            
+
             // 方法2: 使用正确的插件相对路径
             if (!wasmInitialized) {
                 try {
-                    console.log('尝试通过插件相对路径获取WASM文件...');
                     // 在Obsidian中，使用app://local协议访问插件文件
                     const pluginWasmUrl = 'app://local/.obsidian/plugins/HiWords/lindera_wasm_bg.wasm';
                     const response = await fetch(pluginWasmUrl);
@@ -67,64 +62,52 @@ export class KoreanMorphologyService {
                         const wasmBytes = await response.arrayBuffer();
                         await init({ module_or_path: wasmBytes });
                         wasmInitialized = true;
-                        console.log('WASM模块通过插件相对路径初始化成功');
-                    } else {
-                        console.log('插件相对路径fetch失败:', response.status);
                     }
                 } catch (error) {
-                    console.log('方法2失败:', error.message);
+                    // Silently try next method
                 }
             }
-            
+
             // 方法3: 尝试无参数初始化（让库自己处理）
             if (!wasmInitialized) {
                 try {
-                    console.log('尝试无参数初始化...');
                     await init({});
                     wasmInitialized = true;
-                    console.log('WASM模块无参数初始化成功');
                 } catch (error) {
-                    console.log('方法3失败:', error.message);
+                    // Silently try next method
                 }
             }
-            
+
             // 方法4: 尝试通过Obsidian的资源加载器
             if (!wasmInitialized) {
                 try {
-                    console.log('尝试通过Obsidian资源加载器...');
                     // 使用Obsidian的资源协议
                     const resourceUrl = `app://local/.obsidian/plugins/HiWords/lindera_wasm_bg.wasm`;
-                    console.log('资源URL:', resourceUrl);
-                    
+
                     // 直接传递URL给init函数
                     await init({ module_or_path: resourceUrl });
                     wasmInitialized = true;
-                    console.log('WASM模块通过资源加载器初始化成功');
                 } catch (error) {
-                    console.log('方法4失败:', error.message);
+                    // Last method failed
                 }
             }
-            
+
             if (!wasmInitialized) {
                 console.warn('所有WASM初始化方法都失败，将使用后备分析方案');
                 this.isInitialized = false;
                 return;
             }
-            
+
             // 构建Tokenizer
             try {
                 const builder = new TokenizerBuilder();
-                console.log('TokenizerBuilder创建成功');
-                
+
                 // 设置内嵌韩语字典
                 builder.setDictionary('embedded://ko-dic');
-                console.log('韩语字典设置成功');
-                
+
                 this.tokenizer = builder.build();
-                console.log('Tokenizer构建成功');
-                
+
                 this.isInitialized = true;
-                console.log('韩语形态学分析服务初始化完成');
             } catch (error) {
                 console.error('Tokenizer构建失败:', error);
                 this.isInitialized = false;
@@ -178,9 +161,9 @@ export class KoreanMorphologyService {
                 // console.log('使用 Lindera 进行分析...');
                 // 使用 tokenizer 进行形态学分析
                 const tokens = this.tokenizer.tokenize(word.trim());
-                
+
                 // console.log('Lindera 原始分析结果:', tokens);
-                
+
                 if (!tokens || tokens.length === 0) {
                     // console.log('Lindera 分析结果为空，使用后备方案');
                     return this.fallbackAnalyze(word);
@@ -190,6 +173,7 @@ export class KoreanMorphologyService {
                 // console.log('所有 tokens:', tokens);
                 const analysisResult = this.analyzeTokens(tokens, word);
                 if (!analysisResult) {
+                    // console.log('analyzeTokens 返回 null，使用后备方案');
                     return this.fallbackAnalyze(word);
                 }
 
@@ -210,7 +194,7 @@ export class KoreanMorphologyService {
                     confidence: analysisResult.confidence || 0.8
                 };
                 
-                // console.log('分析结果:', result);
+                // console.log('最终分析结果:', result);
                 return result;
             } catch (error) {
                 console.error('Lindera 分析失败，使用后备方案:', error);
@@ -230,29 +214,11 @@ export class KoreanMorphologyService {
             return null;
         }
 
-        // 策略1: 处理复合动词结构（名词 + XSV/하다）
+        // 策略1: 处理复合词结构
         if (tokens.length >= 2) {
-            for (let i = 0; i < tokens.length - 1; i++) {
-                const currentToken = this.extractTokenInfo(tokens[i]);
-                const nextToken = this.extractTokenInfo(tokens[i + 1]);
-
-                if (currentToken && nextToken) {
-                    // 检查是否为 名词 + XSV(하) 的结构
-                    if ((currentToken.partOfSpeech.includes('NNG') || currentToken.partOfSpeech.includes('NNP')) &&
-                        nextToken.partOfSpeech === 'XSV' && nextToken.surface === '하') {
-
-                        // 构造复合动词：名词 + 하다
-                        const baseForm = currentToken.surface + '하다';
-                        // console.log('找到复合动词结构:', { noun: currentToken.surface, verb: nextToken.surface, baseForm });
-
-                        return {
-                            surface: originalWord,
-                            baseForm: baseForm,
-                            partOfSpeech: 'NNG+XSV',
-                            confidence: 0.95
-                        };
-                    }
-                }
+            const result = this.analyzeCompoundWord(tokens, originalWord);
+            if (result) {
+                return result;
             }
         }
 
@@ -289,6 +255,115 @@ export class KoreanMorphologyService {
     }
 
     /**
+     * 分析复合词结构
+     */
+    private analyzeCompoundWord(tokens: any[], originalWord: string): { surface: string, baseForm: string, partOfSpeech: string, confidence: number } | null {
+        // 提取所有token信息
+        const tokenInfos = tokens.map(token => this.extractTokenInfo(token)).filter((info): info is NonNullable<typeof info> => info !== null);
+
+        if (tokenInfos.length < 2) {
+            return null;
+        }
+
+        // 模式1: 名词 + XSV(하) 的结构
+        for (let i = 0; i < tokenInfos.length - 1; i++) {
+            const currentToken = tokenInfos[i];
+            const nextToken = tokenInfos[i + 1];
+
+            if (currentToken && nextToken &&
+                (currentToken.partOfSpeech.includes('NNG') || currentToken.partOfSpeech.includes('NNP')) &&
+                nextToken.partOfSpeech === 'XSV' && nextToken.surface === '하') {
+
+                const baseForm = currentToken.surface + '하다';
+                return {
+                    surface: originalWord,
+                    baseForm: baseForm,
+                    partOfSpeech: 'NNG+XSV',
+                    confidence: 0.95
+                };
+            }
+        }
+
+        // 模式2: 动词词根 + 되다 (被动语态)
+        // 寻找 되 + 语尾 的组合
+        for (let i = 0; i < tokenInfos.length - 1; i++) {
+            const currentToken = tokenInfos[i];
+            const nextToken = tokenInfos[i + 1];
+
+            // 检查是否为被动语态结构
+            if (currentToken && nextToken && this.isPassiveStructure(currentToken, nextToken)) {
+                // 构造被动动词原型
+                const baseForm = this.constructPassiveBaseForm(tokenInfos, i);
+                if (baseForm) {
+                    return {
+                        surface: originalWord,
+                        baseForm: baseForm,
+                        partOfSpeech: 'VV+XSV',  // 被动动词
+                        confidence: 0.92
+                    };
+                }
+            }
+        }
+
+        // 模式3: 复合动词（多个动词词根的组合）
+        const verbTokens = tokenInfos.filter(token =>
+            token && (this.isVerbOrAdjective(token.partOfSpeech) ||
+            token.partOfSpeech.includes('VV') ||
+            token.partOfSpeech.includes('VA'))
+        );
+
+        if (verbTokens.length >= 1) {
+            // 使用最后一个动词token的基础形式
+            const lastVerbToken = verbTokens[verbTokens.length - 1];
+            if (lastVerbToken) {
+                return {
+                    surface: originalWord,
+                    baseForm: lastVerbToken.baseForm,
+                    partOfSpeech: lastVerbToken.partOfSpeech,
+                    confidence: 0.85
+                };
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * 检查是否为被动语态结构
+     */
+    private isPassiveStructure(currentToken: any, nextToken: any): boolean {
+        // 检查 되 + 语尾 的模式
+        return (nextToken.surface === '되' && currentToken.partOfSpeech.includes('EC')) ||
+               (currentToken.surface === '되' || currentToken.surface.includes('되')) ||
+               (nextToken.partOfSpeech === 'XSV' && nextToken.surface === '되');
+    }
+
+    /**
+     * 构造被动动词的原型
+     */
+    private constructPassiveBaseForm(tokenInfos: any[], passiveIndex: number): string | null {
+        // 寻找动词词根
+        for (let i = 0; i < passiveIndex; i++) {
+            const token = tokenInfos[i];
+            if (token && (token.partOfSpeech.includes('NNG') || token.partOfSpeech.includes('NNP') ||
+                token.partOfSpeech.includes('VV') || token.partOfSpeech.includes('VA'))) {
+                // 构造被动形式: 词根 + 되다
+                return token.surface + '되다';
+            }
+        }
+
+        // 如果找不到明确的词根，检查是否有완整的词干
+        if (passiveIndex > 0) {
+            const stemParts = tokenInfos.slice(0, passiveIndex).map(t => t?.surface || '').join('');
+            if (stemParts.length > 0) {
+                return stemParts + '되다';
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * 从单个token中提取信息
      */
     private extractTokenInfo(token: any): { surface: string, baseForm: string, partOfSpeech: string } | null {
@@ -303,37 +378,13 @@ export class KoreanMorphologyService {
             if (Array.isArray(details) && details.length > 0) {
                 partOfSpeech = details[0] || 'UNKNOWN';
 
-                // 从 details[7] 解析真正的原型
-                // 格式如: "찾아가/VV/*+아/EC/*" 或 "*"
+                // 优先从 details[6] 获取原型（Reading），再从 details[7] 获取形态素信息
+                const reading = details[6] || '';
                 const morphemeInfo = details[7] || '';
-                // console.log('形态素信息:', morphemeInfo);
 
-                if (morphemeInfo && typeof morphemeInfo === 'string' && morphemeInfo !== '*') {
-                    // 有具体的形态素信息，提取第一个形态素的原型部分
-                    const firstMorpheme = morphemeInfo.split('+')[0];
-                    const baseFormMatch = firstMorpheme.match(/^([^\/]+)/);
-                    if (baseFormMatch) {
-                        baseForm = baseFormMatch[1];
+                // console.log('原型读音:', reading, '形态素信息:', morphemeInfo);
 
-                        // 对于动词和形容词，确保以 '다' 结尾
-                        if (partOfSpeech.includes('VCN') || partOfSpeech.includes('VV') || partOfSpeech.includes('VA')) {
-                            if (!baseForm.endsWith('다')) {
-                                baseForm = baseForm + '다';
-                            }
-                        }
-                    } else {
-                        baseForm = surface;
-                    }
-                } else {
-                    // 形态素信息是 "*" 或为空，根据词性处理
-                    if (partOfSpeech.includes('VV') || partOfSpeech.includes('VA') || partOfSpeech.includes('VCN')) {
-                        // 动词/形容词：使用 surface + 다
-                        baseForm = surface.endsWith('다') ? surface : surface + '다';
-                    } else {
-                        // 名词等其他词性：直接使用 surface
-                        baseForm = surface;
-                    }
-                }
+                baseForm = this.extractBaseFormFromMorphology(surface, reading, morphemeInfo, partOfSpeech);
             } else {
                 partOfSpeech = 'UNKNOWN';
                 baseForm = surface;
@@ -353,11 +404,120 @@ export class KoreanMorphologyService {
     }
 
     /**
+     * 从形态学信息中提取基础形式
+     */
+    private extractBaseFormFromMorphology(surface: string, reading: string, morphemeInfo: string, partOfSpeech: string): string {
+        // 策略1: 使用reading字段（如果可用且合理）
+        // 排除reading是词性标记的情况（如 'ETM', 'EC' 等）
+        const isPosTag = /^[A-Z]{2,}$/.test(reading); // 词性标记通常是大写字母
+        if (reading && reading !== '*' && reading !== surface && !isPosTag) {
+            // 对于动词和形容词，确保以 '다' 结尾
+            if (this.isVerbOrAdjective(partOfSpeech)) {
+                return reading.endsWith('다') ? reading : reading + '다';
+            }
+            return reading;
+        }
+
+        // 策略2: 解析形态素信息
+        if (morphemeInfo && typeof morphemeInfo === 'string' && morphemeInfo !== '*') {
+            const baseFormFromMorpheme = this.parseBaseFormFromMorpheme(morphemeInfo, partOfSpeech);
+            if (baseFormFromMorpheme) {
+                return baseFormFromMorpheme;
+            }
+        }
+
+        // 策略3: 根据词性和表面形式推断
+        return this.inferBaseFormFromSurface(surface, partOfSpeech);
+    }
+
+    /**
+     * 从形态素信息中解析基础形式
+     */
+    private parseBaseFormFromMorpheme(morphemeInfo: string, partOfSpeech: string): string | null {
+        // 形态素信息格式: "찾아가/VV/*+아/EC/*" 或 "거론/NNG/*+되/XSV/*+고/EC/*"
+        const morphemes = morphemeInfo.split('+');
+
+        // 寻找主要的词汇形态素（排除语法形态素如EC, ETM, EP等）
+        for (const morpheme of morphemes) {
+            const parts = morpheme.split('/');
+            if (parts.length >= 2) {
+                const morphSurface = parts[0];
+                const morphPos = parts[1];
+
+                // 跳过纯语法形态素（连接语尾、连体语尾等）
+                if (morphPos === 'EC' || morphPos === 'ETM' || morphPos === 'EP' ||
+                    morphPos === 'EF' || morphPos === 'ETN') {
+                    continue;
+                }
+
+                // 如果是主要的动词、形容词或名词形态素
+                if (morphPos === 'VV' || morphPos === 'VA' || morphPos === 'VCN' ||
+                    morphPos === 'NNG' || morphPos === 'NNP') {
+
+                    if (this.isVerbOrAdjective(morphPos)) {
+                        return morphSurface.endsWith('다') ? morphSurface : morphSurface + '다';
+                    }
+                    return morphSurface;
+                }
+            }
+        }
+
+        // 特殊处理被动语态结构
+        if (morphemes.length >= 2) {
+            const result = this.handlePassiveMorphemes(morphemes);
+            if (result) {
+                return result;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * 处理被动语态形态素
+     */
+    private handlePassiveMorphemes(morphemes: string[]): string | null {
+        // 寻找 名词/动词 + XSV(되) 的模式
+        for (let i = 0; i < morphemes.length - 1; i++) {
+            const currentParts = morphemes[i].split('/');
+            const nextParts = morphemes[i + 1].split('/');
+
+            if (currentParts.length >= 2 && nextParts.length >= 2) {
+                const currentSurface = currentParts[0];
+                const currentPos = currentParts[1];
+                const nextSurface = nextParts[0];
+                const nextPos = nextParts[1];
+
+                // 检查是否为被动语态: 명사/동사 + 되
+                if ((currentPos === 'NNG' || currentPos === 'NNP' || currentPos === 'VV') &&
+                    nextPos === 'XSV' && nextSurface === '되') {
+                    return currentSurface + '되다';
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * 根据表面形式和词性推断基础形式
+     */
+    private inferBaseFormFromSurface(surface: string, partOfSpeech: string): string {
+        if (this.isVerbOrAdjective(partOfSpeech)) {
+            // 动词/形容词：如果不以다结尾，添加다
+            return surface.endsWith('다') ? surface : surface + '다';
+        } else {
+            // 名词等其他词性：直接使用表面形式
+            return surface;
+        }
+    }
+
+    /**
      * 后备分析方案（简单的规则匹配）
      */
     private fallbackAnalyze(word: string): MorphologyAnalysisResult | null {
         // console.log(`使用后备方案分析: ${word}`);
-        
+
         // 简单的韩语动词/形容词词尾识别
         const commonEndings = [
             '진다', '친다', '는다', 'ㄴ다', '다',  // 现在时
@@ -367,15 +527,16 @@ export class KoreanMorphologyService {
             '었어요', '았어요', '였어요',  // 敬语过去时
             '겠어요',  // 敬语未来时
             '습니다', '십니다',  // 正式敬语现在时
-            '었습니다', '았습니다', '였습니다'  // 正式敬语过去时
+            '었습니다', '았습니다', '였습니다',  // 正式敬语过去时
+            '고', '어', '아', '여',  // 连接语尾
         ];
-        
+
         for (const ending of commonEndings) {
             if (word.endsWith(ending)) {
                 // 提取词干
                 const stem = word.slice(0, -ending.length);
                 let baseForm = stem;
-                
+
                 // 尝试构造原型
                 if (ending === '진다') {
                     // 여기진다 -> 여기지다
@@ -392,19 +553,19 @@ export class KoreanMorphologyService {
                     // 其他情况，添加다
                     baseForm = stem + '다';
                 }
-                
+
                 const result = {
                     surface: word,
                     baseForm: baseForm,
                     partOfSpeech: 'VV', // 假设为动词
                     confidence: 0.6  // 后备方案置信度较低
                 };
-                
+
                 // console.log('后备分析结果:', result);
                 return result;
             }
         }
-        
+
         // 如果没有匹配到，返回原词
         return {
             surface: word,

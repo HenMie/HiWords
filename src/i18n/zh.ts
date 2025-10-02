@@ -78,12 +78,14 @@ export default {
         add_word: "HiWords: 添加单词",
         edit_word: "HiWords: 编辑单词",
         show_sidebar: "显示 HiWords 侧边栏",
+        add_selected_word: "添加选中的单词",
     },
     
     // 通知
     notices: {
         vocabulary_refreshed: "生词本已刷新",
         word_added: "单词已添加到生词本",
+        no_selection: "请先选中要添加的单词",
         word_exists: "单词已存在于生词本中",
         error_adding_word: "添加单词到生词本时出错",
         select_book_required: "请选择生词本",

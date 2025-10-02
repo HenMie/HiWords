@@ -116,34 +116,31 @@ export class WordHighlighter implements PluginValue {
         
         // 获取未掌握的原型单词（已掌握的单词不会被高亮）
         const baseWords = this.vocabularyManager.getAllWordsForHighlight();
-        // console.log(`开始构建形态学索引，原型单词数量: ${baseWords.length}`);
-        
-        let totalInflections = 0;
-        
+
         // 为每个原型单词添加其所有活用形
         for (const baseWord of baseWords) {
             const definition = this.vocabularyManager.getDefinition(baseWord);
             if (definition) {
                 // 添加原型本身
                 this.wordTrie.addWord(baseWord, definition);
-                
-                // 获取并添加所有活用形
-                const inflectionForms = this.vocabularyManager.getAllInflectionForms(baseWord);
-                // console.log(`原型 ${baseWord} 的活用形: [${Array.from(inflectionForms).join(', ')}]`);
-                
-                for (const inflectionForm of inflectionForms) {
+
+                // 获取已索引的活用形
+                const indexedInflectionForms = this.vocabularyManager.getAllInflectionForms(baseWord);
+
+                // 为韩语单词生成常见活用形
+                const commonInflectionForms = this.generateCommonInflections(baseWord);
+
+                // 合并已索引的和生成的活用形
+                const allInflectionForms = new Set([...indexedInflectionForms, ...commonInflectionForms]);
+
+                for (const inflectionForm of allInflectionForms) {
                     if (inflectionForm !== baseWord) {
                         // 活用形指向同一个定义
                         this.wordTrie.addWord(inflectionForm, definition);
-                        totalInflections++;
                     }
                 }
             }
         }
-        
-        const endTime = performance.now();
-        console.log(`形态学索引构建完成，耗时 ${(endTime - startTime).toFixed(2)}ms`);
-        // console.log(`添加了 ${baseWords.length} 个原型和 ${totalInflections} 个活用形到前缀树`);
     }
 
     update(update: ViewUpdate) {
@@ -341,6 +338,175 @@ export class WordHighlighter implements PluginValue {
             color: mapCanvasColorToCSSVar((trieMatch.payload as WordDefinition).color, 'var(--color-accent)'),
             baseForm: (trieMatch.payload as WordDefinition).word // 存储原型，用于悬浮卡片查找
         }));
+    }
+
+    /**
+     * 为韩语单词生成常见活用形
+     */
+    private generateCommonInflections(baseWord: string): string[] {
+        // 只为韩语动词/形容词生成活用形
+        if (!this.isKoreanWord(baseWord) || !baseWord.endsWith('다')) {
+            return [];
+        }
+
+        const stem = baseWord.slice(0, -1); // 去掉 '다'
+        const inflections: string[] = [];
+
+        // 检查词干最后一个字符是否有收音（받침）
+        const lastChar = stem[stem.length - 1];
+        const hasFinalConsonant = this.hasFinalConsonant(lastChar);
+
+        // 检查是否为ㅂ不规则动词（如 사납다）
+        const isBIrregular = this.isBIrregular(lastChar);
+
+        if (isBIrregular) {
+            // ㅂ不规则：사납다 -> 사나우 + 어 = 사나워
+            const irregularStem = this.applyBIrregular(stem);
+
+            // 基本连接语尾
+            inflections.push(irregularStem + '어');     // 사나워
+            inflections.push(irregularStem + '니');     // 사나우니
+            inflections.push(irregularStem + '면');     // 사나우면
+            inflections.push(stem + '고');              // 사납고（保持原形）
+
+            // 连体语尾（需要将ㄴ和ㄹ添加为收音）
+            const stemWithN = this.addFinalConsonant(irregularStem, 4); // ㄴ的终声值是4
+            const stemWithL = this.addFinalConsonant(irregularStem, 8); // ㄹ的终声值是8
+            inflections.push(stemWithN);     // 사나운
+            inflections.push(stemWithL);     // 사나울
+
+            // 敬语
+            inflections.push(irregularStem + '어요');   // 사나워요
+        } else {
+            // 规则动词
+            // 基本连接语尾
+            inflections.push(stem + '고');      // 거론되고
+            inflections.push(stem + '어');      // 거론되어
+            inflections.push(stem + '면');      // 거론되면
+            inflections.push(stem + '니');      // 거론되니
+            inflections.push(stem + '며');      // 거론되며
+
+            // 敬语形式
+            inflections.push(stem + '어요');    // 거론되어요
+            inflections.push(stem + '습니다');  // 거론됩니다
+
+            // 过去时
+            inflections.push(stem + '었다');    // 거론되었다
+            inflections.push(stem + '었어요');  // 거론되었어요
+
+            // 连体语尾
+            inflections.push(stem + '는');      // 거론되는
+            inflections.push(stem + '은');      // 거론된
+            inflections.push(stem + '던');      // 거론되던
+
+            // 未来/推测语尾 (ㄹ语尾) - 需要根据是否有收音决定
+            if (hasFinalConsonant) {
+                inflections.push(stem + '을');      // 거론될（有收音：거론되 + 을）
+                inflections.push(stem + '을까');
+            } else {
+                // 无收音：需要将ㄹ添加为收音
+                const stemWithL = this.addFinalConsonant(stem, 8); // ㄹ的终声值是8
+                inflections.push(stemWithL);      // 찢어질（无收音：찢어지 + ㄹ = 찢어질）
+                inflections.push(stemWithL + '까');
+            }
+
+            // 其他常见语尾
+            inflections.push(stem + '지');      // 거론되지
+            inflections.push(stem + '서');      // 거론되서
+            inflections.push(stem + '지만');    // 거론되지만
+        }
+
+        return inflections;
+    }
+
+    /**
+     * 检查韩文字符是否有收音（받침）
+     */
+    private hasFinalConsonant(char: string): boolean {
+        if (!char || char.length !== 1) return false;
+        const code = char.charCodeAt(0);
+        // 韩文音节范围：0xAC00-0xD7A3
+        if (code < 0xAC00 || code > 0xD7A3) return false;
+
+        // 韩文音节结构：(初声 * 21 + 中声) * 28 + 终声 + 0xAC00
+        // 终声为0表示无收音
+        const finalConsonant = (code - 0xAC00) % 28;
+        return finalConsonant !== 0;
+    }
+
+    /**
+     * 检查是否为ㅂ不规则动词
+     */
+    private isBIrregular(char: string): boolean {
+        if (!char || char.length !== 1) return false;
+        const code = char.charCodeAt(0);
+        if (code < 0xAC00 || code > 0xD7A3) return false;
+
+        // 检查收音是否为ㅂ (17)
+        const finalConsonant = (code - 0xAC00) % 28;
+        return finalConsonant === 17; // ㅂ的终声值
+    }
+
+    /**
+     * 应用ㅂ不规则变化：사납 -> 사나우
+     */
+    private applyBIrregular(stem: string): string {
+        if (!stem) return stem;
+
+        const lastChar = stem[stem.length - 1];
+        const code = lastChar.charCodeAt(0);
+
+        if (code < 0xAC00 || code > 0xD7A3) return stem;
+
+        // 分解韩文字符
+        const base = code - 0xAC00;
+        const initialConsonant = Math.floor(base / 588); // 初声
+        const medialVowel = Math.floor((base % 588) / 28); // 中声
+        const finalConsonant = base % 28; // 终声
+
+        // 如果终声是ㅂ(17)，去掉ㅂ并添加우
+        if (finalConsonant === 17) {
+            // 去掉收音ㅂ
+            const newChar = String.fromCharCode(0xAC00 + initialConsonant * 588 + medialVowel * 28);
+            return stem.slice(0, -1) + newChar + '우';
+        }
+
+        return stem;
+    }
+
+    /**
+     * 给韩文字符串的最后一个字符添加收音
+     * @param text 韩文字符串
+     * @param finalConsonantValue 收音值（0-27，0表示无收音）
+     */
+    private addFinalConsonant(text: string, finalConsonantValue: number): string {
+        if (!text || text.length === 0) return text;
+
+        const lastChar = text[text.length - 1];
+        const code = lastChar.charCodeAt(0);
+
+        // 检查是否为韩文音节
+        if (code < 0xAC00 || code > 0xD7A3) return text;
+
+        // 分解韩文字符
+        const base = code - 0xAC00;
+        const initialConsonant = Math.floor(base / 588); // 初声
+        const medialVowel = Math.floor((base % 588) / 28); // 中声
+
+        // 构造新字符（添加指定的收音）
+        const newChar = String.fromCharCode(
+            0xAC00 + initialConsonant * 588 + medialVowel * 28 + finalConsonantValue
+        );
+
+        return text.slice(0, -1) + newChar;
+    }
+
+    /**
+     * 检查是否为韩语单词
+     */
+    private isKoreanWord(word: string): boolean {
+        const koreanRegex = /[\uAC00-\uD7AF\u1100-\u11FF\uA960-\uA97F\uD7B0-\uD7FF]/;
+        return koreanRegex.test(word);
     }
 
     /**

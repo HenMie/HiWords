@@ -71,7 +71,6 @@ export class AddWordModal extends Modal {
             });
             
             restoreButton.onclick = () => {
-                console.log(`还原单词: ${this.word} -> ${this.originalWord}`);
                 this.word = this.originalWord;
                 this.refreshModal();
             };
@@ -352,22 +351,17 @@ export class AddWordModal extends Modal {
         }
         
         this.isAnalyzing = true;
-        console.log(`开始异步分析单词: ${this.originalWord}`);
-        
+
         try {
             const baseForm = await this.plugin.vocabularyManager.analyzeWordToBaseForm(this.originalWord);
-            console.log(`分析结果: ${this.originalWord} -> ${baseForm}`);
 
             // 检查分析结果是否合理
             // 如果原始单词是韩语，但分析结果不是韩语（如 "*"），则使用原始单词
             if (this.isKoreanText(this.originalWord) && (!baseForm || !this.isKoreanText(baseForm))) {
-                console.log('分析结果不是韩语字符，使用原始单词');
                 this.word = this.originalWord;
             } else if (baseForm && baseForm !== this.originalWord) {
                 this.word = baseForm;
-                console.log('单词已更新');
             } else {
-                console.log('分析结果与原始单词相同或为空');
                 // 即使分析结果相同，也要确保使用分析结果（可能去除了语尾）
                 if (baseForm) {
                     this.word = baseForm;
@@ -380,10 +374,8 @@ export class AddWordModal extends Modal {
         } finally {
             // 先设置分析完成状态，再刷新UI
             this.isAnalyzing = false;
-            console.log('分析完成，isAnalyzing = false');
-            
+
             // 无论分析结果如何，都要刷新模态框以移除"正在分析"状态
-            console.log('刷新模态框，移除分析状态');
             this.refreshModal();
         }
     }
@@ -392,13 +384,9 @@ export class AddWordModal extends Modal {
      * 刷新模态框显示
      */
     private refreshModal(): void {
-        console.log('refreshModal 被调用, isAnalyzing:', this.isAnalyzing, 'word:', this.word);
         if (this.contentEl) {
             this.contentEl.empty();
             this.onOpen();
-            console.log('模态框已刷新');
-        } else {
-            console.log('contentEl 不存在，无法刷新');
         }
     }
     

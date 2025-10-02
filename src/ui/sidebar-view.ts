@@ -195,16 +195,11 @@ export class HiWordsSidebarView extends ItemView {
                 content = await this.app.vault.read(this.currentFile);
             }
 
-            console.log(`[HiWords] 扫描文档: ${this.currentFile.path}`);
-            console.log(`[HiWords] 文档内容长度: ${content.length}`);
-            console.log(`[HiWords] 文档内容预览: ${content.substring(0, 200)}...`);
-
             const allWordDefinitions = await this.plugin.vocabularyManager.getAllWordDefinitions();
-            console.log(`[HiWords] 总词汇数量: ${allWordDefinitions.length}`);
 
             // 创建一个数组来存储找到的单词及其位置
             const foundWordsWithPosition: { wordDef: WordDefinition, position: number }[] = [];
-            
+
             // 扫描文档内容，查找生词并记录位置
             for (const wordDef of allWordDefinitions) {
                 // 检查主单词
@@ -213,9 +208,8 @@ export class HiWordsSidebarView extends ItemView {
                 let regex = this.buildSearchRegex(wordDef.word);
                 let match = regex.exec(content);
                 let position = match ? match.index : -1;
-                
+
                 if (position !== -1) {
-                    console.log(`[HiWords] 找到匹配: "${wordDef.word}" 在位置 ${position}`);
                     // 避免重复添加
                     if (!foundWordsWithPosition.some(w => w.wordDef.nodeId === wordDef.nodeId)) {
                         foundWordsWithPosition.push({
@@ -223,15 +217,8 @@ export class HiWordsSidebarView extends ItemView {
                             position: position
                         });
                     }
-                } else {
-                    // 对于前几个单词，显示为什么没有匹配
-                    if (allWordDefinitions.indexOf(wordDef) < 5) {
-                        console.log(`[HiWords] 未找到匹配: "${wordDef.word}"`);
-                    }
                 }
             }
-
-            console.log(`[HiWords] 找到的单词数量: ${foundWordsWithPosition.length}`);
 
             // 按照单词在文档中首次出现的位置排序
             foundWordsWithPosition.sort((a, b) => a.position - b.position);
@@ -698,9 +685,7 @@ export class HiWordsSidebarView extends ItemView {
         const hasCJK = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u.test(term);
         const pattern = hasCJK ? `${escaped}` : `\\b${escaped}\\b`;
         const flags = hasCJK ? 'giu' : 'gi';
-        
-        console.log(`[HiWords] 构建正则表达式: "${term}" -> 模式: "${pattern}", 标志: "${flags}", 包含CJK: ${hasCJK}`);
-        
+
         return new RegExp(pattern, flags);
     }
 

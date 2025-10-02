@@ -296,7 +296,6 @@ export class DefinitionPopover {
                     if (baseForm) {
                         // 使用分析得到的原型查找定义
                         wordDefinition = this.vocabularyManager.getDefinition(baseForm);
-                        console.log(`悬浮卡片：通过形态素分析 ${word} -> ${baseForm} 找到定义:`, !!wordDefinition);
                     }
                 } catch (error) {
                     console.error('悬浮卡片形态素分析失败:', error);

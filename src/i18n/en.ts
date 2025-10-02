@@ -78,12 +78,14 @@ export default {
         add_word: "HiWords: Add word",
         edit_word: "HiWords: Edit word",
         show_sidebar: "Show HiWords sidebar",
+        add_selected_word: "Add selected word",
     },
-    
+
     // Notices
     notices: {
         vocabulary_refreshed: "Vocabulary books refreshed",
         word_added: "Word added to vocabulary book",
+        no_selection: "Please select a word first",
         word_exists: "Word already exists in vocabulary book",
         error_adding_word: "Error adding word to vocabulary book",
         select_book_required: "Please select a vocabulary book",

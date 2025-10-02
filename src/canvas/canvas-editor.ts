@@ -160,7 +160,7 @@ export class CanvasEditor {
             // 删除别名相关处理
 
             let updated = false;
-            const parser = new CanvasParser(this.app);
+            const parser = new CanvasParser(this.app, this.settings);
             await this.app.vault.process(file, (current) => {
                 const canvasData: CanvasData = JSON.parse(current || '{"nodes":[],"edges":[]}');
                 if (!Array.isArray(canvasData.nodes)) canvasData.nodes = [];
@@ -168,6 +168,7 @@ export class CanvasEditor {
                 const index = canvasData.nodes.findIndex((n) => n.id === nodeId);
                 if (index === -1) {
                     console.error(`未找到节点: ${nodeId}`);
+                    updated = false;
                     return JSON.stringify(canvasData);
                 }
 
@@ -207,7 +208,7 @@ export class CanvasEditor {
             }
 
             let removed = false;
-            const parser = new CanvasParser(this.app);
+            const parser = new CanvasParser(this.app, this.settings);
             await this.app.vault.process(file, (current) => {
                 const canvasData: CanvasData = JSON.parse(current || '{"nodes":[],"edges":[]}');
                 if (!Array.isArray(canvasData.nodes)) canvasData.nodes = [];
@@ -215,6 +216,7 @@ export class CanvasEditor {
                 const index = canvasData.nodes.findIndex((n) => n.id === nodeId);
                 if (index === -1) {
                     console.warn(`未找到要删除的节点: ${nodeId}`);
+                    removed = false;
                     return JSON.stringify(canvasData);
                 }
 
@@ -253,6 +255,7 @@ export class CanvasEditor {
                 const index = canvasData.nodes.findIndex((n) => n.id === nodeId);
                 if (index === -1) {
                     console.error(`未找到节点: ${nodeId}`);
+                    updated = false;
                     return JSON.stringify(canvasData);
                 }
 
