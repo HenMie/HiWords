@@ -177,7 +177,12 @@ export class CanvasEditor {
                 if (definition) nodeText = `${nodeText}\n${etymology ? '' : '\n'}${definition}`;
 
                 canvasData.nodes[index].text = nodeText;
-                if (color !== undefined) canvasData.nodes[index].color = color.toString();
+                if (color !== undefined) {
+                    canvasData.nodes[index].color = color.toString();
+                } else {
+                    // 如果未指定颜色，移除颜色属性
+                    delete (canvasData.nodes[index] as any).color;
+                }
 
                 // 自动布局
                 normalizeLayout(canvasData, this.settings, parser);

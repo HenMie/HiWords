@@ -171,15 +171,8 @@ export default class HiWordsPlugin extends Plugin {
                     return;
                 }
 
-                // 打开添加单词模态框，传入选中的文本
-                const { AddWordModal } = await import('./src/ui/add-word-modal');
-                const modal = new AddWordModal(
-                    this.app,
-                    this,
-                    selectedText,
-                    false // isEditMode = false
-                );
-                modal.open();
+                // 使用 addOrEditWord 方法，自动判断是添加还是编辑
+                this.addOrEditWord(selectedText);
             }
         });
     }

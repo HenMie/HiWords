@@ -404,29 +404,33 @@ export class VocabularyManager {
      */
     async updateWordInCanvas(bookPath: string, nodeId: string, word: string, definition: string, color?: number, etymology?: string): Promise<boolean> {
         try {
+            // 0. 获取原有的词汇定义，保留其他属性（如 mastered）
+            const oldWordDef = await this.getWordDefinitionByNodeId(bookPath, nodeId);
+
             // 1. 先更新Canvas文件
             const success = await this.canvasEditor.updateWordInCanvas(bookPath, nodeId, word, definition, color, etymology);
-            
+
             if (success) {
-                // 2. 创建更新后的词汇定义
+                // 2. 创建更新后的词汇定义，保留原有的 mastered 等属性
                 const updatedWordDef: WordDefinition = {
                     word,
                     definition,
                     etymology,
                     source: bookPath,
                     nodeId, // 使用原有的nodeId
-                    color: color ? this.getColorString(color) : undefined
+                    color: color ? this.getColorString(color) : undefined,
+                    mastered: oldWordDef?.mastered // 保留原有的 mastered 状态
                 };
-                
+
                 // 3. 立即更新内存缓存
                 this.updateWordInMemoryCache(bookPath, nodeId, updatedWordDef);
-                
+
                 // 4. 重建缓存以立即生效
                 this.rebuildCache();
-                
+
                 return true;
             }
-            
+
             return false;
         } catch (error) {
             console.error('Failed to update word in canvas:', error);
