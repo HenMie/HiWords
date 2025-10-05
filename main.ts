@@ -42,24 +42,24 @@ export default class HiWordsPlugin extends Plugin {
     masteredService: MasteredService;
     editorExtensions: Extension[] = [];
     highlighterInstance: WordHighlighter | null = null;
-    private sidebarView: HiWordsSidebarView | null = null;
     private isSidebarInitialized = false;
 
     async onload() {
         // 加载设置
         await this.loadSettings();
-        
+
         // 初始化国际化模块
         i18n.setApp(this.app);
-        
+
         // 初始化管理器
         this.vocabularyManager = new VocabularyManager(this.app, this.settings);
-        
+
         // 初始化已掌握服务
         this.masteredService = new MasteredService(this, this.vocabularyManager);
-        
-        // 初始化定义弹出框
+
+        // 初始化定义弹出框（作为 Component 需要加载）
         this.definitionPopover = new DefinitionPopover(this);
+        this.addChild(this.definitionPopover);
         this.definitionPopover.setVocabularyManager(this.vocabularyManager);
         this.definitionPopover.setMasteredService(this.masteredService);
         
@@ -69,10 +69,7 @@ export default class HiWordsPlugin extends Plugin {
         // 注册侧边栏视图
         this.registerView(
             SIDEBAR_VIEW_TYPE,
-            (leaf) => {
-                this.sidebarView = new HiWordsSidebarView(leaf, this);
-                return this.sidebarView;
-            }
+            (leaf) => new HiWordsSidebarView(leaf, this)
         );
         
         // 注册编辑器扩展
@@ -285,11 +282,15 @@ export default class HiWordsPlugin extends Plugin {
             // 使用全局高亮器管理器刷新所有高亮器实例
             highlighterManager.refreshAll();
         }
-        
-        // 刷新侧边栏视图
-        if (this.sidebarView) {
-            this.sidebarView.refresh();
-        }
+
+        // 刷新侧边栏视图（通过 API 获取）
+        const leaves = this.app.workspace.getLeavesOfType(SIDEBAR_VIEW_TYPE);
+        leaves.forEach(leaf => {
+            const view = leaf.view as HiWordsSidebarView;
+            if (view && view.refresh) {
+                view.refresh();
+            }
+        });
     }
 
     /**
@@ -369,7 +370,7 @@ export default class HiWordsPlugin extends Plugin {
      * 卸载插件
      */
     onunload() {
-        this.definitionPopover.unload();
+        // definitionPopover 作为子组件会自动卸载
         this.vocabularyManager.clear();
         // 清理增量更新相关资源
         if (this.vocabularyManager.destroy) {

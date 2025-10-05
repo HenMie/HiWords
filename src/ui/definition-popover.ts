@@ -1,11 +1,11 @@
-import { App, MarkdownRenderer, MarkdownView, Notice, setIcon, TFile } from 'obsidian';
+import { App, MarkdownRenderer, MarkdownView, Notice, setIcon, TFile, Component } from 'obsidian';
 import { VocabularyManager, MasteredService } from '../core';
 import { WordDefinition } from '../utils';
 import { playWordTTS } from '../utils';
 import { t } from '../i18n';
 import HiWordsPlugin from '../../main';
 
-export class DefinitionPopover {
+export class DefinitionPopover extends Component {
     private app: App;
     private plugin: HiWordsPlugin;
     private activeTooltip: HTMLElement | null = null;
@@ -20,6 +20,7 @@ export class DefinitionPopover {
     private static readonly MIN_INTERVAL_MS = 150; // 两次显示的最小间隔
 
     constructor(plugin: HiWordsPlugin) {
+        super();
         this.app = plugin.app;
         this.plugin = plugin;
 
