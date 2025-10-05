@@ -19,6 +19,8 @@ const DEFAULT_SETTINGS: HiWordsSettings = {
     blurDefinitions: false, // 默认不启用模糊效果
     // 发音地址模板（用户可在设置里修改）
     ttsTemplate: 'https://dict.youdao.com/dictvoice?audio={{word}}&type=2',
+    // 调试模式（默认关闭）
+    debugMode: false,
     // 自动布局默认值
     autoLayoutEnabled: true,
     cardWidth: 260,

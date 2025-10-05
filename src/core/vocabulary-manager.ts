@@ -35,8 +35,9 @@ export class VocabularyManager {
         
         // 初始化形态学分析服务
         this.morphologyService = new KoreanMorphologyService(this.app);
+        this.morphologyService.setDebugMode(settings.debugMode ?? false);
         this.morphologyIndexManager = new MorphologyIndexManager(this.morphologyService);
-        
+
         // 监听文件变化，自动更新形态学索引
         this.registerFileWatchers();
     }
@@ -243,6 +244,10 @@ export class VocabularyManager {
         // 同步给 CanvasParser（影响掌握判定等）
         if (this.canvasParser && (this.canvasParser as any).updateSettings) {
             this.canvasParser.updateSettings(settings);
+        }
+        // 同步调试模式到韩语形态学服务
+        if (this.morphologyService) {
+            this.morphologyService.setDebugMode(settings.debugMode ?? false);
         }
     }
 

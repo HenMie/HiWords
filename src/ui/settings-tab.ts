@@ -312,6 +312,19 @@ export class HiWordsSettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 }));
 
+        // 调试模式
+        new Setting(containerEl)
+            .setName(t('settings.debug_mode') || 'Debug mode')
+            .setDesc(t('settings.debug_mode_desc') || 'Enable detailed logging in the console for troubleshooting')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.debugMode ?? false)
+                .onChange(async (value) => {
+                    this.plugin.settings.debugMode = value;
+                    await this.plugin.saveSettings();
+                    // 通知相关服务更新调试模式
+                    this.plugin.app.workspace.trigger('hi-words:settings-changed');
+                }));
+
     }
 
     /**

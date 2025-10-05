@@ -53,6 +53,8 @@ export interface HiWordsSettings {
     masteredDetection?: 'group' | 'color';
     // 发音地址模板（如：https://dict.youdao.com/dictvoice?audio={{word}}&type=2）
     ttsTemplate?: string;
+    // 调试模式（开启后在控制台输出详细日志）
+    debugMode?: boolean;
     // 自动布局设置
     autoLayoutEnabled?: boolean; // 是否启用自动布局
     // 左侧区域布局

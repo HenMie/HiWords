@@ -31,11 +31,114 @@ export class KoreanMorphologyService {
     private isInitialized = false;
     private initPromise: Promise<void> | null = null;
     private app: any;
+    private debugMode: boolean = false;
 
     constructor(app?: any) {
         this.app = app;
         // 延迟初始化，避免阻塞插件启动
         this.initPromise = this.initialize();
+    }
+
+    /**
+     * 设置调试模式
+     */
+    public setDebugMode(enabled: boolean): void {
+        this.debugMode = enabled;
+    }
+
+    /**
+     * 调试日志输出
+     */
+    private debugLog(...args: any[]): void {
+        if (this.debugMode) {
+            console.log('[KoreanMorphology]', ...args);
+        }
+    }
+
+    /**
+     * 合并后续的语尾token
+     * @param tokens 所有token
+     * @param startIndex 开始索引（从哪个索引开始检查）
+     * @param maxLookAhead 最多向前看几个token
+     * @param processedTokens 已处理的token集合（用于标记）
+     * @returns 合并后的表面形式和处理的token数量
+     */
+    private mergeSubsequentEndings(
+        tokens: any[],
+        startIndex: number,
+        maxLookAhead: number = 5,
+        processedTokens?: Set<number>
+    ): { mergedSurface: string; processedCount: number } {
+        let mergedSurface = '';
+        let processedCount = 0;
+
+        for (let j = startIndex; j < tokens.length && j < startIndex + maxLookAhead; j++) {
+            const subsequentTokenInfo = this.extractTokenInfo(tokens[j]);
+            if (subsequentTokenInfo &&
+                (subsequentTokenInfo.partOfSpeech.includes('EP') ||   // 先语末语尾
+                 subsequentTokenInfo.partOfSpeech.includes('ETM') ||  // 连体语尾
+                 subsequentTokenInfo.partOfSpeech.includes('EC') ||   // 连结语尾
+                 subsequentTokenInfo.partOfSpeech.includes('EF'))) { // 终语尾
+
+                this.debugLog(`[mergeSubsequentEndings] 添加语尾: ${subsequentTokenInfo.surface}`);
+                mergedSurface += subsequentTokenInfo.surface;
+                processedCount++;
+                if (processedTokens) {
+                    processedTokens.add(j);
+                }
+            } else {
+                break; // 遇到非语尾成分，停止合并
+            }
+        }
+
+        return { mergedSurface, processedCount };
+    }
+
+    /**
+     * 构建复合词分析结果
+     * @param tokenInfos 当前token信息数组（至少包含2个token）
+     * @param allTokens 所有token数组
+     * @param startIndexInAllTokens 在allTokens中的起始索引
+     * @param baseForm 基础形式
+     * @param partOfSpeech 词性
+     * @param confidence 置信度
+     * @param processedTokens 已处理token集合
+     * @param shouldMergeEndings 是否需要合并后续语尾
+     * @returns 分析结果
+     */
+    private buildCompoundWordResult(
+        tokenInfos: { surface: string; baseForm: string; partOfSpeech: string }[],
+        allTokens: any[],
+        startIndexInAllTokens: number,
+        baseForm: string,
+        partOfSpeech: string,
+        confidence: number,
+        processedTokens: Set<number>,
+        shouldMergeEndings: boolean = true
+    ): { surface: string; baseForm: string; partOfSpeech: string; confidence: number } {
+        // 计算初始表面形式（合并tokenInfos中的所有token）
+        let combinedSurface = tokenInfos.map(t => t.surface).join('');
+
+        // 如果需要，合并后续语尾（从tokenInfos之后的位置开始）
+        if (shouldMergeEndings) {
+            const nextIndex = startIndexInAllTokens + tokenInfos.length;
+            const { mergedSurface } = this.mergeSubsequentEndings(
+                allTokens,
+                nextIndex,
+                5,
+                processedTokens
+            );
+            combinedSurface += mergedSurface;
+        }
+
+        this.debugLog(`[buildCompoundWordResult] 最终结果: ${combinedSurface} → ${baseForm}`);
+
+        return {
+            surface: combinedSurface,
+            baseForm: baseForm,
+            partOfSpeech: partOfSpeech,
+            confidence: confidence
+        };
     }
 
     /**
@@ -153,33 +256,33 @@ export class KoreanMorphologyService {
             return null;
         }
 
-        // console.log(`[形态学分析] 开始分析单词: ${word}`);
+        this.debugLog(`开始分析单词: ${word}`);
 
         // 如果 tokenizer 可用，使用它进行分析
         if (await this.ensureInitialized() && this.tokenizer) {
             try {
-                // console.log('[形态学分析] 使用 Lindera 进行分析...');
+                this.debugLog('使用 Lindera 进行分析...');
                 // 使用 tokenizer 进行形态学分析
                 const tokens = this.tokenizer.tokenize(word.trim());
 
-                // console.log('[形态学分析] Lindera 原始分析结果:', JSON.stringify(tokens, null, 2));
+                this.debugLog('Lindera 原始分析结果:', JSON.stringify(tokens, null, 2));
 
                 if (!tokens || tokens.length === 0) {
-                    // console.log('Lindera 分析结果为空，使用后备方案');
+                    this.debugLog('Lindera 分析结果为空，使用后备方案');
                     return this.fallbackAnalyze(word);
                 }
 
                 // 分析所有tokens，寻找最佳的基础形式
-                // console.log('[形态学分析] 所有 tokens:', tokens);
+                this.debugLog('所有 tokens:', tokens);
                 const analysisResult = this.analyzeTokens(tokens, word);
                 if (!analysisResult) {
-                    // console.log('[形态学分析] analyzeTokens 返回 null，使用后备方案');
+                    this.debugLog('analyzeTokens 返回 null，使用后备方案');
                     return this.fallbackAnalyze(word);
                 }
 
                 let { surface, baseForm, partOfSpeech } = analysisResult;
 
-                // console.log('[形态学分析] 提取的属性:', { surface, baseForm, partOfSpeech });
+                this.debugLog('提取的属性:', { surface, baseForm, partOfSpeech });
 
                 // 确保原型以 '다' 结尾（动词/形容词）
                 let normalizedBaseForm = baseForm;
@@ -194,7 +297,7 @@ export class KoreanMorphologyService {
                     confidence: analysisResult.confidence || 0.8
                 };
 
-                // console.log('[形态学分析] 最终分析结果:', result);
+                this.debugLog('最终分析结果:', result);
                 return result;
             } catch (error) {
                 console.error('Lindera 分析失败，使用后备方案:', error);
@@ -218,7 +321,7 @@ export class KoreanMorphologyService {
         if (tokens.length >= 2) {
             const result = this.analyzeCompoundWord(tokens, originalWord);
             if (result) {
-                // console.log('[analyzeTokens] 复合词分析成功:', result);
+                this.debugLog('[analyzeTokens] 复合词分析成功:', result);
                 return result;
             }
         }
@@ -230,11 +333,11 @@ export class KoreanMorphologyService {
             if (tokenInfo && this.isVerbOrAdjective(tokenInfo.partOfSpeech)) {
                 // 如果baseForm是"하다"或"해다"，可能是复合词的一部分，跳过
                 if (tokenInfo.baseForm === '하다' || tokenInfo.baseForm === '해다') {
-                    // console.log('[analyzeTokens] 跳过独立的 하다/해다，可能是复合词的一部分');
+                    this.debugLog('[analyzeTokens] 跳过独立的 하다/해다，可能是复合词的一部分');
                     continue;
                 }
 
-                // console.log('[analyzeTokens] 找到独立动词token:', tokenInfo);
+                this.debugLog('[analyzeTokens] 找到独立动词token:', tokenInfo);
                 return {
                     surface: originalWord,
                     baseForm: tokenInfo.baseForm,
@@ -248,7 +351,7 @@ export class KoreanMorphologyService {
         for (const token of tokens) {
             const tokenInfo = this.extractTokenInfo(token);
             if (tokenInfo) {
-                // console.log('使用第一个有效token:', tokenInfo);
+                this.debugLog('使用第一个有效token:', tokenInfo);
                 return {
                     surface: originalWord,
                     baseForm: tokenInfo.baseForm,
@@ -272,7 +375,7 @@ export class KoreanMorphologyService {
             return null;
         }
 
-        // 模式1: 名词 + 하다动词 的结构
+        // 模式1a: 名词 + 하다动词 的结构
         // Lindera 可能的情况:
         // 1. 하 (XSV)
         // 2. 해 (XSV 或 VV)
@@ -286,7 +389,7 @@ export class KoreanMorphologyService {
 
                 // 使用通用的辅助方法检查
                 if (this.isHadaRelatedToken(nextToken)) {
-                    // console.log('[analyzeCompoundWord] 找到 名词+하다 结构:', currentToken.surface, '+', nextToken.surface);
+                    this.debugLog('[analyzeCompoundWord] 找到 名词+하다 结构:', currentToken.surface, '+', nextToken.surface);
                     const baseForm = currentToken.surface + '하다';
                     return {
                         surface: originalWord,
@@ -295,6 +398,27 @@ export class KoreanMorphologyService {
                         confidence: 0.95
                     };
                 }
+            }
+        }
+
+        // 模式1b: 词根 + 形容词/动词后缀结构 (XR + XSA/XSV)
+        // 例如: 훈훈 (XR) + 하 (XSA) → 훈훈하다
+        for (let i = 0; i < tokenInfos.length - 1; i++) {
+            const currentToken = tokenInfos[i];
+            const nextToken = tokenInfos[i + 1];
+
+            if (currentToken && nextToken &&
+                currentToken.partOfSpeech.includes('XR') &&
+                (nextToken.partOfSpeech.includes('XSA') || nextToken.partOfSpeech.includes('XSV'))) {
+
+                this.debugLog('[analyzeCompoundWord] 找到 词根+形容词后缀 结构:', currentToken.surface, '+', nextToken.surface);
+                const baseForm = currentToken.surface + '하다';
+                return {
+                    surface: originalWord,
+                    baseForm: baseForm,
+                    partOfSpeech: 'XR+XSA',
+                    confidence: 0.95
+                };
             }
         }
 
@@ -396,7 +520,7 @@ export class KoreanMorphologyService {
                 const reading = details[6] || '';
                 const morphemeInfo = details[7] || '';
 
-                // console.log(`[extractTokenInfo] ${surface}: reading=${reading}, morphemeInfo=${morphemeInfo}, pos=${partOfSpeech}`);
+                this.debugLog(`[extractTokenInfo] ${surface}: reading=${reading}, morphemeInfo=${morphemeInfo}, pos=${partOfSpeech}`);
 
                 baseForm = this.extractBaseFormFromMorphology(surface, reading, morphemeInfo, partOfSpeech);
             } else {
@@ -530,7 +654,7 @@ export class KoreanMorphologyService {
      * 后备分析方案（简单的规则匹配）
      */
     private fallbackAnalyze(word: string): MorphologyAnalysisResult | null {
-        // console.log(`使用后备方案分析: ${word}`);
+        this.debugLog(`使用后备方案分析: ${word}`);
 
         // 简单的韩语动词/形容词词尾识别
         const commonEndings = [
@@ -575,7 +699,7 @@ export class KoreanMorphologyService {
                     confidence: 0.6  // 后备方案置信度较低
                 };
 
-                // console.log('后备分析结果:', result);
+                this.debugLog('后备分析结果:', result);
                 return result;
             }
         }
@@ -616,9 +740,9 @@ export class KoreanMorphologyService {
                 const tokenInfo = this.extractTokenInfo(token);
 
                 // 调试：打印每个token
-                // if (tokenInfo && this.isKoreanText(tokenInfo.surface)) {
-                //     console.log(`[analyzeDocument] Token[${i}]: ${tokenInfo.surface} (${tokenInfo.partOfSpeech}) baseForm: ${tokenInfo.baseForm}`);
-                // }
+                if (tokenInfo && this.isKoreanText(tokenInfo.surface)) {
+                    this.debugLog(`[analyzeDocument] Token[${i}]: ${tokenInfo.surface} (${tokenInfo.partOfSpeech}) baseForm: ${tokenInfo.baseForm}`);
+                }
 
                 // 首先尝试检测复合词结构
                 let tokenGroup = [token];
@@ -641,78 +765,75 @@ export class KoreanMorphologyService {
                         // 使用通用的辅助方法检查
                         const isHadaToken = this.isHadaRelatedToken(nextTokenInfo);
 
+                        // 检查是否是词根 + 形容词/动词后缀结构 (XR + XSA/XSV)
+                        const isRootToken = currentTokenInfo.partOfSpeech.includes('XR');
+                        const isAdjectiveSuffix = nextTokenInfo.partOfSpeech.includes('XSA') || nextTokenInfo.partOfSpeech.includes('XSV');
+
                         if (isNounToken && isHadaToken) {
-                            // console.log(`[analyzeDocument] 找到 名词+하다 结构: ${currentTokenInfo.surface} + ${nextTokenInfo.surface}`);
+                            this.debugLog(`[analyzeDocument] 找到 名词+하다 结构: ${currentTokenInfo.surface} + ${nextTokenInfo.surface}`);
 
-                            // 这是一个复合动词结构
+                            // 标记下一个token已处理
+                            processedTokens.add(i + 1);
                             tokenGroup = [token, tokens[i + 1]];
-                            let combinedSurface = currentTokenInfo.surface + nextTokenInfo.surface;
-                            processedTokens.add(i + 1); // 标记下一个token已处理
 
-                            // 如果下一个token已经是复合形式（如 해요），就不需要继续合并了
-                            // 否则检查是否还有后续的语尾（如: 하 + 어 + 야）
-                            if (!nextTokenInfo.surface.startsWith('해') || nextTokenInfo.surface.length <= 1) {
-                                for (let j = i + 2; j < tokens.length && j < i + 5; j++) {
-                                    const subsequentTokenInfo = this.extractTokenInfo(tokens[j]);
-                                    if (subsequentTokenInfo &&
-                                        (subsequentTokenInfo.partOfSpeech.includes('EP') ||   // 先语末语尾
-                                         subsequentTokenInfo.partOfSpeech.includes('ETM') ||  // 连体语尾
-                                         subsequentTokenInfo.partOfSpeech.includes('EC') ||   // 连结语尾
-                                         subsequentTokenInfo.partOfSpeech.includes('EF'))) { // 终语尾
+                            // 如果下一个token不是复合形式（如 해요），才继续合并后续语尾
+                            const shouldMergeEndings = !nextTokenInfo.surface.startsWith('해') || nextTokenInfo.surface.length <= 1;
 
-                                        // console.log(`[analyzeDocument] 添加后续语尾: ${subsequentTokenInfo.surface}`);
-                                        combinedSurface += subsequentTokenInfo.surface;
-                                        tokenGroup.push(tokens[j]);
-                                        processedTokens.add(j);
-                                    } else {
-                                        break; // 遇到非语尾成分，停止合并
-                                    }
-                                }
-                            }
-
-                            // 构造复合动词基础形式
+                            // 使用通用方法构建结果
                             const baseForm = currentTokenInfo.surface + '하다';
-                            // console.log(`[analyzeDocument] 最终结果: ${combinedSurface} → ${baseForm}`);
-                            analysisResult = {
-                                surface: combinedSurface,
-                                baseForm: baseForm,
-                                partOfSpeech: 'NNG+HADA',
-                                confidence: 0.95
-                            };
+                            analysisResult = this.buildCompoundWordResult(
+                                [currentTokenInfo, nextTokenInfo],
+                                tokens,
+                                i,  // startIndexInAllTokens
+                                baseForm,
+                                'NNG+HADA',
+                                0.95,
+                                processedTokens,
+                                shouldMergeEndings
+                            );
+                        }
+                        // 情况1b: 词根 + 形容词/动词后缀结构 (XR + XSA/XSV)
+                        // 例如: 훈훈 (XR) + 하 (XSA) → 훈훈하다
+                        else if (isRootToken && isAdjectiveSuffix) {
+                            this.debugLog(`[analyzeDocument] 找到 词根+形容词后缀 结构: ${currentTokenInfo.surface} + ${nextTokenInfo.surface}`);
+
+                            // 标记下一个token已处理
+                            processedTokens.add(i + 1);
+                            tokenGroup = [token, tokens[i + 1]];
+
+                            // 使用通用方法构建结果
+                            const baseForm = currentTokenInfo.surface + '하다';
+                            analysisResult = this.buildCompoundWordResult(
+                                [currentTokenInfo, nextTokenInfo],
+                                tokens,
+                                i,
+                                baseForm,
+                                'XR+XSA',
+                                0.95,
+                                processedTokens,
+                                true  // 总是合并后续语尾
+                            );
                         }
                         // 情况2: 动词词根 + 语尾的复杂结构
                         else if ((currentTokenInfo.partOfSpeech.includes('VV') || currentTokenInfo.partOfSpeech.includes('VA')) &&
                                 (nextTokenInfo.partOfSpeech.includes('EP') || nextTokenInfo.partOfSpeech.includes('ETM') ||
                                  nextTokenInfo.partOfSpeech.includes('EC') || nextTokenInfo.partOfSpeech.includes('EF'))) {
 
-                            // 这是动词 + 语尾的结构，合并处理
-                            tokenGroup = [token, tokens[i + 1]];
-                            let combinedSurface = currentTokenInfo.surface + nextTokenInfo.surface;
+                            // 标记下一个token已处理
                             processedTokens.add(i + 1);
+                            tokenGroup = [token, tokens[i + 1]];
 
-                            // 继续检查后续语尾
-                            for (let j = i + 2; j < tokens.length && j < i + 5; j++) {
-                                const subsequentTokenInfo = this.extractTokenInfo(tokens[j]);
-                                if (subsequentTokenInfo &&
-                                    (subsequentTokenInfo.partOfSpeech.includes('EP') ||
-                                     subsequentTokenInfo.partOfSpeech.includes('ETM') ||
-                                     subsequentTokenInfo.partOfSpeech.includes('EC') ||
-                                     subsequentTokenInfo.partOfSpeech.includes('EF'))) {
-
-                                    combinedSurface += subsequentTokenInfo.surface;
-                                    tokenGroup.push(tokens[j]);
-                                    processedTokens.add(j);
-                                } else {
-                                    break;
-                                }
-                            }
-
-                            analysisResult = {
-                                surface: combinedSurface,
-                                baseForm: currentTokenInfo.baseForm,
-                                partOfSpeech: currentTokenInfo.partOfSpeech + '+' + nextTokenInfo.partOfSpeech,
-                                confidence: 0.9
-                            };
+                            // 使用通用方法构建结果
+                            analysisResult = this.buildCompoundWordResult(
+                                [currentTokenInfo, nextTokenInfo],
+                                tokens,
+                                i,
+                                currentTokenInfo.baseForm,
+                                currentTokenInfo.partOfSpeech + '+' + nextTokenInfo.partOfSpeech,
+                                0.9,
+                                processedTokens,
+                                true  // 总是合并后续语尾
+                            );
                         }
                     }
                 }
@@ -747,7 +868,7 @@ export class KoreanMorphologyService {
 
                 // 如果有有效的分析结果，添加到索引
                 if (analysisResult) {
-                    // console.log(`[文档分析] 找到活用形: ${analysisResult.surface} → ${analysisResult.baseForm}`);
+                    this.debugLog(`[文档分析] 找到活用形: ${analysisResult.surface} → ${analysisResult.baseForm}`);
 
                     // 建立索引：从原型到活用形的映射
                     if (!morphologyIndex.has(analysisResult.baseForm)) {
