@@ -317,6 +317,26 @@ export class KoreanMorphologyService {
             return null;
         }
 
+        // 策略0: 检查是否为名词复合词（名词+名词），如果是则视为整体
+        if (tokens.length >= 2) {
+            const tokenInfos = tokens.map(token => this.extractTokenInfo(token)).filter((info): info is NonNullable<typeof info> => info !== null);
+
+            // 检查是否所有token都是名词（NNG或NNP）
+            const allNouns = tokenInfos.every(info =>
+                info.partOfSpeech.includes('NNG') || info.partOfSpeech.includes('NNP')
+            );
+
+            if (allNouns && tokenInfos.length >= 2) {
+                this.debugLog('[analyzeTokens] 检测到名词复合词，视为整体:', originalWord);
+                return {
+                    surface: originalWord,
+                    baseForm: originalWord,  // 复合名词的原型就是它本身
+                    partOfSpeech: 'NNG+NNG',  // 复合名词
+                    confidence: 0.95
+                };
+            }
+        }
+
         // 策略1: 优先处理复合词结构（名词+하다 等）
         if (tokens.length >= 2) {
             const result = this.analyzeCompoundWord(tokens, originalWord);
