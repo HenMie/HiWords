@@ -1,5 +1,5 @@
 import type { HiWordsSettings } from '../utils';
-import { Trie, mapCanvasColorToCSSVar } from '../utils';
+import { Trie, mapCanvasColorToCSSVar, generateCommonInflections } from '../utils';
 import type { VocabularyManager } from '../core';
 
 /**
@@ -16,9 +16,30 @@ export function registerPDFHighlighter(plugin: {
   const buildTrie = () => {
     const trie = new Trie();
     const words = plugin.vocabularyManager.getAllWordsForHighlight();
+
+    // 为每个原型单词添加其所有活用形（与编辑模式和阅读模式保持一致）
     for (const w of words) {
       const def = plugin.vocabularyManager.getDefinition(w);
-      if (def) trie.addWord(w, def);
+      if (def) {
+        // 添加原型本身
+        trie.addWord(w, def);
+
+        // 获取已索引的活用形
+        const indexedInflectionForms = plugin.vocabularyManager.getAllInflectionForms(w);
+
+        // 为韩语单词生成常见活用形
+        const commonInflectionForms = generateCommonInflections(w);
+
+        // 合并已索引的和生成的活用形
+        const allInflectionForms = new Set([...indexedInflectionForms, ...commonInflectionForms]);
+
+        for (const inflectionForm of allInflectionForms) {
+          if (inflectionForm !== w) {
+            // 活用形指向同一个定义
+            trie.addWord(inflectionForm, def);
+          }
+        }
+      }
     }
     return trie;
   };
