@@ -1,136 +1,65 @@
 <div align="center">
-	<h1>HiWords-Vocabulary Manager for Obsidian (Fork)</h1>
-	<p><em>基于 <a href="https://github.com/CatMuse/HiWords">CatMuse/HiWords</a> 的个人定制版本</em></p>
+  <h1>HiWords - Vocabulary Manager for Obsidian (Fork)</h1>
+  <p><em>基于 <a href="https://github.com/CatMuse/HiWords">CatMuse/HiWords</a> 的个人扩展版，重点强化韩语形态学与 Canvas 管理体验。</em></p>
 </div>
 
 ---
 
-A powerful Obsidian plugin that helps you expand your vocabulary while reading. It automatically highlights and translates unfamiliar words, making learning more efficient.
+HiWords 是一个在阅读时帮助你积累词汇的 Obsidian 插件，会自动高亮生词并提供释义。本仓库是在原项目基础上的长期维护分支，主要用于满足韩语学习和 Canvas 管理的个性化需求。
 
 ![Screenshot](https://github.com/user-attachments/assets/359f874d-299c-4dd6-9fa1-bacd4664fb42)
 
-## ✨ Key Features
+## Fork 新增特性
 
-### 📚 Canvas Vocabulary Management
+- **韩语形态学引擎**  
+  集成 `lindera-wasm-ko-dic`（`src/core/korean-morphology-service.ts`），初始化时自动加载 WASM，并针对韩语词性做了专项处理：支持复合名词、派生动词以及不规则变化等，将活用形统一映射到 Canvas 中的原型词条。
 
-- **Canvas-based Vocabulary**: Use Obsidian Canvas files as vocabulary books with visual management
-- **Multiple Vocabulary Books**: Create and manage multiple vocabulary collections for different topics
-- **Flexible Word Organization**: Freely arrange vocabulary cards in Canvas with color categorization
-- **Real-time Synchronization**: Automatic sync when vocabulary files are modified
+- **全模式形态学高亮**  
+  通过 `Trie` 前缀树与 `MorphologyIndexManager` 对 Markdown、阅读模式以及 PDF 视图进行统一的高亮匹配（`src/core/word-highlighter.ts`、`src/ui/pdf-highlighter.ts`）。高亮结果会自动去重并优先保留更长的匹配，所有编辑器实例由 `highlighterManager` 统一刷新。
 
-### 🎯 Smart Word Highlighting
+- **词汇添加与编辑体验升级**  
+  新的模态框会异步解析韩语原型、记住最近使用的词书、支持词源字段，批量同步到 Canvas（`src/ui/add-word-modal.ts`）。选择已经存在的词条会直接进入编辑模式，避免重复输入。
 
-- **Automatic Highlighting**: Automatically identifies and highlights words from your vocabulary books
-- **Color Mapping**: Sets highlight colors based on Canvas node colors
-- **Real-time Updates**: Updates highlights when switching between files
-- **Performance Optimization**: Uses CodeMirror 6 extensions for efficient processing of large documents
+- **调试与维护工具**  
+  新增调试模式（Settings -> Debug Mode）输出形态学处理日志，改进 Canvas 文件监听与增量刷新策略，并跟进上游 0.4.0 版本的性能优化。
 
-### 💡 Hover Definitions
+## 仍保留的核心功能
 
-- **Instant Translation**: View definitions by hovering over highlighted words
-- **Markdown Support**: Definition content supports Markdown rendering
-- **Elegant Interface**: Carefully designed popup interface with theme adaptation
-- **Quick Access**: Access word explanations without leaving your current reading flow
+- Canvas 词书：使用多个 Canvas 文件做分类管理，节点颜色对应高亮颜色。
+- 自动高亮：切换笔记时动态刷新，能够处理较大的文档。
+- 悬浮释义：鼠标指向即可阅读 Markdown 释义。
+- 侧边栏词表：展示当前文档出现的词条并支持快速定位。
+- 快捷操作：右键菜单、命令面板与快捷键均可快速添加或刷新词条。
 
-### 📋 Sidebar Vocabulary List
+## 快速上手
 
-- **Current Document Words**: Displays all vocabulary words appearing in the current document
-- **Quick Navigation**: Click on words to jump to their locations in the document
-- **Color Indicators**: Maintains visual consistency with highlight colors
-- **Real-time Updates**: Automatically updates the vocabulary list as document content changes
+1. 将插件复制到 `.obsidian/plugins/hi-words/` 并在 Obsidian 设置中启用。  
+2. 创建 Canvas 词书（示例结构）：
 
-### ⚡ Convenient Operations
-
-- **Right-click to Add**: Quickly add selected text to vocabulary books via context menu
-- **Command Palette**: Refresh vocabulary books or open the sidebar through the command palette
-
-## 🚀 Quick Start
-
-### Installing the Plugin
-
-1. Download the plugin files to the `.obsidian/plugins/hi-words/` directory
-2. Enable the HiWords plugin in Obsidian settings
-3. Restart Obsidian
-
-### Creating a Vocabulary Book
-
-1. Create a new Canvas file (e.g., `vocabulary.canvas`)
-2. Add text nodes in Canvas with the following format:
    ```
    word
-   *alias1, alias2, alias3*
+   [etymology]
 
    definition or translation
-
    ```
-3. Set different colors for vocabulary nodes to categorize them
 
-### Configuring the Plugin
+3. 在设置页添加词书、启用自动高亮与悬浮释义，根据需要调整自动布局、Mastered 管理、TTS 模板或调试选项。
 
-1. Open the plugin settings page
-2. Add your Canvas files as vocabulary books
-3. Enable automatic highlighting and hover display features
-4. Start enjoying the smart vocabulary learning experience!
+## 命令
 
-## 📖 Usage Guide
+- `hi-words:refresh-vocabulary`：重新解析所有词书。
+- `hi-words:open-vocabulary-sidebar`：打开词条侧边栏。
+- `hi-words:add-selected-word`：将选中文本添加或编辑为词条。
 
-### Canvas Vocabulary Format
+## 配置要点
 
-In Canvas, each vocabulary node should contain:
-- **First line**: The word or phrase to learn
-- **Definition section**: Word explanation, translation, or example sentences (supports Markdown)
+- **自动高亮**：开启后，编辑器、阅读模式、PDF 视图共用形态学索引。  
+- **Mastered 功能**：支持“移动到 Mastered 分组”或“以颜色区分”两种模式。  
+- **自动布局**：控制 Canvas 词卡尺寸、列数、间距，保持画布整洁。  
+- **调试模式**：在控制台查看形态学分析与索引详情，便于排查错漏。  
+- **模糊释义**：在公共环境中隐藏释义，悬浮或展开时查看。  
+- **发音模板**：配置任意 TTS 服务，通过侧边栏或悬浮卡片播放。
 
-Example:
-```
-serendipity
-*alias1, alias2, alias3*
-n. The ability to make fortunate discoveries by accident
-Example: The discovery was pure serendipity.
+## 致谢
 
-```
-
-### Highlight Color System
-
-The plugin automatically maps Canvas node colors to corresponding highlight colors:
-
-- 🔴 Red node → Red highlight
-- 🟡 Yellow node → Yellow highlight
-- 🟢 Green node → Green highlight
-- 🔵 Blue node → Blue highlight
-- 🟣 Purple node → Purple highlight
-- ⚫ Gray node → Gray highlight
-
-### Command List
-
-- **Refresh Vocabulary** (`hi-words:refresh-vocabulary`)
-  - Manually refresh all vocabulary book content
-  - Use this command to immediately apply changes after modifying vocabulary books
-
-- **Open Vocabulary List** (`hi-words:open-vocabulary-sidebar`)
-  - Open the sidebar vocabulary list view
-  - View all vocabulary words in the current document
-
-## ⚙️ Settings Options
-
-### Basic Settings
-
-- **Enable Automatic Highlighting**: Automatically highlight words from vocabulary books while reading
-- **Hover to Show Definition**: Display word definition popups on mouse hover
-
-### Vocabulary Book Management
-
-- **Add Vocabulary Book**: Select Canvas files as vocabulary books
-- **Enable/Disable**: Control the activation status of specific vocabulary books
-- **Remove Vocabulary Book**: Remove unwanted vocabulary books from configuration
-
-## 👏 Credits & Support
-
-本项目基于 [CatMuse/HiWords](https://github.com/CatMuse/HiWords) 进行个人定制开发。
-
-如果你觉得原项目有用，请支持原作者：
-- [Buy the original author a coffee on Ko-fi](https://ko-fi.com/catmuse)
-- 给原项目一个 ⭐ star！
-
-## 📝 个人定制说明
-
-这是我基于原项目的个人定制版本，包含了一些适合我个人使用习惯的修改。如果你对原版感兴趣，请访问 [原项目](https://github.com/CatMuse/HiWords)。
+原始项目由 [CatMuse](https://github.com/CatMuse/HiWords) 创建，如果这款插件对你有帮助，请为上游项目点赞或赞助支持。
