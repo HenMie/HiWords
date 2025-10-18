@@ -482,16 +482,18 @@ export class HiWordsSidebarView extends ItemView {
         }
         
         // 来源信息
-        const source = card.createEl('div', { cls: 'hi-words-word-source' });
-        const bookName = this.getBookNameFromPath(wordDef.source);
-        source.createEl('span', { text: `${t('sidebar.source_prefix')}${bookName}`, cls: 'hi-words-source-text' });
-        
-        // 添加点击事件到来源信息：导航到源文件
-        source.style.cursor = 'pointer';
-        source.addEventListener('click', (e) => {
-            e.stopPropagation(); // 阻止事件冒泡
-            this.navigateToSource(wordDef);
-        });
+        if (this.plugin.settings.showWordSource ?? true) {
+            const source = card.createEl('div', { cls: 'hi-words-word-source' });
+            const bookName = this.getBookNameFromPath(wordDef.source);
+            source.createEl('span', { text: `${t('sidebar.source_prefix')}${bookName}`, cls: 'hi-words-source-text' });
+            
+            // 添加点击事件到来源信息：导航到源文件
+            source.style.cursor = 'pointer';
+            source.addEventListener('click', (e) => {
+                e.stopPropagation(); // 阻止事件冒泡
+                this.navigateToSource(wordDef);
+            });
+        }
         
         // 添加已掌握状态样式
         if (isMastered) {

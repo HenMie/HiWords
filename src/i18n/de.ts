@@ -32,6 +32,10 @@ export default {
         enable_mastered_feature_desc: "Gemeisterte Wörter markieren, um sie nicht mehr hervorzuheben. Seitenleiste zeigt Gruppen",
         blur_definitions: "Inhalt verwischen",
         blur_definitions_desc: "Standardmäßig verwischen, beim Hover anzeigen. Ideal zum Lernen – erinnern vor der Antwort",
+        show_word_source: "Wortquelle anzeigen",
+        show_word_source_desc: "Zeigt den Namen des Wortbuchs in Popovers und der Seitenleiste",
+        debug_mode: "Debug-Modus",
+        debug_mode_desc: "Ausführliche Konsolenprotokolle zur Fehleranalyse aktivieren",
         // Auto layout
         auto_layout: "Automatisches Layout",
         enable_auto_layout: "Automatisches Layout aktivieren",

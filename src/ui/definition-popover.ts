@@ -426,23 +426,26 @@ export class DefinitionPopover extends Component {
                     titleContainer.appendChild(buttonContainer);
                 }
                 
-                // 源信息
-                const sourceEl = document.createElement('div');
-                sourceEl.className = 'hi-words-tooltip-source';
-                const fileName = detailDef.source.split('/').pop() || '';
-                const displayName = fileName.endsWith('.canvas') ? fileName.slice(0, -7) : fileName;
-                sourceEl.textContent = `${t('sidebar.source_prefix')}${displayName}`;
-                
-                // 添加点击事件到来源信息：导航到源文件
-                sourceEl.style.cursor = 'pointer';
-                sourceEl.addEventListener('click', (e) => {
-                    e.stopPropagation(); // 阻止事件冒泡
-                    this.navigateToSource(detailDef);
-                    // 点击跳转后清理预览框
-                    this.removeTooltip();
-                });
-                
-                tooltip.appendChild(sourceEl);
+                const showSource = this.plugin.settings.showWordSource ?? true;
+                if (showSource) {
+                    // 源信息
+                    const sourceEl = document.createElement('div');
+                    sourceEl.className = 'hi-words-tooltip-source';
+                    const fileName = detailDef.source.split('/').pop() || '';
+                    const displayName = fileName.endsWith('.canvas') ? fileName.slice(0, -7) : fileName;
+                    sourceEl.textContent = `${t('sidebar.source_prefix')}${displayName}`;
+                    
+                    // 添加点击事件到来源信息：导航到源文件
+                    sourceEl.style.cursor = 'pointer';
+                    sourceEl.addEventListener('click', (e) => {
+                        e.stopPropagation(); // 阻止事件冒泡
+                        this.navigateToSource(detailDef);
+                        // 点击跳转后清理预览框
+                        this.removeTooltip();
+                    });
+                    
+                    tooltip.appendChild(sourceEl);
+                }
             }
         }
 

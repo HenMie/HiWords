@@ -37,9 +37,13 @@ export default {
         mode_color: "颜色模式（绿色=4）",
         blur_definitions: "模糊内容",
         blur_definitions_desc: "默认模糊显示内容，鼠标悬停时显示清晰内容。适合学习时先回忆再查看答案",
+        show_word_source: "显示词书来源",
+        show_word_source_desc: "在浮窗和侧边栏中显示单词来自的生词本名称",
         // 发音地址模板
         tts_template: "发音地址模板",
         tts_template_desc: "使用 {{word}} 作为占位符，例如：https://dict.youdao.com/dictvoice?audio={{word}}&type=2",
+        debug_mode: "调试模式",
+        debug_mode_desc: "在控制台输出详细日志，便于排查问题",
         // 自动布局
         auto_layout: "白板自动布局",
         enable_auto_layout: "启用自动布局",

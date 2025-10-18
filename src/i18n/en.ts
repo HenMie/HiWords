@@ -37,9 +37,13 @@ export default {
         mode_color: "Color mode (green = 4)",
         blur_definitions: "Blur content",
         blur_definitions_desc: "Blur content by default, reveal on hover. Great for learning—recall before seeing the answer",
+        show_word_source: "Show word source",
+        show_word_source_desc: "Display the vocabulary book name in tooltips and the sidebar",
         // TTS template
         tts_template: "TTS URL template",
         tts_template_desc: "Use {{word}} as placeholder, e.g. https://dict.youdao.com/dictvoice?audio={{word}}&type=2",
+        debug_mode: "Debug mode",
+        debug_mode_desc: "Enable detailed logging in the console for troubleshooting",
         // Auto layout
         auto_layout: "Canvas auto layout",
         enable_auto_layout: "Enable auto layout",

@@ -32,6 +32,10 @@ export default {
         enable_mastered_feature_desc: "Marquez les mots maîtrisés pour ne plus les surligner. La barre latérale affiche des groupes",
         blur_definitions: "Flouter le contenu",
         blur_definitions_desc: "Flouter par défaut, révéler au survol. Idéal pour mémoriser avant de voir la réponse",
+        show_word_source: "Afficher la source du mot",
+        show_word_source_desc: "Afficher le nom du carnet de vocabulaire dans les info-bulles et la barre latérale",
+        debug_mode: "Mode debug",
+        debug_mode_desc: "Activer des journaux détaillés dans la console pour le dépannage",
         // Auto layout
         auto_layout: "Disposition auto",
         enable_auto_layout: "Activer disposition auto",

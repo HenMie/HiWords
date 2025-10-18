@@ -44,11 +44,24 @@ export class Trie {
             let node = this.root;
             let j = i;
             let longestMatch: TrieMatch | null = null;
+            let matchedChars = 0;
             
             // 尝试从当前位置匹配单词，保留最长匹配
-            while (j < lowerText.length && node.children.has(lowerText[j])) {
-                node = node.children.get(lowerText[j])!;
-                j++;
+            while (j < lowerText.length) {
+                const char = lowerText[j];
+                const directChild = node.children.get(char);
+                
+                if (directChild) {
+                    node = directChild;
+                    j++;
+                    matchedChars++;
+                } else if (char === ' ' && matchedChars > 0 && !node.children.has(char)) {
+                    // 允许复合词中间的空格被忽略
+                    j++;
+                    continue;
+                } else {
+                    break;
+                }
                 
                 // 如果到达单词结尾，检查是否为更长的匹配
                 if (node.isEndOfWord) {

@@ -44,9 +44,13 @@ export interface LanguagePack {
         mode_color?: string;
         blur_definitions: string;
         blur_definitions_desc: string;
+        show_word_source?: string;
+        show_word_source_desc?: string;
         // TTS template (optional for backward compatibility)
         tts_template?: string;
         tts_template_desc?: string;
+        debug_mode?: string;
+        debug_mode_desc?: string;
         // Auto layout section
         auto_layout: string;
         enable_auto_layout: string;

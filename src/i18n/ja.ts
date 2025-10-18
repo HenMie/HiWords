@@ -32,6 +32,10 @@ export default {
         enable_mastered_feature_desc: "習得済みの単語をマークしてハイライトを停止。サイドバーにグループ表示",
         blur_definitions: "内容をぼかす",
         blur_definitions_desc: "デフォルトでぼかし、ホバーで表示。答えを見る前の想起に最適",
+        show_word_source: "単語帳の出典を表示",
+        show_word_source_desc: "ポップアップとサイドバーに単語帳の名前を表示します",
+        debug_mode: "デバッグモード",
+        debug_mode_desc: "トラブルシューティングのために詳細なログをコンソールに出力します",
         // Auto layout
         auto_layout: "自動レイアウト",
         enable_auto_layout: "自動レイアウトを有効化",

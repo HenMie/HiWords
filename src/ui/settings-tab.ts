@@ -299,6 +299,18 @@ export class HiWordsSettingTab extends PluginSettingTab {
                     // 触发侧边栏更新以应用模糊效果
                     this.plugin.app.workspace.trigger('hi-words:settings-changed');
                 }));
+        
+        // 是否显示词书来源
+        new Setting(containerEl)
+            .setName(t('settings.show_word_source') || 'Show word source')
+            .setDesc(t('settings.show_word_source_desc') || 'Display the vocabulary book name in tooltips and the sidebar')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.showWordSource ?? true)
+                .onChange(async (value) => {
+                    this.plugin.settings.showWordSource = value;
+                    await this.plugin.saveSettings();
+                    this.plugin.app.workspace.trigger('hi-words:settings-changed');
+                }));
 
         // 发音地址模板（点击主词发音）
         new Setting(containerEl)

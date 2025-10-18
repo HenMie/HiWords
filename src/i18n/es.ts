@@ -32,6 +32,10 @@ export default {
         enable_mastered_feature_desc: "Marca palabras dominadas para dejar de resaltarlas. La barra lateral muestra grupos",
         blur_definitions: "Difuminar contenido",
         blur_definitions_desc: "Difuminar por defecto, mostrar al pasar el cursor. Ideal para recordar antes de ver la respuesta",
+        show_word_source: "Show word source",
+        show_word_source_desc: "Display the vocabulary book name in tooltips and the sidebar",
+        debug_mode: "Debug mode",
+        debug_mode_desc: "Enable detailed logging in the console for troubleshooting",
         // Auto layout
         auto_layout: "Auto Layout",
         enable_auto_layout: "Habilitar auto layout",
