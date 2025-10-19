@@ -578,7 +578,7 @@ export class KoreanMorphologyService {
 
         // 策略2: 解析形态素信息
         if (morphemeInfo && typeof morphemeInfo === 'string' && morphemeInfo !== '*') {
-            const baseFormFromMorpheme = this.parseBaseFormFromMorpheme(morphemeInfo, partOfSpeech);
+            const baseFormFromMorpheme = this.parseBaseFormFromMorpheme(surface, morphemeInfo, partOfSpeech);
             if (baseFormFromMorpheme) {
                 return baseFormFromMorpheme;
             }
@@ -591,36 +591,55 @@ export class KoreanMorphologyService {
     /**
      * 从形态素信息中解析基础形式
      */
-    private parseBaseFormFromMorpheme(morphemeInfo: string, partOfSpeech: string): string | null {
-        // 形态素信息格式: "찾아가/VV/*+아/EC/*" 或 "거론/NNG/*+되/XSV/*+고/EC/*"
+    private parseBaseFormFromMorpheme(surface: string, morphemeInfo: string, partOfSpeech: string): string | null {
         const morphemes = morphemeInfo.split('+');
 
-        // 寻找主要的词汇形态素（排除语法形态素如EC, ETM, EP等）
+        const lexicalMorphemes: { surface: string; pos: string }[] = [];
+
         for (const morpheme of morphemes) {
             const parts = morpheme.split('/');
-            if (parts.length >= 2) {
-                const morphSurface = parts[0];
-                const morphPos = parts[1];
+            if (parts.length < 2) {
+                continue;
+            }
 
-                // 跳过纯语法形态素（连接语尾、连体语尾等）
-                if (morphPos === 'EC' || morphPos === 'ETM' || morphPos === 'EP' ||
-                    morphPos === 'EF' || morphPos === 'ETN') {
-                    continue;
+            const morphSurface = parts[0];
+            const morphPos = parts[1];
+
+            if (morphPos === 'EC' || morphPos === 'ETM' || morphPos === 'EP' ||
+                morphPos === 'EF' || morphPos === 'ETN') {
+                continue;
+            }
+
+            lexicalMorphemes.push({ surface: morphSurface, pos: morphPos });
+        }
+
+        if (lexicalMorphemes.length > 0) {
+            const nounParts = lexicalMorphemes.filter(morpheme => morpheme.pos.startsWith('NN'));
+            const isOverallNoun =
+                partOfSpeech.includes('NNG') ||
+                partOfSpeech.includes('NNP') ||
+                partOfSpeech.startsWith('NN');
+
+            if (isOverallNoun &&
+                nounParts.length >= 2 &&
+                nounParts.length === lexicalMorphemes.length) {
+                const combinedSurface = nounParts.map(m => m.surface).join('');
+                const compoundBaseForm = combinedSurface === surface ? surface : combinedSurface;
+                this.debugLog('[parseBaseFormFromMorpheme] 检测到复合名词:', compoundBaseForm, '形态素:', morphemeInfo);
+                return compoundBaseForm;
+            }
+
+            const primaryMorpheme = lexicalMorphemes[0];
+            if (primaryMorpheme) {
+                if (this.isVerbOrAdjective(primaryMorpheme.pos)) {
+                    return primaryMorpheme.surface.endsWith('다')
+                        ? primaryMorpheme.surface
+                        : primaryMorpheme.surface + '다';
                 }
-
-                // 如果是主要的动词、形容词或名词形态素
-                if (morphPos === 'VV' || morphPos === 'VA' || morphPos === 'VCN' ||
-                    morphPos === 'NNG' || morphPos === 'NNP') {
-
-                    if (this.isVerbOrAdjective(morphPos)) {
-                        return morphSurface.endsWith('다') ? morphSurface : morphSurface + '다';
-                    }
-                    return morphSurface;
-                }
+                return primaryMorpheme.surface;
             }
         }
 
-        // 特殊处理被动语态结构
         if (morphemes.length >= 2) {
             const result = this.handlePassiveMorphemes(morphemes);
             if (result) {
@@ -630,6 +649,7 @@ export class KoreanMorphologyService {
 
         return null;
     }
+
 
     /**
      * 处理被动语态形态素
