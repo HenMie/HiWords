@@ -1,6 +1,7 @@
 import init, { TokenizerBuilder } from 'lindera-wasm-ko-dic';
 // @ts-ignore
 import wasmBytes from '../../lindera_wasm_bg.wasm';
+import { isKoreanText } from '../utils/korean-text-utils';
 
 /**
  * 形态学分析结果
@@ -240,12 +241,10 @@ export class KoreanMorphologyService {
     }
 
     /**
-     * 检查是否为韩语文本
+     * 检查是否为韩语文本（使用统一的工具函数）
      */
     public isKoreanText(text: string): boolean {
-        // 韩语字符范围：한글 음절 (AC00–D7AF), 한글 자모 (1100–11FF, A960–A97F, D7B0–D7FF)
-        const koreanRegex = /[\uAC00-\uD7AF\u1100-\u11FF\uA960-\uA97F\uD7B0-\uD7FF]/;
-        return koreanRegex.test(text);
+        return isKoreanText(text);
     }
 
     /**

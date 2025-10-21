@@ -1,5 +1,5 @@
 import { App, TFile } from 'obsidian';
-import { CanvasData, CanvasNode, HiWordsSettings } from '../utils';
+import { CanvasData, CanvasNode, HiWordsSettings, genHex16, num, rectOf, overlaps } from '../utils';
 import { CanvasParser } from './canvas-parser';
 import { normalizeLayout } from './layout';
 
@@ -18,16 +18,6 @@ export class CanvasEditor {
 
     updateSettings(settings: HiWordsSettings) {
         this.settings = settings;
-    }
-
-    /**
-     * 生成 16 位十六进制小写 ID（贴近标准 Canvas ID 风格）
-     */
-    private genHex16(): string {
-        // 浏览器环境可用 crypto.getRandomValues
-        const bytes = new Uint8Array(8);
-        (window.crypto || (window as any).msCrypto).getRandomValues(bytes);
-        return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
     }
 
     /**
@@ -56,23 +46,13 @@ export class CanvasEditor {
                 if (!Array.isArray(canvasData.nodes)) canvasData.nodes = [];
 
                 // 生成 16-hex ID
-                const nodeId = this.genHex16();
+                const nodeId = genHex16();
 
                 // 放置参数（与设置保持一致）
                 const newW = this.settings.cardWidth ?? 260;
                 const newH = this.settings.cardHeight ?? 120;
                 const verticalGap = this.settings.verticalGap ?? 16;
                 const groupPadding = this.settings.leftPadding ?? 24; // 与 Mastered 分组保持的水平间距
-
-                // 简易几何工具（带兜底）
-                const num = (v: any, def: number) => (typeof v === 'number' ? v : def);
-                const rectOf = (n: Partial<CanvasNode>) => ({
-                    x: num(n.x, 0),
-                    y: num(n.y, 0),
-                    w: num(n.width, 200),
-                    h: num(n.height, 60),
-                });
-                const overlaps = (ax: number, aw: number, bx: number, bw: number) => ax < bx + bw && ax + aw > bx;
 
                 // 定位 Mastered 分组（如果存在）
                 const masteredGroup = canvasData.nodes.find(

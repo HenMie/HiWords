@@ -1,6 +1,8 @@
 import type { HiWordsSettings } from '../utils';
-import { Trie, mapCanvasColorToCSSVar, generateCommonInflections } from '../utils';
+import { Debouncer } from '../utils';
 import type { VocabularyManager } from '../core';
+import { WordMatcherService } from '../core/word-matcher-service';
+import { HighlightSpanBuilder } from './highlight-span-builder';
 
 /**
  * 在 PDF 视图中注册单词高亮功能
@@ -12,48 +14,16 @@ export function registerPDFHighlighter(plugin: {
   app: any;
   registerEvent: (eventRef: any) => void;
 }): void {
-  
-  const buildTrie = () => {
-    const trie = new Trie();
-    const words = plugin.vocabularyManager.getAllWordsForHighlight();
-
-    // 为每个原型单词添加其所有活用形（与编辑模式和阅读模式保持一致）
-    for (const w of words) {
-      const def = plugin.vocabularyManager.getDefinition(w);
-      if (def) {
-        // 添加原型本身
-        trie.addWord(w, def);
-
-        // 获取已索引的活用形
-        const indexedInflectionForms = plugin.vocabularyManager.getAllInflectionForms(w);
-
-        // 为韩语单词生成常见活用形
-        const commonInflectionForms = generateCommonInflections(w);
-
-        // 合并已索引的和生成的活用形
-        const allInflectionForms = new Set([...indexedInflectionForms, ...commonInflectionForms]);
-
-        for (const inflectionForm of allInflectionForms) {
-          if (inflectionForm !== w) {
-            // 活用形指向同一个定义
-            trie.addWord(inflectionForm, def);
-          }
-        }
-      }
-    }
-    return trie;
-  };
+  // 使用统一的词汇匹配服务
+  const wordMatcherService = new WordMatcherService(plugin.vocabularyManager);
 
   // 已处理的文本层集合，避免重复处理
   const processedTextLayers = new WeakSet<HTMLElement>();
-  
-  // 防抖定时器
-  let debounceTimer: number | null = null;
 
   /**
    * 处理 PDF 文本层高亮
    */
-  const processPDFTextLayer = (textLayer: HTMLElement, trie: Trie) => {
+  const processPDFTextLayer = (textLayer: HTMLElement) => {
     // 避免重复处理同一个文本层
     if (processedTextLayers.has(textLayer)) {
       return;
@@ -75,7 +45,7 @@ export function registerPDFHighlighter(plugin: {
         const text = span.textContent || '';
         if (!text.trim()) return;
 
-        const matches = trie.findAllMatches(text) as Array<{
+        const matches = wordMatcherService.findMatches(text) as Array<{
           from: number;
           to: number;
           word: string;
@@ -107,18 +77,14 @@ export function registerPDFHighlighter(plugin: {
             frag.appendChild(document.createTextNode(text.slice(last, match.from)));
           }
 
-          // 创建高亮元素
-          const def = match.payload;
-          const color = mapCanvasColorToCSSVar(def?.color, 'var(--color-base-60)');
-          const highlightSpan = document.createElement('span');
-          
-          highlightSpan.className = 'hi-words-highlight hi-words-pdf-highlight';
-          highlightSpan.setAttribute('data-word', def?.word || match.word); // 使用原型词汇，回退到匹配词汇
-          if (def?.definition) highlightSpan.setAttribute('data-definition', def.definition);
-          if (color) highlightSpan.setAttribute('data-color', color);
-          highlightSpan.setAttribute('data-style', highlightStyle);
-          if (color) highlightSpan.setAttribute('style', `--word-highlight-color: ${color}`);
-          highlightSpan.textContent = text.slice(match.from, match.to);
+          // 使用统一的 HighlightSpanBuilder 创建高亮元素
+          const matchedText = text.slice(match.from, match.to);
+          const highlightSpan = HighlightSpanBuilder.buildFromMatch(
+            matchedText, 
+            match, 
+            highlightStyle,
+            ['hi-words-pdf-highlight'] // PDF 专用额外类名
+          );
           
           frag.appendChild(highlightSpan);
           last = match.to;
@@ -139,31 +105,27 @@ export function registerPDFHighlighter(plugin: {
   };
 
   /**
-   * 防抖处理 PDF 高亮更新
+   * 防抖处理 PDF 高亮更新（使用 Debouncer）
    */
-  const debouncedProcessPDF = () => {
-    if (debounceTimer) {
-      window.clearTimeout(debounceTimer);
-    }
+  const processAllPDFLayers = () => {
+    if (!plugin.settings.enableAutoHighlight) return;
     
-    debounceTimer = window.setTimeout(() => {
-      if (!plugin.settings.enableAutoHighlight) return;
-      
-      const trie = buildTrie();
-      
-      // 查找所有 PDF 文本层
-      const textLayers = document.querySelectorAll('.textLayer');
-      textLayers.forEach((textLayer: HTMLElement) => {
-        // 检查是否在 PDF 视图中
-        const pdfContainer = textLayer.closest('.pdf-container, .mod-pdf');
-        if (pdfContainer) {
-          processPDFTextLayer(textLayer, trie);
-        }
-      });
-      
-      debounceTimer = null;
-    }, 300);
+    // 重建Trie以获取最新的词汇列表
+    wordMatcherService.buildTrie();
+    
+    // 查找所有 PDF 文本层
+    const textLayers = document.querySelectorAll('.textLayer');
+    textLayers.forEach((textLayer: HTMLElement) => {
+      // 检查是否在 PDF 视图中
+      const pdfContainer = textLayer.closest('.pdf-container, .mod-pdf');
+      if (pdfContainer) {
+        processPDFTextLayer(textLayer);
+      }
+    });
   };
+  
+  const debouncer = new Debouncer(processAllPDFLayers, 300);
+  const debouncedProcessPDF = () => debouncer.trigger();
 
   /**
    * 监听 PDF 视图变化
@@ -257,9 +219,7 @@ export function registerPDFHighlighter(plugin: {
 
   // 清理函数（如果需要的话）
   const cleanup = () => {
-    if (debounceTimer) {
-      window.clearTimeout(debounceTimer);
-    }
+    debouncer.cancel();
     observer.disconnect();
     // WeakSet 没有 clear 方法，重新创建一个新的 WeakSet
     // processedTextLayers 会在函数作用域结束时自动清理

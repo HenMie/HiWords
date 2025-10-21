@@ -1,5 +1,6 @@
 import { App, Modal, Notice, setIcon } from 'obsidian';
 import type { VocabularyBook, WordDefinition } from '../utils';
+import { isKoreanText } from '../utils/korean-text-utils';
 import HiWordsPlugin from '../../main';
 import { t } from '../i18n';
 
@@ -333,14 +334,7 @@ export class AddWordModal extends Modal {
         return window.confirm(t('modals.delete_confirmation').replace('{0}', this.word));
     }
     
-    /**
-     * 检查字符串是否包含韩语字符
-     */
-    private isKoreanText(text: string): boolean {
-        // 韩语字符范围：한글 음절 (AC00–D7AF), 한글 자모 (1100–11FF, A960–A97F, D7B0–D7FF)
-        const koreanRegex = /[\uAC00-\uD7AF\u1100-\u11FF\uA960-\uA97F\uD7B0-\uD7FF]/;
-        return koreanRegex.test(text);
-    }
+    // isKoreanText 现在从 korean-text-utils.ts 导入
 
     /**
      * 异步分析单词，获取原型
@@ -357,7 +351,7 @@ export class AddWordModal extends Modal {
 
             // 检查分析结果是否合理
             // 如果原始单词是韩语，但分析结果不是韩语（如 "*"），则使用原始单词
-            if (this.isKoreanText(this.originalWord) && (!baseForm || !this.isKoreanText(baseForm))) {
+            if (isKoreanText(this.originalWord) && (!baseForm || !isKoreanText(baseForm))) {
                 this.word = this.originalWord;
             } else if (baseForm && baseForm !== this.originalWord) {
                 this.word = baseForm;

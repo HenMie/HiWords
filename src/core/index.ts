@@ -7,3 +7,6 @@ export { MasteredService } from './mastered-service';
 export { WordHighlighter, createWordHighlighterExtension, getWordUnderCursor, highlighterManager } from './word-highlighter';
 export { KoreanMorphologyService } from './korean-morphology-service';
 export { MorphologyIndexManager } from './morphology-index-manager';
+export { WordMatcherService } from './word-matcher-service';
+export { CanvasService } from './canvas-service';
+export { VocabularyCacheManager } from './vocabulary-cache-manager';

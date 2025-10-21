@@ -1,7 +1,8 @@
 import type { HiWordsSettings } from '../utils';
-import { Trie, mapCanvasColorToCSSVar, generateCommonInflections } from '../utils';
 import { removeOverlappingMatches } from '../utils/trie';
 import type { VocabularyManager } from '../core';
+import { WordMatcherService } from '../core/word-matcher-service';
+import { HighlightSpanBuilder } from './highlight-span-builder';
 
 /**
  * 在阅读模式注册 Markdown 后处理器，高亮匹配的词汇。
@@ -14,36 +15,8 @@ export function registerReadingModeHighlighter(plugin: {
     processor: (el: HTMLElement, ctx: unknown) => void
   ) => void;
 }): void {
-  const buildTrie = () => {
-    const trie = new Trie();
-    const words = plugin.vocabularyManager.getAllWordsForHighlight();
-
-    // 为每个原型单词添加其所有活用形（与编辑模式保持一致）
-    for (const w of words) {
-      const def = plugin.vocabularyManager.getDefinition(w);
-      if (def) {
-        // 添加原型本身
-        trie.addWord(w, def);
-
-        // 获取已索引的活用形
-        const indexedInflectionForms = plugin.vocabularyManager.getAllInflectionForms(w);
-
-        // 为韩语单词生成常见活用形
-        const commonInflectionForms = generateCommonInflections(w);
-
-        // 合并已索引的和生成的活用形
-        const allInflectionForms = new Set([...indexedInflectionForms, ...commonInflectionForms]);
-
-        for (const inflectionForm of allInflectionForms) {
-          if (inflectionForm !== w) {
-            // 活用形指向同一个定义
-            trie.addWord(inflectionForm, def);
-          }
-        }
-      }
-    }
-    return trie;
-  };
+  // 使用统一的词汇匹配服务
+  const wordMatcherService = new WordMatcherService(plugin.vocabularyManager);
 
   const EXCLUDE_SELECTOR = [
     'pre',
@@ -59,7 +32,7 @@ export function registerReadingModeHighlighter(plugin: {
     '.file-embed',
   ].join(',');
 
-  const processElement = (root: HTMLElement, trie: Trie) => {
+  const processElement = (root: HTMLElement) => {
     const walker = document.createTreeWalker(
       root,
       NodeFilter.SHOW_TEXT,
@@ -90,7 +63,7 @@ export function registerReadingModeHighlighter(plugin: {
       const text = textNode.nodeValue || '';
       if (!text) continue;
 
-      const matches = trie.findAllMatches(text) as Array<{
+      const matches = wordMatcherService.findMatches(text) as Array<{
         from: number;
         to: number;
         word: string;
@@ -106,16 +79,11 @@ export function registerReadingModeHighlighter(plugin: {
       let last = 0;
       for (const m of filtered) {
         if (m.from > last) frag.appendChild(document.createTextNode(text.slice(last, m.from)));
-        const def = m.payload;
-        const color = mapCanvasColorToCSSVar(def?.color, 'var(--color-base-60)');
-        const span = document.createElement('span');
-        span.className = 'hi-words-highlight';
-        span.setAttribute('data-word', def?.word || m.word); // 使用原型词汇，回退到匹配词汇
-        if (def?.definition) span.setAttribute('data-definition', def.definition);
-        if (color) span.setAttribute('data-color', color);
-        span.setAttribute('data-style', highlightStyle);
-        if (color) span.setAttribute('style', `--word-highlight-color: ${color}`);
-        span.textContent = text.slice(m.from, m.to);
+        
+        // 使用统一的 HighlightSpanBuilder 创建高亮元素
+        const matchedText = text.slice(m.from, m.to);
+        const span = HighlightSpanBuilder.buildFromMatch(matchedText, m, highlightStyle);
+        
         frag.appendChild(span);
         last = m.to;
       }
@@ -146,8 +114,9 @@ export function registerReadingModeHighlighter(plugin: {
       
       if (!isInMainEditor) return;
       
-      const trie = buildTrie();
-      processElement(el, trie);
+      // 重建Trie以获取最新的词汇列表
+      wordMatcherService.buildTrie();
+      processElement(el);
     } catch (e) {
       console.error('阅读模式高亮处理失败:', e);
     }

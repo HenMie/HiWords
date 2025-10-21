@@ -3,6 +3,8 @@
  * 为韩语动词/形容词生成常见活用形
  */
 
+import { isKoreanWord } from './korean-text-utils';
+
 /**
  * 为韩语单词生成常见活用形
  * @param baseWord 原型单词（以'다'结尾的动词/形容词）
@@ -173,12 +175,4 @@ export function addFinalConsonant(text: string, finalConsonantValue: number): st
   return text.slice(0, -1) + newChar;
 }
 
-/**
- * 检查是否为韩语单词
- * @param word 单词
- * @returns 是否为韩语单词
- */
-export function isKoreanWord(word: string): boolean {
-  const koreanRegex = /[\uAC00-\uD7AF\u1100-\u11FF\uA960-\uA97F\uD7B0-\uD7FF]/;
-  return koreanRegex.test(word);
-}
+// isKoreanWord 现在从 korean-text-utils.ts 导入

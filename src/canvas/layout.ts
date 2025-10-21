@@ -1,4 +1,4 @@
-import { CanvasData, CanvasNode, HiWordsSettings } from '../utils';
+import { CanvasData, CanvasNode, HiWordsSettings, clamp } from '../utils';
 import { CanvasParser } from './canvas-parser';
 
 /**
@@ -140,5 +140,3 @@ export function layoutGroupInner(
   group.width = Math.max(group.width, maxRight - group.x + padding);
   group.height = Math.max(group.height, maxBottom - group.y + padding);
 }
-
-function clamp(v: number, min: number, max: number) { return Math.max(min, Math.min(max, v)); }

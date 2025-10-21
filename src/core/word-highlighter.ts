@@ -19,11 +19,11 @@ import {
     WordMatch,
     WordDefinition,
     mapCanvasColorToCSSVar,
-    Trie,
     TrieMatch,
-    generateCommonInflections
+    Debouncer
 } from '../utils';
 import { removeOverlappingMatches } from '../utils/trie';
+import { WordMatcherService } from './word-matcher-service';
 
 // 防抖延迟时间（毫秒）
 const DEBOUNCE_DELAY = 300;
@@ -98,17 +98,21 @@ export class WordHighlighter implements PluginValue {
     decorations: DecorationSet;
     private vocabularyManager: VocabularyManager;
     private editorView: EditorView;
-    private wordTrie: Trie;
-    private debounceTimer: number | null = null;
+    private wordMatcherService: WordMatcherService;
+    private debouncer: Debouncer;
     private lastRanges: {from: number, to: number}[] = [];
     private cachedMatches: Map<string, WordMatch[]> = new Map();
 
     constructor(view: EditorView, vocabularyManager: VocabularyManager) {
         this.editorView = view;
         this.vocabularyManager = vocabularyManager;
-        this.wordTrie = new Trie();
-        this.buildWordTrie();
+        this.wordMatcherService = new WordMatcherService(vocabularyManager);
         this.decorations = this.buildDecorations(view);
+        
+        // 初始化防抖器
+        this.debouncer = new Debouncer(() => {
+            this.decorations = this.buildDecorations(this.editorView);
+        }, DEBOUNCE_DELAY);
         
         // 注册到全局管理器
         highlighterManager.register(this);
@@ -119,42 +123,14 @@ export class WordHighlighter implements PluginValue {
      */
     private buildWordTrie() {
         const startTime = performance.now();
-        this.wordTrie.clear();
-        
-        // 获取未掌握的原型单词（已掌握的单词不会被高亮）
-        const baseWords = this.vocabularyManager.getAllWordsForHighlight();
-
-        // 为每个原型单词添加其所有活用形
-        for (const baseWord of baseWords) {
-            const definition = this.vocabularyManager.getDefinition(baseWord);
-            if (definition) {
-                // 添加原型本身
-                this.wordTrie.addWord(baseWord, definition);
-
-                // 获取已索引的活用形
-                const indexedInflectionForms = this.vocabularyManager.getAllInflectionForms(baseWord);
-
-                // 为韩语单词生成常见活用形
-                const commonInflectionForms = generateCommonInflections(baseWord);
-
-                // 合并已索引的和生成的活用形
-                const allInflectionForms = new Set([...indexedInflectionForms, ...commonInflectionForms]);
-
-                for (const inflectionForm of allInflectionForms) {
-                    if (inflectionForm !== baseWord) {
-                        // 活用形指向同一个定义
-                        this.wordTrie.addWord(inflectionForm, definition);
-                    }
-                }
-            }
-        }
+        this.wordMatcherService.buildTrie();
     }
 
     update(update: ViewUpdate) {
         // 如果词汇管理器中的词汇发生变化，重建前缀树
         if (update.docChanged || update.viewportChanged || update.focusChanged) {
             // 使用防抖处理，避免频繁更新
-            this.debouncedUpdate(update.view);
+            this.debouncer.trigger();
         }
     }
 
@@ -173,20 +149,6 @@ export class WordHighlighter implements PluginValue {
         this.editorView.dispatch({
             effects: forceUpdateEffect.of(true)
         });
-    }
-    
-    /**
-     * 防抖更新处理
-     */
-    private debouncedUpdate(view: EditorView) {
-        if (this.debounceTimer) {
-            window.clearTimeout(this.debounceTimer);
-        }
-        
-        this.debounceTimer = window.setTimeout(() => {
-            this.decorations = this.buildDecorations(view);
-            this.debounceTimer = null;
-        }, DEBOUNCE_DELAY);
     }
 
     /**
@@ -288,8 +250,8 @@ export class WordHighlighter implements PluginValue {
         const matches: WordMatch[] = [];
         
         try {
-            // 使用前缀树查找所有匹配（包括原型和活用形）
-            const trieMatches = this.wordTrie.findAllMatches(text);
+            // 使用统一的 WordMatcherService 查找所有匹配
+            const trieMatches = this.wordMatcherService.findMatches(text);
             
             // 转换为 WordMatch 对象
             for (const match of trieMatches) {
@@ -356,13 +318,10 @@ export class WordHighlighter implements PluginValue {
 
     destroy() {
         // 清理资源
-        if (this.debounceTimer) {
-            window.clearTimeout(this.debounceTimer);
-            this.debounceTimer = null;
-        }
+        this.debouncer.cancel();
         
         this.cachedMatches.clear();
-        this.wordTrie.clear();
+        this.wordMatcherService.destroy();
         
         // 从全局管理器中注销
         highlighterManager.unregister(this);

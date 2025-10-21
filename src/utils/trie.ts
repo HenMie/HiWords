@@ -33,9 +33,11 @@ export class Trie {
     /**
      * 在文本中查找所有匹配的单词
      * @param text 要搜索的文本
+     * @param canSkipSpace 可选的回调函数，用于判断是否允许跨空格匹配
+     *                     接收参数：(textBeforeSpace: string, textAfterSpace: string, spacePosition: number) => boolean
      * @returns 匹配结果数组，每个结果包含单词、位置和关联数据
      */
-    findAllMatches(text: string): TrieMatch[] {
+    findAllMatches(text: string, canSkipSpace?: (textBeforeSpace: string, textAfterSpace: string, spacePosition: number) => boolean): TrieMatch[] {
         const matches: TrieMatch[] = [];
         const lowerText = text.toLowerCase();
         
@@ -56,9 +58,17 @@ export class Trie {
                     j++;
                     matchedChars++;
                 } else if (char === ' ' && matchedChars > 0 && !node.children.has(char)) {
-                    // 允许复合词中间的空格被忽略
-                    j++;
-                    continue;
+                    // 允许复合词中间的空格被忽略，但需要检查是否符合条件
+                    const shouldSkip = canSkipSpace
+                        ? canSkipSpace(text.substring(i, j), text.substring(j + 1), j)
+                        : true; // 如果没有提供回调，保持原有行为
+                    
+                    if (shouldSkip) {
+                        j++;
+                        continue;
+                    } else {
+                        break;
+                    }
                 } else {
                     break;
                 }

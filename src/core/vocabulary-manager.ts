@@ -1,25 +1,20 @@
 import { App, TFile, Notice } from 'obsidian';
 import { WordDefinition, VocabularyBook, HiWordsSettings } from '../utils';
-import { CanvasParser, CanvasEditor } from '../canvas';
 import { KoreanMorphologyService } from './korean-morphology-service';
 import { MorphologyIndexManager } from './morphology-index-manager';
+import { CanvasService } from './canvas-service';
+import { VocabularyCacheManager } from './vocabulary-cache-manager';
 
 export class VocabularyManager {
     private app: App;
-    private canvasParser: CanvasParser;
-    private canvasEditor: CanvasEditor;
+    private canvasService: CanvasService;
+    private cacheManager: VocabularyCacheManager;
     private definitions: Map<string, WordDefinition[]> = new Map();
     private settings: HiWordsSettings;
     
     // 形态学分析相关
     private morphologyService: KoreanMorphologyService;
     private morphologyIndexManager: MorphologyIndexManager;
-    
-    // 缓存优化
-    private wordDefinitionCache: Map<string, WordDefinition> = new Map(); // 单词 -> 定义映射
-    private allWordsCache: string[] = []; // 所有单词的缓存
-    private bookWordsCache: Map<string, string[]> = new Map(); // 书本路径 -> 单词列表映射
-    private cacheValid: boolean = false; // 缓存是否有效
     
     // 增量更新优化
     private memoryOnlyWords: Map<string, WordDefinition[]> = new Map(); // 仅内存中的新词汇
@@ -29,9 +24,11 @@ export class VocabularyManager {
 
     constructor(app: App, settings: HiWordsSettings) {
         this.app = app;
-        this.canvasParser = new CanvasParser(app, settings);
-        this.canvasEditor = new CanvasEditor(app, settings);
         this.settings = settings;
+        
+        // 初始化服务
+        this.canvasService = new CanvasService(app, settings);
+        this.cacheManager = new VocabularyCacheManager();
         
         // 初始化形态学分析服务
         this.morphologyService = new KoreanMorphologyService(this.app);
@@ -47,7 +44,7 @@ export class VocabularyManager {
      */
     async loadAllVocabularyBooks(): Promise<void> {
         this.definitions.clear();
-        this.invalidateCache();
+        this.cacheManager.invalidate();
 
         const loadPromises = this.settings.vocabularyBooks
             .filter(book => book.enabled)
@@ -56,7 +53,7 @@ export class VocabularyManager {
         await Promise.all(loadPromises);
 
         // 重建缓存
-        this.rebuildCache();
+        this.cacheManager.rebuild(this.definitions);
     }
 
     /**
@@ -70,17 +67,17 @@ export class VocabularyManager {
             return;
         }
 
-        if (!CanvasParser.isCanvasFile(file)) {
+        if (!CanvasService.isCanvasFile(file)) {
             console.warn(`[HiWords] File is not a canvas: ${book.path}`);
             return;
         }
 
         try {
-            const definitions = await this.canvasParser.parseCanvasFile(file);
+            const definitions = await this.canvasService.parseCanvasFile(file);
             this.definitions.set(book.path, definitions);
 
             // 使缓存失效
-            this.invalidateCache();
+            this.cacheManager.invalidate();
         } catch (error) {
             console.error(`[HiWords] Failed to load vocabulary book ${book.name}:`, error);
         }
@@ -102,15 +99,19 @@ export class VocabularyManager {
         visited.add(normalizedWord);
         
         // 检查缓存
-        if (this.cacheValid && this.wordDefinitionCache.has(normalizedWord)) {
-            return this.wordDefinitionCache.get(normalizedWord) || null;
+        if (this.cacheManager.isValid()) {
+            const cached = this.cacheManager.getDefinition(normalizedWord);
+            if (cached) {
+                return cached;
+            }
         }
         
         // 如果缓存无效，则重建缓存
-        if (!this.cacheValid) {
-            this.rebuildCache();
-            if (this.wordDefinitionCache.has(normalizedWord)) {
-                return this.wordDefinitionCache.get(normalizedWord) || null;
+        if (!this.cacheManager.isValid()) {
+            this.cacheManager.rebuild(this.definitions);
+            const cached = this.cacheManager.getDefinition(normalizedWord);
+            if (cached) {
+                return cached;
             }
         }
 
@@ -120,7 +121,7 @@ export class VocabularyManager {
             const foundByMainWord = definitions.find(def => def.word === normalizedWord);
             if (foundByMainWord) {
                 // 更新缓存
-                this.wordDefinitionCache.set(normalizedWord, foundByMainWord);
+                this.cacheManager.setDefinition(normalizedWord, foundByMainWord);
                 return foundByMainWord;
             }
         }
@@ -134,7 +135,7 @@ export class VocabularyManager {
                     const baseDefinition = this.getDefinition(result.baseForm, visited);
                     if (baseDefinition) {
                         // 缓存活用形到原型的映射
-                        this.wordDefinitionCache.set(normalizedWord, baseDefinition);
+                        this.cacheManager.setDefinition(normalizedWord, baseDefinition);
                     }
                 }
             }).catch(error => {
@@ -150,13 +151,13 @@ export class VocabularyManager {
      */
     getAllWords(): string[] {
         // 如果缓存有效，直接返回缓存的单词列表
-        if (this.cacheValid) {
-            return [...this.allWordsCache]; // 返回副本以防修改
+        if (this.cacheManager.isValid()) {
+            return this.cacheManager.getAllWords();
         }
         
         // 重建缓存并返回
-        this.rebuildCache();
-        return [...this.allWordsCache];
+        this.cacheManager.rebuild(this.definitions);
+        return this.cacheManager.getAllWords();
     }
 
     /**
@@ -169,28 +170,13 @@ export class VocabularyManager {
             return this.getAllWords();
         }
         
-        // 如果缓存有效，从缓存中过滤出未掌握的单词
-        if (this.cacheValid) {
-            const unmasteredWords: string[] = [];
-            for (const word of this.allWordsCache) {
-                const wordDef = this.wordDefinitionCache.get(word);
-                if (wordDef && !wordDef.mastered) {
-                    unmasteredWords.push(word);
-                }
-            }
-            return unmasteredWords;
+        // 确保缓存有效
+        if (!this.cacheManager.isValid()) {
+            this.cacheManager.rebuild(this.definitions);
         }
         
-        // 重建缓存并过滤
-        this.rebuildCache();
-        const unmasteredWords: string[] = [];
-        for (const word of this.allWordsCache) {
-            const wordDef = this.wordDefinitionCache.get(word);
-            if (wordDef && !wordDef.mastered) {
-                unmasteredWords.push(word);
-            }
-        }
-        return unmasteredWords;
+        // 从缓存管理器获取未掌握的单词
+        return this.cacheManager.getUnmasteredWords();
     }
 
     /**
@@ -198,8 +184,11 @@ export class VocabularyManager {
      */
     getWordsFromBook(bookPath: string): string[] {
         // 如果缓存有效且包含该书本的单词列表，直接返回
-        if (this.cacheValid && this.bookWordsCache.has(bookPath)) {
-            return [...this.bookWordsCache.get(bookPath)!]; // 返回副本以防修改
+        if (this.cacheManager.isValid()) {
+            const words = this.cacheManager.getWordsFromBook(bookPath);
+            if (words.length > 0) {
+                return words;
+            }
         }
         
         const definitions = this.definitions.get(bookPath);
@@ -212,9 +201,6 @@ export class VocabularyManager {
         
         const uniqueWords = [...new Set(words)]; // 去重
         
-        // 更新缓存
-        this.bookWordsCache.set(bookPath, uniqueWords);
-        
         return uniqueWords;
     }
 
@@ -226,7 +212,7 @@ export class VocabularyManager {
         if (book && book.enabled) {
             await this.loadVocabularyBook(book);
             // 使缓存失效
-            this.invalidateCache();
+            this.cacheManager.invalidate();
         }
     }
 
@@ -236,15 +222,9 @@ export class VocabularyManager {
     updateSettings(settings: HiWordsSettings): void {
         this.settings = settings;
         // 设置变更可能影响词汇，使缓存失效
-        this.invalidateCache();
-        // 同步给 CanvasEditor
-        if (this.canvasEditor && (this.canvasEditor as any).updateSettings) {
-            this.canvasEditor.updateSettings(settings);
-        }
-        // 同步给 CanvasParser（影响掌握判定等）
-        if (this.canvasParser && (this.canvasParser as any).updateSettings) {
-            this.canvasParser.updateSettings(settings);
-        }
+        this.cacheManager.invalidate();
+        // 同步给 CanvasService
+        this.canvasService.updateSettings(settings);
         // 同步调试模式到韩语形态学服务
         if (this.morphologyService) {
             this.morphologyService.setDebugMode(settings.debugMode ?? false);
@@ -281,8 +261,8 @@ export class VocabularyManager {
         const normalizedWord = word.toLowerCase().trim();
         
         // 如果缓存有效，直接检查缓存
-        if (this.cacheValid) {
-            return this.wordDefinitionCache.has(normalizedWord);
+        if (this.cacheManager.isValid()) {
+            return this.cacheManager.hasWord(normalizedWord);
         }
         
         return this.getDefinition(word) !== null;
@@ -293,7 +273,7 @@ export class VocabularyManager {
      */
     clear(): void {
         this.definitions.clear();
-        this.invalidateCache();
+        this.cacheManager.clear();
     }
     
     /**
@@ -315,7 +295,7 @@ export class VocabularyManager {
             this.addWordToMemoryCache(bookPath, wordDef);
             
             // 3. 重建缓存以立即生效
-            this.rebuildCache();
+            this.cacheManager.rebuild(this.definitions);
             
             // 4. 异步写入文件并更新真实nodeId
             this.scheduleCanvasSync(bookPath, wordDef);
@@ -332,7 +312,7 @@ export class VocabularyManager {
      */
     async setNodeColor(bookPath: string, nodeId: string, color?: number): Promise<boolean> {
         try {
-            const ok = await this.canvasEditor.setNodeColor(bookPath, nodeId, color);
+            const ok = await this.canvasService.setNodeColor(bookPath, nodeId, color);
             if (!ok) return false;
 
             // 更新内存缓存中的该节点颜色
@@ -343,10 +323,9 @@ export class VocabularyManager {
                     const def = defs[idx];
                     def.color = color !== undefined ? this.getColorString(color) : undefined;
                     // 更新缓存映射
-                    this.wordDefinitionCache.set(def.word, def);
-                    // 删除别名相关代码
+                    this.cacheManager.setDefinition(def.word, def);
                     // 标记缓存需要重建（颜色变化可能影响过滤）
-                    this.cacheValid = false;
+                    this.cacheManager.invalidate();
                 }
             }
             return true;
@@ -356,53 +335,6 @@ export class VocabularyManager {
         }
     }
     
-    /**
-     * 使缓存失效
-     * 当词汇数据发生变化时调用
-     */
-    private invalidateCache(): void {
-        this.cacheValid = false;
-        this.wordDefinitionCache.clear();
-        this.allWordsCache = [];
-        this.bookWordsCache.clear();
-    }
-    
-    /**
-     * 重建缓存
-     * 构建单词到定义的映射和所有单词的列表
-     */
-    private rebuildCache(): void {
-        const startTime = performance.now();
-        
-        // 清空现有缓存
-        this.wordDefinitionCache.clear();
-        this.allWordsCache = [];
-        this.bookWordsCache.clear();
-        
-        const allWords = new Set<string>();
-        
-        // 遍历所有词汇本和定义
-        for (const [bookPath, definitions] of this.definitions.entries()) {
-            const bookWords = new Set<string>();
-            
-            for (const def of definitions) {
-                // 只添加主单词（原型）到缓存
-                const normalizedWord = def.word.toLowerCase().trim();
-                this.wordDefinitionCache.set(normalizedWord, def);
-                allWords.add(normalizedWord);
-                bookWords.add(normalizedWord);
-            }
-            
-            // 保存该书本的单词列表
-            this.bookWordsCache.set(bookPath, [...bookWords]);
-        }
-        
-        // 保存所有单词列表
-        this.allWordsCache = [...allWords];
-        
-        // 标记缓存为有效
-        this.cacheValid = true;
-    }
     
     /**
      * 更新 Canvas 文件中的词汇 - 增量更新优化版本
@@ -413,7 +345,7 @@ export class VocabularyManager {
             const oldWordDef = await this.getWordDefinitionByNodeId(bookPath, nodeId);
 
             // 1. 先更新Canvas文件
-            const success = await this.canvasEditor.updateWordInCanvas(bookPath, nodeId, word, definition, color, etymology);
+            const success = await this.canvasService.updateWordInCanvas(bookPath, nodeId, word, definition, color, etymology);
 
             if (success) {
                 // 2. 创建更新后的词汇定义，保留原有的 mastered 等属性
@@ -431,7 +363,7 @@ export class VocabularyManager {
                 this.updateWordInMemoryCache(bookPath, nodeId, updatedWordDef);
 
                 // 4. 重建缓存以立即生效
-                this.rebuildCache();
+                this.cacheManager.rebuild(this.definitions);
 
                 return true;
             }
@@ -481,11 +413,11 @@ export class VocabularyManager {
             bookWords.push(wordDef); // 新增
         }
         
-        // 更新单词缓存
-        this.wordDefinitionCache.set(wordDef.word, wordDef);
+        // 更新缓存管理器
+        this.cacheManager.setDefinition(wordDef.word, wordDef);
         
         // 标记缓存需要重建
-        this.cacheValid = false;
+        this.cacheManager.invalidate();
     }
     
     /**
@@ -505,16 +437,16 @@ export class VocabularyManager {
             const oldWordDef = bookWords[existingIndex];
             
             // 清除旧的缓存映射
-            this.wordDefinitionCache.delete(oldWordDef.word);
+            this.cacheManager.deleteDefinition(oldWordDef.word);
             
             // 更新词汇
             bookWords[existingIndex] = updatedWordDef;
             
             // 更新新的缓存映射
-            this.wordDefinitionCache.set(updatedWordDef.word, updatedWordDef);
+            this.cacheManager.setDefinition(updatedWordDef.word, updatedWordDef);
             
             // 标记缓存需要重建
-            this.cacheValid = false;
+            this.cacheManager.invalidate();
         } else {
             console.warn(`未找到节点ID: ${nodeId}`);
         }
@@ -554,7 +486,7 @@ export class VocabularyManager {
         try {
             // 批量写入Canvas
             for (const wordDef of pendingWords) {
-                const success = await this.canvasEditor.addWordToCanvas(
+                const success = await this.canvasService.addWordToCanvas(
                     bookPath,
                     wordDef.word,
                     wordDef.definition,
@@ -571,8 +503,6 @@ export class VocabularyManager {
             // 清空待同步队列和定时器
             this.pendingSyncWords.delete(bookPath);
             this.syncTimeouts.delete(bookPath);
-            
-
             
         } catch (error) {
             console.error('Failed to sync words to canvas:', error);
@@ -592,21 +522,6 @@ export class VocabularyManager {
     }
     
     /**
-     * 智能缓存失效 - 只影响特定书本
-     */
-    private invalidateCacheForBook(bookPath: string): void {
-        const bookWords = this.definitions.get(bookPath);
-        if (bookWords) {
-            bookWords.forEach(wordDef => {
-                this.wordDefinitionCache.delete(wordDef.word);
-            });
-        }
-        
-        // 标记缓存需要重建
-        this.cacheValid = false;
-    }
-
-    /**
      * 从Canvas文件中删除词汇
      * @param bookPath 生词本路径
      * @param nodeId 要删除的节点ID
@@ -615,14 +530,14 @@ export class VocabularyManager {
     async deleteWordFromCanvas(bookPath: string, nodeId: string): Promise<boolean> {
         try {
             // 1. 先从Canvas文件中删除
-            const success = await this.canvasEditor.deleteWordFromCanvas(bookPath, nodeId);
+            const success = await this.canvasService.deleteWordFromCanvas(bookPath, nodeId);
             
             if (success) {
                 // 2. 从内存缓存中删除
                 this.deleteWordFromMemoryCache(bookPath, nodeId);
                 
                 // 3. 重建缓存以立即生效
-                this.rebuildCache();
+                this.cacheManager.rebuild(this.definitions);
                 
                 return true;
             }
@@ -651,7 +566,7 @@ export class VocabularyManager {
             const wordDefToDelete = bookWords[existingIndex];
             
             // 清除缓存映射
-            this.wordDefinitionCache.delete(wordDefToDelete.word);
+            this.cacheManager.deleteDefinition(wordDefToDelete.word);
             
             // 从数组中删除词汇
             bookWords.splice(existingIndex, 1);
@@ -669,7 +584,7 @@ export class VocabularyManager {
             }
             
             // 标记缓存需要重建
-            this.cacheValid = false;
+            this.cacheManager.invalidate();
         } else {
             console.warn(`未找到节点ID: ${nodeId}`);
         }
@@ -685,9 +600,7 @@ export class VocabularyManager {
         
         // 清理缓存
         this.definitions.clear();
-        this.wordDefinitionCache.clear();
-        this.allWordsCache = [];
-        this.bookWordsCache.clear();
+        this.cacheManager.clear();
         this.memoryOnlyWords.clear();
         this.pendingSyncWords.clear();
         
@@ -736,64 +649,21 @@ export class VocabularyManager {
         bookWords[index] = updatedDef;
 
         // 更新缓存
-        this.wordDefinitionCache.delete(oldDef.word);
-        this.wordDefinitionCache.set(updatedDef.word, updatedDef);
+        this.cacheManager.deleteDefinition(oldDef.word);
+        this.cacheManager.setDefinition(updatedDef.word, updatedDef);
 
         // 标记缓存需要重建
-        this.cacheValid = false;
+        this.cacheManager.invalidate();
 
         // 保存到 Canvas 文件
         try {
-            await this.saveWordDefinitionToCanvas(bookPath, nodeId, updatedDef);
+            await this.canvasService.saveWordDefinitionToCanvas(bookPath, nodeId, updatedDef);
         } catch (error) {
             console.error('保存单词定义到 Canvas 失败:', error);
             // 不返回 false，因为内存更新已经成功
         }
 
         return true;
-    }
-
-    /**
-     * 保存单词定义到 Canvas 文件
-     * @param bookPath 生词本路径
-     * @param nodeId 节点 ID
-     * @param wordDef 单词定义
-     */
-    private async saveWordDefinitionToCanvas(bookPath: string, nodeId: string, wordDef: WordDefinition): Promise<void> {
-        const file = this.app.vault.getAbstractFileByPath(bookPath);
-        if (!(file instanceof TFile)) {
-            throw new Error(`Canvas 文件不存在: ${bookPath}`);
-        }
-
-        try {
-            // 使用 Vault.process 修改文件
-            await this.app.vault.process(file, (content) => {
-                const canvasData = JSON.parse(content);
-
-                // 找到要更新的节点
-                const node = canvasData.nodes.find((n: any) => n.id === wordDef.nodeId);
-                if (!node) {
-                    throw new Error(`找不到节点 ID: ${wordDef.nodeId}`);
-                }
-
-                // 构建纯文本内容，不包含 frontmatter
-                let textContent = wordDef.word;
-
-                // 添加定义
-                if (wordDef.definition) {
-                    textContent += '\n' + wordDef.definition;
-                }
-
-                // 更新节点内容
-                node.text = textContent;
-
-                // 返回更新后的内容
-                return JSON.stringify(canvasData);
-            });
-        } catch (error) {
-            console.error('保存 Canvas 文件失败:', error);
-            throw error;
-        }
     }
 
     /**
@@ -832,21 +702,11 @@ export class VocabularyManager {
      * @returns 未掌握的单词数组
      */
     async getUnmasteredWords(): Promise<string[]> {
-        if (!this.cacheValid) {
-            this.rebuildCache();
+        if (!this.cacheManager.isValid()) {
+            this.cacheManager.rebuild(this.definitions);
         }
         
-        // 从缓存中过滤出未掌握的单词
-        const unmasteredWords: string[] = [];
-        
-        for (const word of this.allWordsCache) {
-            const wordDef = this.wordDefinitionCache.get(word);
-            if (wordDef && !wordDef.mastered) {
-                unmasteredWords.push(word);
-            }
-        }
-        
-        return unmasteredWords;
+        return this.cacheManager.getUnmasteredWords();
     }
 
     /**
@@ -854,21 +714,11 @@ export class VocabularyManager {
      * @returns 已掌握的单词数组
      */
     async getMasteredWords(): Promise<string[]> {
-        if (!this.cacheValid) {
-            this.rebuildCache();
+        if (!this.cacheManager.isValid()) {
+            this.cacheManager.rebuild(this.definitions);
         }
         
-        // 从缓存中过滤出已掌握的单词
-        const masteredWords: string[] = [];
-        
-        for (const word of this.allWordsCache) {
-            const wordDef = this.wordDefinitionCache.get(word);
-            if (wordDef && wordDef.mastered) {
-                masteredWords.push(word);
-            }
-        }
-        
-        return masteredWords;
+        return this.cacheManager.getMasteredWords();
     }
 
     // ==================== 形态学分析相关方法 ====================
@@ -975,7 +825,7 @@ export class VocabularyManager {
      * @returns 是否已掌握
      */
     isWordMastered(word: string): boolean {
-        const wordDef = this.wordDefinitionCache.get(word.toLowerCase());
+        const wordDef = this.cacheManager.getDefinition(word.toLowerCase());
         return wordDef?.mastered === true;
     }
 }

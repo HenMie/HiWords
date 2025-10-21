@@ -4,13 +4,14 @@
  */
 
 import { App, TFile } from 'obsidian';
-import { CanvasData, CanvasNode, HiWordsSettings } from '../utils';
+import { CanvasData, CanvasNode, HiWordsSettings, genHex16, CanvasLoader } from '../utils';
 import { CanvasParser } from './canvas-parser';
 import { normalizeLayout, layoutGroupInner } from './layout';
 
 export class MasteredGroupManager {
     private app: App;
     private canvasParser: CanvasParser;
+    private canvasLoader: CanvasLoader;
     private settings: HiWordsSettings | undefined;
     private readonly MASTERED_GROUP_LABEL = 'Mastered';
     private readonly MASTERED_GROUP_COLOR = '4'; // 绿色
@@ -18,20 +19,12 @@ export class MasteredGroupManager {
     constructor(app: App, settings?: HiWordsSettings) {
         this.app = app;
         this.canvasParser = new CanvasParser(app);
+        this.canvasLoader = new CanvasLoader(app);
         this.settings = settings;
     }
 
     updateSettings(settings: HiWordsSettings) {
         this.settings = settings;
-    }
-
-    /**
-     * 生成 16 位十六进制小写 ID（贴近标准 Canvas ID 风格）
-     */
-    private genHex16(): string {
-        const bytes = new Uint8Array(8);
-        (window.crypto || (window as any).msCrypto).getRandomValues(bytes);
-        return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
     }
 
     /**
@@ -184,7 +177,7 @@ export class MasteredGroupManager {
      */
     private createMasteredGroup(canvasData: CanvasData): CanvasNode {
         // 使用 16-hex 小写 ID，避免与生态不一致
-        const groupId = this.genHex16();
+        const groupId = genHex16();
         
         // 计算分组位置
         const { x, y } = this.calculateMasteredGroupPosition(canvasData);
@@ -347,17 +340,7 @@ export class MasteredGroupManager {
      * @returns Canvas 数据或 null
      */
     private async loadCanvas(bookPath: string): Promise<CanvasData | null> {
-        try {
-            const file = this.app.vault.getAbstractFileByPath(bookPath);
-            if (!(file instanceof TFile)) {
-                return null;
-            }
-
-            const content = await this.app.vault.read(file);
-            return JSON.parse(content) as CanvasData;
-        } catch (error) {
-            return null;
-        }
+        return this.canvasLoader.loadCanvas(bookPath);
     }
 
     /**
@@ -367,20 +350,7 @@ export class MasteredGroupManager {
      * @returns 操作是否成功
      */
     private async saveCanvas(bookPath: string, canvasData: CanvasData): Promise<boolean> {
-        try {
-            const file = this.app.vault.getAbstractFileByPath(bookPath);
-            if (!(file instanceof TFile)) {
-                return false;
-            }
-
-            // 使用原子更新，避免并发覆盖（此处以提供的数据为准进行写入）
-            await this.app.vault.process(file, () => {
-                return JSON.stringify(canvasData);
-            });
-            return true;
-        } catch (error) {
-            return false;
-        }
+        return this.canvasLoader.saveCanvas(bookPath, canvasData);
     }
 
 

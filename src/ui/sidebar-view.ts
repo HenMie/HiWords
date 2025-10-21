@@ -1,6 +1,6 @@
 import { ItemView, WorkspaceLeaf, TFile, MarkdownView, MarkdownRenderer, setIcon } from 'obsidian';
 import HiWordsPlugin from '../../main';
-import { WordDefinition, mapCanvasColorToCSSVar, getColorWithOpacity, playWordTTS } from '../utils';
+import { WordDefinition, mapCanvasColorToCSSVar, getColorWithOpacity, playWordTTS, MarkdownLinkBinder, Debouncer } from '../utils';
 import { t } from '../i18n';
 
 export const SIDEBAR_VIEW_TYPE = 'hi-words-sidebar';
@@ -12,14 +12,19 @@ export class HiWordsSidebarView extends ItemView {
     private currentFile: TFile | null = null;
     private lastActiveMarkdownView: MarkdownView | null = null; // 缓存最后一个活动的MarkdownView
     private firstLoadForFile: boolean = false; // 仅在切换到新文件后的首次渲染生效
-    private updateTimer: number | null = null; // 合并/防抖更新
+    private updateDebouncer: Debouncer; // 更新防抖器
     private measureQueue: HTMLElement[] = []; // 批量测量的队列
     private measureScheduled = false; // 是否已安排 RAF 测量
     private delegatedBound = false; // 是否已绑定根级事件委托
+    private linkBinder: MarkdownLinkBinder; // Markdown 链接绑定器
 
     constructor(leaf: WorkspaceLeaf, plugin: HiWordsPlugin) {
         super(leaf);
         this.plugin = plugin;
+        this.linkBinder = new MarkdownLinkBinder(plugin.app);
+        this.updateDebouncer = new Debouncer(() => {
+            void this.updateView();
+        }, 0); // 初始延迟为 0，后续通过 scheduleUpdate 指定
     }
 
     /**
@@ -167,16 +172,17 @@ export class HiWordsSidebarView extends ItemView {
 
     /**
      * 合并/防抖更新：多事件密集触发时，避免排队大量 setTimeout
+     * 注意：由于 Debouncer 在创建时固定延迟，这里我们手动管理延迟
      */
     private scheduleUpdate(delay: number) {
-        if (this.updateTimer !== null) {
-            clearTimeout(this.updateTimer);
-            this.updateTimer = null;
-        }
-        this.updateTimer = window.setTimeout(() => {
-            this.updateTimer = null;
+        this.updateDebouncer.cancel();
+        
+        // 创建新的 Debouncer 以支持不同的延迟时间
+        this.updateDebouncer = new Debouncer(() => {
             void this.updateView();
         }, Math.max(0, delay));
+        
+        this.updateDebouncer.trigger();
     }
 
     /**
@@ -692,68 +698,10 @@ export class HiWordsSidebarView extends ItemView {
     }
 
     /**
-     * 为侧边栏渲染内容绑定内部链接与标签交互：
-     * - internal-link: 悬停触发原生 hover 预览；点击跳转
-     * - tag: 点击打开/复用搜索视图
+     * 为侧边栏渲染内容绑定内部链接与标签交互（使用统一的 MarkdownLinkBinder）
      */
     private bindInternalLinksAndTags(root: HTMLElement, sourcePath: string, hoverParent: HTMLElement) {
-        // 内部链接
-        root.querySelectorAll('a.internal-link').forEach((a) => {
-            const linkEl = a as HTMLAnchorElement;
-            const linktext = (linkEl.getAttribute('href') || (linkEl as any).dataset?.href || '').trim();
-            if (!linktext) return;
-
-            linkEl.addEventListener('mouseover', (evt) => {
-                (this.app.workspace as any).trigger('hover-link', {
-                    event: evt,
-                    source: 'hi-words',
-                    hoverParent,
-                    target: linkEl,
-                    linktext,
-                    sourcePath
-                });
-            });
-
-            linkEl.addEventListener('click', (evt) => {
-                evt.preventDefault();
-                evt.stopPropagation();
-                this.app.workspace.openLinkText(linktext, sourcePath);
-            });
-        });
-
-        // 标签
-        root.querySelectorAll('a.tag').forEach((a) => {
-            const tagEl = a as HTMLAnchorElement;
-            const query = (tagEl.getAttribute('href') || tagEl.textContent || '').trim();
-            if (!query) return;
-            tagEl.addEventListener('click', (evt) => {
-                evt.preventDefault();
-                evt.stopPropagation();
-                this.openOrUpdateSearch(query.startsWith('#') ? query : `#${query}`);
-            });
-        });
-    }
-
-    /** 打开或复用全局搜索视图并设置查询 */
-    private openOrUpdateSearch(query: string) {
-        try {
-            const leaves = this.app.workspace.getLeavesOfType('search');
-            if (leaves.length > 0) {
-                const view: any = leaves[0].view;
-                view.setQuery?.(query);
-                this.app.workspace.revealLeaf(leaves[0]);
-                return;
-            }
-
-            const leaf = this.app.workspace.getRightLeaf(false);
-            if (!leaf) return;
-            (this.app as any).internalPlugins?.getPluginById?.('global-search')?.enable?.();
-            (leaf as any).setViewState?.({ type: 'search', active: true });
-            const view: any = (leaf as any).view;
-            view?.setQuery?.(query);
-        } catch (e) {
-            console.error('打开搜索失败:', e);
-        }
+        this.linkBinder.bindInternalLinksAndTags(root, sourcePath, hoverParent);
     }
 
     /**
