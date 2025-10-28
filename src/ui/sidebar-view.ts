@@ -1,7 +1,8 @@
 import { ItemView, WorkspaceLeaf, TFile, MarkdownView, MarkdownRenderer, setIcon } from 'obsidian';
 import HiWordsPlugin from '../../main';
-import { WordDefinition, mapCanvasColorToCSSVar, getColorWithOpacity, playWordTTS, MarkdownLinkBinder, Debouncer } from '../utils';
+import { WordDefinition, mapCanvasColorToCSSVar, getColorWithOpacity, playWordTTS, MarkdownLinkBinder, Debouncer, removeOverlappingMatches } from '../utils';
 import { t } from '../i18n';
+import { WordMatcherService } from '../core/word-matcher-service';
 
 export const SIDEBAR_VIEW_TYPE = 'hi-words-sidebar';
 
@@ -17,11 +18,13 @@ export class HiWordsSidebarView extends ItemView {
     private measureScheduled = false; // 是否已安排 RAF 测量
     private delegatedBound = false; // 是否已绑定根级事件委托
     private linkBinder: MarkdownLinkBinder; // Markdown 链接绑定器
+    private wordMatcherService: WordMatcherService; // 单词匹配服务
 
     constructor(leaf: WorkspaceLeaf, plugin: HiWordsPlugin) {
         super(leaf);
         this.plugin = plugin;
         this.linkBinder = new MarkdownLinkBinder(plugin.app);
+        this.wordMatcherService = new WordMatcherService(plugin.vocabularyManager);
         this.updateDebouncer = new Debouncer(() => {
             void this.updateView();
         }, 0); // 初始延迟为 0，后续通过 scheduleUpdate 指定
@@ -136,6 +139,7 @@ export class HiWordsSidebarView extends ItemView {
 
     async onClose() {
         // 清理资源
+        this.wordMatcherService.destroy();
     }
 
     /**
@@ -201,32 +205,43 @@ export class HiWordsSidebarView extends ItemView {
                 content = await this.app.vault.read(this.currentFile);
             }
 
-            const allWordDefinitions = await this.plugin.vocabularyManager.getAllWordDefinitions();
+            // 重建 Trie 以确保使用最新的词汇数据（包含所有单词，包括已掌握的）
+            this.wordMatcherService.buildTrie(true);
 
-            // 创建一个数组来存储找到的单词及其位置
-            const foundWordsWithPosition: { wordDef: WordDefinition, position: number }[] = [];
+            // 使用 WordMatcherService 查找所有匹配（包括变形）
+            const matches = this.wordMatcherService.findMatches(content);
 
-            // 扫描文档内容，查找生词并记录位置
-            for (const wordDef of allWordDefinitions) {
-                // 检查主单词
-                // 使用 Unicode 感知的匹配：
-                // 英文等拉丁词使用 \b 边界；含日语/CJK 的词不使用 \b，以便能在无空格文本中命中
-                let regex = this.buildSearchRegex(wordDef.word);
-                let match = regex.exec(content);
-                let position = match ? match.index : -1;
+            // 使用与文章高亮相同的重叠处理逻辑，优先保留更长的匹配
+            const filteredMatches = removeOverlappingMatches(matches);
 
-                if (position !== -1) {
-                    // 避免重复添加
-                    if (!foundWordsWithPosition.some(w => w.wordDef.nodeId === wordDef.nodeId)) {
-                        foundWordsWithPosition.push({
-                            wordDef: wordDef,
-                            position: position
+            // 创建一个 Map 来存储每个单词的首次出现位置
+            const wordPositionMap = new Map<string, { wordDef: WordDefinition, position: number }>();
+
+            // 遍历过滤后的匹配，记录每个单词的首次出现位置
+            for (const match of filteredMatches) {
+                const definition = match.payload as WordDefinition;
+                if (definition && definition.nodeId) {
+                    // 使用 nodeId 作为唯一标识，避免重复添加同一个单词的不同变形
+                    if (!wordPositionMap.has(definition.nodeId)) {
+                        wordPositionMap.set(definition.nodeId, {
+                            wordDef: definition,
+                            position: match.from
                         });
+                    } else {
+                        // 如果已经存在，保留更早出现的位置
+                        const existing = wordPositionMap.get(definition.nodeId)!;
+                        if (match.from < existing.position) {
+                            wordPositionMap.set(definition.nodeId, {
+                                wordDef: definition,
+                                position: match.from
+                            });
+                        }
                     }
                 }
             }
 
             // 按照单词在文档中首次出现的位置排序
+            const foundWordsWithPosition = Array.from(wordPositionMap.values());
             foundWordsWithPosition.sort((a, b) => a.position - b.position);
             this.currentWords = foundWordsWithPosition.map(item => item.wordDef);
         } catch (error) {
@@ -424,24 +439,7 @@ export class HiWordsSidebarView extends ItemView {
             // 设置图标（未掌握显示smile供用户点击标记为已掌握，已掌握显示frown供用户点击取消）
             setIcon(buttonContainer, isMastered ? 'frown' : 'smile');
             
-            // 添加点击事件
-            buttonContainer.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                
-                try {
-                    // 切换已掌握状态
-                    if (isMastered) {
-                        await this.plugin.masteredService.unmarkWordAsMastered(wordDef.source, wordDef.nodeId, wordDef.word);
-                    } else {
-                        await this.plugin.masteredService.markWordAsMastered(wordDef.source, wordDef.nodeId, wordDef.word);
-                    }
-                    
-                    // 刷新侧边栏
-                    setTimeout(() => this.updateView(), 100);
-                } catch (error) {
-                    console.error('切换已掌握状态失败:', error);
-                }
-            });
+            // 事件处理已经通过 bindDelegatedHandlers 的事件委托统一处理，无需重复绑定
         }
         
         // 词源显示（如果存在）
@@ -755,6 +753,7 @@ export class HiWordsSidebarView extends ItemView {
      */
     public refresh() {
         this.currentFile = null; // 强制重新扫描
+        this.wordMatcherService.buildTrie(true); // 重建 Trie（包含所有单词）
         this.scheduleUpdate(0);
     }
 }

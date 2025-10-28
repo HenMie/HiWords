@@ -20,11 +20,15 @@ export class WordMatcherService {
 
     /**
      * 构建单词前缀树（包含形态学索引）
+     * @param includeAllWords 是否包含所有单词（包括已掌握的），默认 false（只包含未掌握的）
      */
-    public buildTrie(): void {
+    public buildTrie(includeAllWords: boolean = false): void {
         this.trie.clear();
         
-        const baseWords = this.vocabularyManager.getAllWordsForHighlight();
+        // 根据参数决定获取所有单词还是只获取未掌握的单词
+        const baseWords = includeAllWords 
+            ? this.vocabularyManager.getAllWords()
+            : this.vocabularyManager.getAllWordsForHighlight();
 
         for (const baseWord of baseWords) {
             const definition = this.vocabularyManager.getDefinition(baseWord);
