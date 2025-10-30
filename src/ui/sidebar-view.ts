@@ -19,6 +19,9 @@ export class HiWordsSidebarView extends ItemView {
     private delegatedBound = false; // 是否已绑定根级事件委托
     private linkBinder: MarkdownLinkBinder; // Markdown 链接绑定器
     private wordMatcherService: WordMatcherService; // 单词匹配服务
+    // 排序缓存优化
+    private sortedWordsCache: WordDefinition[] = [];
+    private cacheInvalidated = true;
 
     constructor(leaf: WorkspaceLeaf, plugin: HiWordsPlugin) {
         super(leaf);
@@ -244,9 +247,13 @@ export class HiWordsSidebarView extends ItemView {
             const foundWordsWithPosition = Array.from(wordPositionMap.values());
             foundWordsWithPosition.sort((a, b) => a.position - b.position);
             this.currentWords = foundWordsWithPosition.map(item => item.wordDef);
+            
+            // 标记缓存失效
+            this.cacheInvalidated = true;
         } catch (error) {
             console.error('Failed to scan document:', error);
             this.currentWords = [];
+            this.cacheInvalidated = true;
         }
     }
 
@@ -266,9 +273,21 @@ export class HiWordsSidebarView extends ItemView {
             return;
         }
 
+        // 使用缓存的排序结果（如果缓存有效）
+        let wordsToRender: WordDefinition[];
+        if (this.cacheInvalidated) {
+            // 缓存失效，重新处理
+            this.sortedWordsCache = [...this.currentWords];
+            this.cacheInvalidated = false;
+            wordsToRender = this.sortedWordsCache;
+        } else {
+            // 使用缓存
+            wordsToRender = this.sortedWordsCache;
+        }
+
         // 分组单词：未掌握和已掌握
-        const unmasteredWords = this.currentWords.filter(word => !word.mastered);
-        const masteredWords = this.currentWords.filter(word => word.mastered);
+        const unmasteredWords = wordsToRender.filter(word => !word.mastered);
+        const masteredWords = wordsToRender.filter(word => word.mastered);
         
 
         // 智能初始标签页选择：仅在切换到新文件后的首次加载时进行

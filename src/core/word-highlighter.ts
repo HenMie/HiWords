@@ -102,6 +102,8 @@ export class WordHighlighter implements PluginValue {
     private debouncer: Debouncer;
     private lastRanges: {from: number, to: number}[] = [];
     private cachedMatches: Map<string, WordMatch[]> = new Map();
+    private lastDocVersion = 0;
+    private lastDocHash = '';
 
     constructor(view: EditorView, vocabularyManager: VocabularyManager) {
         this.editorView = view;
@@ -159,6 +161,23 @@ export class WordHighlighter implements PluginValue {
         const builder = new RangeSetBuilder<Decoration>();
         const matches: WordMatch[] = [];
         
+        // 检查文档版本和内容是否变化
+        const currentDocVersion = view.state.doc.length;
+        const docContent = view.state.doc.toString();
+        const currentDocHash = this.hashContent(docContent);
+        
+        // 如果文档未变化，直接使用缓存
+        if (currentDocVersion === this.lastDocVersion && 
+            currentDocHash === this.lastDocHash &&
+            this.cachedMatches.size > 0) {
+            const cacheKey = view.visibleRanges.map(r => `${r.from}-${r.to}`).join(',');
+            if (this.cachedMatches.has(cacheKey)) {
+                const cachedMatches = this.cachedMatches.get(cacheKey)!;
+                this.applyDecorations(builder, cachedMatches);
+                return builder.finish();
+            }
+        }
+        
         // 检查可见范围是否发生变化
         const currentRanges = view.visibleRanges;
         const rangesChanged = this.haveRangesChanged(currentRanges);
@@ -171,8 +190,10 @@ export class WordHighlighter implements PluginValue {
             return builder.finish();
         }
         
-        // 更新最后处理的范围
+        // 更新最后处理的范围和文档状态
         this.lastRanges = currentRanges.map(range => ({from: range.from, to: range.to}));
+        this.lastDocVersion = currentDocVersion;
+        this.lastDocHash = currentDocHash;
         
         // 扫描可见范围内的文本
         for (let { from, to } of view.visibleRanges) {
@@ -193,6 +214,19 @@ export class WordHighlighter implements PluginValue {
         this.applyDecorations(builder, filteredMatches);
         
         return builder.finish();
+    }
+    
+    /**
+     * 计算内容哈希（简单的哈希函数）
+     */
+    private hashContent(content: string): string {
+        let hash = 0;
+        for (let i = 0; i < content.length; i++) {
+            const char = content.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convert to 32bit integer
+        }
+        return hash.toString(36);
     }
     
     /**

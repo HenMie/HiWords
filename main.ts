@@ -46,6 +46,9 @@ export default class HiWordsPlugin extends Plugin {
     editorExtensions: Extension[] = [];
     highlighterInstance: WordHighlighter | null = null;
     private isSidebarInitialized = false;
+    private isLoadingVocabulary = false;
+    private vocabularyLoadPromise: Promise<void> | null = null;
+    private timeoutIds: number[] = [];
 
     async onload() {
         // 加载设置
@@ -66,8 +69,8 @@ export default class HiWordsPlugin extends Plugin {
         this.definitionPopover.setVocabularyManager(this.vocabularyManager);
         this.definitionPopover.setMasteredService(this.masteredService);
         
-        // 加载生词本
-        await this.vocabularyManager.loadAllVocabularyBooks();
+        // 加载生词本 - 使用安全加载方法防止重复加载
+        await this.loadVocabularySafely();
         
         // 注册侧边栏视图
         this.registerView(
@@ -98,7 +101,8 @@ export default class HiWordsPlugin extends Plugin {
         
         // 在布局准备好后自动刷新生词本
         this.app.workspace.onLayoutReady(async () => {
-            await this.vocabularyManager.loadAllVocabularyBooks();
+            // 使用安全加载方法，防止重复加载
+            await this.loadVocabularySafely();
 
             // 索引当前打开的文档
             await this.indexCurrentDocument();
@@ -114,7 +118,14 @@ export default class HiWordsPlugin extends Plugin {
         try {
             const activeFile = this.app.workspace.getActiveFile();
             if (activeFile && activeFile.extension === 'md') {
-                const content = await this.app.vault.read(activeFile);
+                let content: string;
+                try {
+                    content = await this.app.vault.read(activeFile);
+                } catch (error) {
+                    console.warn(`[HiWords] 无法读取文件 ${activeFile.path}:`, error);
+                    return; // 优雅退出，不阻止插件初始化
+                }
+                
                 const morphologyIndexManager = this.vocabularyManager.getMorphologyIndexManager();
                 await morphologyIndexManager.indexNote(activeFile, content);
                 // console.log(`[HiWords] 索引当前文档: ${activeFile.name}`);
@@ -240,10 +251,10 @@ export default class HiWordsPlugin extends Plugin {
                         this.refreshHighlighter();
                     } else {
                         // 当切换文件时，可能需要更新高亮
-                        setTimeout(() => this.refreshHighlighter(), 100);
+                        this.registerTimeout(() => this.refreshHighlighter(), 100);
 
                         // 索引新的当前文档
-                        setTimeout(async () => {
+                        this.registerTimeout(async () => {
                             await this.indexCurrentDocument();
                             this.refreshHighlighter();
                         }, 200);
@@ -346,7 +357,8 @@ export default class HiWordsPlugin extends Plugin {
     async saveSettings() {
         await this.saveData(this.settings);
         this.vocabularyManager.updateSettings(this.settings);
-        if (this.masteredService && (this.masteredService as any).updateSettings) {
+        // MasteredService 有明确的 updateSettings 方法
+        if (this.masteredService) {
             this.masteredService.updateSettings();
         }
     }
@@ -373,15 +385,85 @@ export default class HiWordsPlugin extends Plugin {
      * 卸载插件
      */
     onunload() {
-        // definitionPopover 作为子组件会自动卸载
-        this.vocabularyManager.clear();
-        // 清理增量更新相关资源
-        if (this.vocabularyManager.destroy) {
-            this.vocabularyManager.destroy();
+        try {
+            // 清理所有定时器
+            this.timeoutIds.forEach(id => clearTimeout(id));
+            this.timeoutIds = [];
+
+            // 清理编辑器扩展
+            this.editorExtensions = [];
+
+            // 清理侧边栏视图
+            const leaves = this.app.workspace.getLeavesOfType(SIDEBAR_VIEW_TYPE);
+            leaves.forEach(leaf => leaf.detach());
+
+            // 清理词汇管理器（带超时保护）
+            if (this.vocabularyManager) {
+                // 等待异步操作完成，最多等待2秒
+                const destroyPromise = this.vocabularyManager.destroy ? 
+                    this.vocabularyManager.destroy() : 
+                    Promise.resolve();
+                    
+                Promise.race([
+                    destroyPromise,
+                    new Promise(resolve => setTimeout(resolve, 2000))
+                ]).then(() => {
+                    this.vocabularyManager.clear();
+                });
+            }
+
+            // 清理全局高亮器管理器
+            highlighterManager.clear();
+
+            // 清理 PDF 高亮器资源
+            cleanupPDFHighlighter(this);
+
+            console.log('[HiWords] 插件卸载成功');
+        } catch (error) {
+            console.error('[HiWords] 插件卸载时出错:', error);
         }
-        // 清理全局高亮器管理器
-        highlighterManager.clear();
-        // 清理 PDF 高亮器资源
-        cleanupPDFHighlighter(this);
+    }
+
+    /**
+     * 安全加载生词本（防止重复加载）
+     */
+    private async loadVocabularySafely(): Promise<void> {
+        // 如果正在加载，返回现有的加载 Promise
+        if (this.isLoadingVocabulary && this.vocabularyLoadPromise) {
+            return this.vocabularyLoadPromise;
+        }
+
+        // 标记正在加载并创建加载 Promise
+        this.isLoadingVocabulary = true;
+        this.vocabularyLoadPromise = this.performVocabularyLoad();
+
+        try {
+            await this.vocabularyLoadPromise;
+        } finally {
+            this.isLoadingVocabulary = false;
+            this.vocabularyLoadPromise = null;
+        }
+    }
+
+    /**
+     * 执行实际的生词本加载
+     */
+    private async performVocabularyLoad(): Promise<void> {
+        try {
+            await this.vocabularyManager.loadAllVocabularyBooks();
+            this.refreshHighlighter();
+        } catch (error) {
+            new Notice('加载生词本失败，请检查文件权限');
+            console.error('[HiWords] 生词本加载失败:', error);
+        }
+    }
+
+    /**
+     * 注册定时器（确保插件卸载时清理）
+     */
+    private registerTimeout(callback: () => void, delay: number): number {
+        const id = window.setTimeout(callback, delay);
+        this.timeoutIds.push(id);
+        return id;
     }
 }

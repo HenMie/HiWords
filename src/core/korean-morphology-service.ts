@@ -4,6 +4,25 @@ import wasmBytes from '../../lindera_wasm_bg.wasm';
 import { isKoreanText } from '../utils/korean-text-utils';
 
 /**
+ * Tokenizer 接口
+ */
+interface Tokenizer {
+    tokenize(text: string): Token[];
+    free(): void;
+}
+
+/**
+ * Token 接口
+ */
+interface Token {
+    surface: string;
+    feature: string[];
+    partOfSpeech?: string;
+    baseForm?: string;
+    [key: string]: unknown;
+}
+
+/**
  * 形态学分析结果
  */
 export interface MorphologyAnalysisResult {
@@ -28,16 +47,16 @@ export interface DocumentAnalysisResult {
  * 使用 lindera-wasm-ko-dic 进行韩语单词的原型还原和活用形匹配
  */
 export class KoreanMorphologyService {
-    private tokenizer: any | null = null;
+    private tokenizer: Tokenizer | null = null;
     private isInitialized = false;
     private initPromise: Promise<void> | null = null;
-    private app: any;
+    private app: unknown;
     private debugMode: boolean = false;
 
     constructor(app?: any) {
         this.app = app;
-        // 延迟初始化，避免阻塞插件启动
-        this.initPromise = this.initialize();
+        // 按需初始化，不在构造函数中立即初始化
+        this.initPromise = null;
     }
 
     /**
@@ -65,7 +84,7 @@ export class KoreanMorphologyService {
      * @returns 合并后的表面形式和处理的token数量
      */
     private mergeSubsequentEndings(
-        tokens: any[],
+        tokens: Token[],
         startIndex: number,
         maxLookAhead: number = 5,
         processedTokens?: Set<number>
@@ -109,7 +128,7 @@ export class KoreanMorphologyService {
      */
     private buildCompoundWordResult(
         tokenInfos: { surface: string; baseForm: string; partOfSpeech: string }[],
-        allTokens: any[],
+        allTokens: Token[],
         startIndexInAllTokens: number,
         baseForm: string,
         partOfSpeech: string,
@@ -146,96 +165,76 @@ export class KoreanMorphologyService {
      * 初始化 Lindera WASM
      */
     private async initialize(): Promise<void> {
-        try {
-            // 方法1: 使用导入的WASM字节数组
-            let wasmInitialized = false;
-            try {
-                await init({ module_or_path: wasmBytes });
-                wasmInitialized = true;
-            } catch (error) {
-                // Silently try next method
-            }
-
-            // 方法2: 使用正确的插件相对路径
-            if (!wasmInitialized) {
-                try {
-                    // 在Obsidian中，使用app://local协议访问插件文件
+        const initMethods = [
+            { 
+                name: 'WASM字节数组', 
+                method: async () => await init({ module_or_path: wasmBytes })
+            },
+            { 
+                name: '插件路径', 
+                method: async () => {
                     const pluginWasmUrl = 'app://local/.obsidian/plugins/HiWords/lindera_wasm_bg.wasm';
                     const response = await fetch(pluginWasmUrl);
-                    if (response.ok) {
-                        const wasmBytes = await response.arrayBuffer();
-                        await init({ module_or_path: wasmBytes });
-                        wasmInitialized = true;
-                    }
-                } catch (error) {
-                    // Silently try next method
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const wasmBytes = await response.arrayBuffer();
+                    await init({ module_or_path: wasmBytes });
                 }
-            }
-
-            // 方法3: 尝试无参数初始化（让库自己处理）
-            if (!wasmInitialized) {
-                try {
-                    await init({});
-                    wasmInitialized = true;
-                } catch (error) {
-                    // Silently try next method
-                }
-            }
-
-            // 方法4: 尝试通过Obsidian的资源加载器
-            if (!wasmInitialized) {
-                try {
-                    // 使用Obsidian的资源协议
+            },
+            { 
+                name: '默认初始化', 
+                method: async () => await init({})
+            },
+            { 
+                name: 'Obsidian资源协议', 
+                method: async () => {
                     const resourceUrl = `app://local/.obsidian/plugins/HiWords/lindera_wasm_bg.wasm`;
-
-                    // 直接传递URL给init函数
                     await init({ module_or_path: resourceUrl });
-                    wasmInitialized = true;
-                } catch (error) {
-                    // Last method failed
                 }
             }
+        ];
 
-            if (!wasmInitialized) {
-                console.warn('所有WASM初始化方法都失败，将使用后备分析方案');
-                this.isInitialized = false;
-                return;
-            }
+        let lastError: Error | null = null;
 
-            // 构建Tokenizer
+        for (const { name, method } of initMethods) {
             try {
-                const builder = new TokenizerBuilder();
-
-                // 设置内嵌韩语字典
-                builder.setDictionary('embedded://ko-dic');
-
-                this.tokenizer = builder.build();
-
+                await method();
                 this.isInitialized = true;
-            } catch (error) {
-                console.error('Tokenizer构建失败:', error);
-                this.isInitialized = false;
+                this.debugLog(`✅ ${name} 初始化成功`);
+                
+                // 构建Tokenizer
+                const builder = new TokenizerBuilder();
+                builder.setDictionary('embedded://ko-dic');
+                this.tokenizer = builder.build() as Tokenizer;
+                
                 return;
+            } catch (error) {
+                lastError = error as Error;
+                this.debugLog(`❌ ${name} 初始化失败:`, error);
             }
-            
-        } catch (error) {
-            console.error('韩语形态学分析服务初始化失败:', error);
-            this.isInitialized = false;
         }
+
+        // 所有方法都失败
+        console.warn('[HiWords] 韩语形态学服务初始化失败，韩语单词活用形匹配功能将不可用');
+        console.warn('[HiWords] 最后错误:', lastError?.message || '未知错误');
+        this.isInitialized = false;
     }
     
 
     /**
-     * 确保服务已初始化
+     * 确保服务已初始化（按需初始化）
      */
     private async ensureInitialized(): Promise<boolean> {
         if (this.isInitialized) {
             return true;
         }
         
-        if (this.initPromise) {
-            await this.initPromise;
+        // 如果还没有初始化 Promise，创建一个
+        if (!this.initPromise) {
+            this.initPromise = this.initialize();
         }
+        
+        // 等待初始化完成
+        await this.initPromise;
         
         return this.isInitialized;
     }
@@ -311,7 +310,7 @@ export class KoreanMorphologyService {
     /**
      * 分析多个tokens，寻找最佳的基础形式
      */
-    private analyzeTokens(tokens: any[], originalWord: string): { surface: string, baseForm: string, partOfSpeech: string, confidence: number } | null {
+    private analyzeTokens(tokens: Token[], originalWord: string): { surface: string, baseForm: string, partOfSpeech: string, confidence: number } | null {
         if (!tokens || tokens.length === 0) {
             return null;
         }
@@ -386,7 +385,7 @@ export class KoreanMorphologyService {
     /**
      * 分析复合词结构
      */
-    private analyzeCompoundWord(tokens: any[], originalWord: string): { surface: string, baseForm: string, partOfSpeech: string, confidence: number } | null {
+    private analyzeCompoundWord(tokens: Token[], originalWord: string): { surface: string, baseForm: string, partOfSpeech: string, confidence: number } | null {
         // 提取所有token信息
         const tokenInfos = tokens.map(token => this.extractTokenInfo(token)).filter((info): info is NonNullable<typeof info> => info !== null);
 
@@ -488,7 +487,10 @@ export class KoreanMorphologyService {
     /**
      * 检查是否为被动语态结构
      */
-    private isPassiveStructure(currentToken: any, nextToken: any): boolean {
+    private isPassiveStructure(
+        currentToken: { surface: string; baseForm: string; partOfSpeech: string }, 
+        nextToken: { surface: string; baseForm: string; partOfSpeech: string }
+    ): boolean {
         // 检查 되 + 语尾 的模式
         return (nextToken.surface === '되' && currentToken.partOfSpeech.includes('EC')) ||
                (currentToken.surface === '되' || currentToken.surface.includes('되')) ||
@@ -498,7 +500,7 @@ export class KoreanMorphologyService {
     /**
      * 构造被动动词的原型
      */
-    private constructPassiveBaseForm(tokenInfos: any[], passiveIndex: number): string | null {
+    private constructPassiveBaseForm(tokenInfos: { surface: string; baseForm: string; partOfSpeech: string }[], passiveIndex: number): string | null {
         // 寻找动词词根
         for (let i = 0; i < passiveIndex; i++) {
             const token = tokenInfos[i];
@@ -523,7 +525,7 @@ export class KoreanMorphologyService {
     /**
      * 从单个token中提取信息
      */
-    private extractTokenInfo(token: any): { surface: string, baseForm: string, partOfSpeech: string } | null {
+    private extractTokenInfo(token: Token): { surface: string, baseForm: string, partOfSpeech: string } | null {
         let surface, baseForm, partOfSpeech;
 
         if (token instanceof Map) {
@@ -764,28 +766,52 @@ export class KoreanMorphologyService {
         }
 
         try {
-            // 使用 tokenizer 对整个文档进行分词和形态学分析
-            const tokens = this.tokenizer.tokenize(text);
+            // 1. 分词
+            const tokens = this.tokenizeText(text);
+            
+            // 2. 分析tokens
+            const tokenAnalysisResults = this.analyzeDocumentTokens(tokens);
+            
+            // 3. 构建形态学索引
+            this.buildMorphologyIndexFromResults(tokenAnalysisResults, morphologyIndex, analysisResults);
+            
+            return { morphologyIndex, analysisResults };
 
-            // 用于跟踪已处理的token位置，避免重复处理复合词
-            const processedTokens = new Set<number>();
+        } catch (error) {
+            console.error('分析文档时出错:', error);
+            return { morphologyIndex, analysisResults };
+        }
+    }
 
-            for (let i = 0; i < tokens.length; i++) {
-                if (processedTokens.has(i)) {
-                    continue;
-                }
+    /**
+     * 分词
+     */
+    private tokenizeText(text: string): Token[] {
+        return this.tokenizer!.tokenize(text);
+    }
 
-                const token = tokens[i];
-                const tokenInfo = this.extractTokenInfo(token);
+    /**
+     * 分析文档tokens并返回分析结果
+     */
+    private analyzeDocumentTokens(tokens: Token[]): MorphologyAnalysisResult[] {
+        const results: MorphologyAnalysisResult[] = [];
+        const processedTokens = new Set<number>();
 
-                // 调试：打印每个token
-                if (tokenInfo && this.isKoreanText(tokenInfo.surface)) {
-                    this.debugLog(`[analyzeDocument] Token[${i}]: ${tokenInfo.surface} (${tokenInfo.partOfSpeech}) baseForm: ${tokenInfo.baseForm}`);
-                }
+        for (let i = 0; i < tokens.length; i++) {
+            if (processedTokens.has(i)) {
+                continue;
+            }
 
-                // 首先尝试检测复合词结构
-                let tokenGroup = [token];
-                let analysisResult = null;
+            const token = tokens[i];
+            const tokenInfo = this.extractTokenInfo(token);
+
+            // 调试：打印每个token
+            if (tokenInfo && this.isKoreanText(tokenInfo.surface)) {
+                this.debugLog(`[analyzeTokens] Token[${i}]: ${tokenInfo.surface} (${tokenInfo.partOfSpeech}) baseForm: ${tokenInfo.baseForm}`);
+            }
+
+            // 首先尝试检测复合词结构
+            let analysisResult = null;
 
                 // 检查是否为复合词结构（名词 + XSV）或包含多个语尾的复杂动词
                 if (i < tokens.length - 1) {
@@ -809,11 +835,10 @@ export class KoreanMorphologyService {
                         const isAdjectiveSuffix = nextTokenInfo.partOfSpeech.includes('XSA') || nextTokenInfo.partOfSpeech.includes('XSV');
 
                         if (isNounToken && isHadaToken) {
-                            this.debugLog(`[analyzeDocument] 找到 名词+하다 结构: ${currentTokenInfo.surface} + ${nextTokenInfo.surface}`);
+                            this.debugLog(`[analyzeDocumentTokens] 找到 名词+하다 结构: ${currentTokenInfo.surface} + ${nextTokenInfo.surface}`);
 
                             // 标记下一个token已处理
                             processedTokens.add(i + 1);
-                            tokenGroup = [token, tokens[i + 1]];
 
                             // 如果下一个token不是复合形式（如 해요），才继续合并后续语尾
                             const shouldMergeEndings = !nextTokenInfo.surface.startsWith('해') || nextTokenInfo.surface.length <= 1;
@@ -834,11 +859,10 @@ export class KoreanMorphologyService {
                         // 情况1b: 词根 + 形容词/动词后缀结构 (XR + XSA/XSV)
                         // 例如: 훈훈 (XR) + 하 (XSA) → 훈훈하다
                         else if (isRootToken && isAdjectiveSuffix) {
-                            this.debugLog(`[analyzeDocument] 找到 词根+形容词后缀 结构: ${currentTokenInfo.surface} + ${nextTokenInfo.surface}`);
+                            this.debugLog(`[analyzeDocumentTokens] 找到 词根+形容词后缀 结构: ${currentTokenInfo.surface} + ${nextTokenInfo.surface}`);
 
                             // 标记下一个token已处理
                             processedTokens.add(i + 1);
-                            tokenGroup = [token, tokens[i + 1]];
 
                             // 使用通用方法构建结果
                             const baseForm = currentTokenInfo.surface + '하다';
@@ -860,7 +884,6 @@ export class KoreanMorphologyService {
 
                             // 标记下一个token已处理
                             processedTokens.add(i + 1);
-                            tokenGroup = [token, tokens[i + 1]];
 
                             // 使用通用方法构建结果
                             analysisResult = this.buildCompoundWordResult(
@@ -905,27 +928,33 @@ export class KoreanMorphologyService {
                     }
                 }
 
-                // 如果有有效的分析结果，添加到索引
-                if (analysisResult) {
-                    this.debugLog(`[文档分析] 找到活用形: ${analysisResult.surface} → ${analysisResult.baseForm}`);
-
-                    // 建立索引：从原型到活用形的映射
-                    if (!morphologyIndex.has(analysisResult.baseForm)) {
-                        morphologyIndex.set(analysisResult.baseForm, new Set());
-                    }
-                    morphologyIndex.get(analysisResult.baseForm)!.add(analysisResult.surface);
-
-                    // 记录分析结果
-                    analysisResults.push(analysisResult);
-                }
+            // 如果有有效的分析结果，添加到结果列表
+            if (analysisResult) {
+                this.debugLog(`[文档分析] 找到活用形: ${analysisResult.surface} → ${analysisResult.baseForm}`);
+                results.push(analysisResult);
             }
+        }
 
-            
-            return { morphologyIndex, analysisResults };
+        return results;
+    }
 
-        } catch (error) {
-            console.error('分析文档时出错:', error);
-            return { morphologyIndex, analysisResults };
+    /**
+     * 从分析结果构建形态学索引
+     */
+    private buildMorphologyIndexFromResults(
+        results: MorphologyAnalysisResult[],
+        morphologyIndex: Map<string, Set<string>>,
+        analysisResults: MorphologyAnalysisResult[]
+    ): void {
+        for (const result of results) {
+            // 建立索引：从原型到活用形的映射
+            if (!morphologyIndex.has(result.baseForm)) {
+                morphologyIndex.set(result.baseForm, new Set());
+            }
+            morphologyIndex.get(result.baseForm)!.add(result.surface);
+
+            // 记录分析结果
+            analysisResults.push(result);
         }
     }
 
@@ -1012,7 +1041,7 @@ export class KoreanMorphologyService {
     /**
      * 计算置信度
      */
-    private calculateConfidence(token: any): number {
+    private calculateConfidence(token: Token): number {
         if (!token) return 0.5;
 
         // 基于词性和词典形式的存在来计算置信度

@@ -22,6 +22,10 @@ export class VocabularyManager {
     private syncTimeouts: Map<string, number> = new Map(); // 同步定时器
     private tempNodeIdCounter: number = 0; // 临时节点ID计数器
 
+    // 异步操作队列管理
+    private analysisQueue: Array<{ word: string; definition: WordDefinition }> = [];
+    private isProcessingQueue = false;
+
     constructor(app: App, settings: HiWordsSettings) {
         this.app = app;
         this.settings = settings;
@@ -63,12 +67,12 @@ export class VocabularyManager {
         const file = this.app.vault.getAbstractFileByPath(book.path);
 
         if (!file || !(file instanceof TFile)) {
-            console.warn(`[HiWords] Canvas file not found: ${book.path}`);
+            console.warn(`[HiWords] 生词本文件未找到: ${book.path}`);
             return;
         }
 
         if (!CanvasService.isCanvasFile(file)) {
-            console.warn(`[HiWords] File is not a canvas: ${book.path}`);
+            console.warn(`[HiWords] 文件不是Canvas格式: ${book.path}`);
             return;
         }
 
@@ -79,8 +83,30 @@ export class VocabularyManager {
             // 使缓存失效
             this.cacheManager.invalidate();
         } catch (error) {
-            console.error(`[HiWords] Failed to load vocabulary book ${book.name}:`, error);
+            const errorMessage = this.formatErrorMessage(error, `加载生词本 ${book.name} 失败`);
+            console.error(`[HiWords] ${errorMessage}`, error);
         }
+    }
+    
+    /**
+     * 格式化错误信息为用户友好的提示
+     */
+    private formatErrorMessage(error: unknown, context: string): string {
+        if (error instanceof Error) {
+            if (error.message.includes('ENOENT') || error.message.includes('not found')) {
+                return `${context}：文件不存在，请检查文件路径`;
+            }
+            if (error.message.includes('EACCES') || error.message.includes('permission')) {
+                return `${context}：权限不足，请检查文件权限`;
+            }
+            if (error.message.includes('parse') || error.message.includes('JSON')) {
+                return `${context}：文件格式错误，请检查文件内容`;
+            }
+            if (error.message.includes('corrupt')) {
+                return `${context}：文件已损坏，请尝试重新创建`;
+            }
+        }
+        return `${context}：未知错误，请查看控制台获取详细信息`;
     }
 
     /**
@@ -128,18 +154,9 @@ export class VocabularyManager {
 
         // 如果是韩语单词，尝试形态学分析
         if (this.morphologyService.isKoreanText(normalizedWord)) {
-            // 异步分析单词，获取原型
-            this.morphologyService.analyzeWord(normalizedWord).then(result => {
-                if (result && result.baseForm !== normalizedWord) {
-                    // 用原型再次查找
-                    const baseDefinition = this.getDefinition(result.baseForm, visited);
-                    if (baseDefinition) {
-                        // 缓存活用形到原型的映射
-                        this.cacheManager.setDefinition(normalizedWord, baseDefinition);
-                    }
-                }
-            }).catch(error => {
-                console.error('形态学分析失败:', error);
+            // 异步分析单词，获取原型（使用安全的异步处理）
+            this.queueMorphologyAnalysis(normalizedWord, visited).catch(error => {
+                console.warn(`[HiWords] 形态学分析失败 ${normalizedWord}:`, error);
             });
         }
 
@@ -598,6 +615,10 @@ export class VocabularyManager {
         this.syncTimeouts.forEach(timeout => window.clearTimeout(timeout));
         this.syncTimeouts.clear();
         
+        // 清理异步队列
+        this.analysisQueue = [];
+        this.isProcessingQueue = false;
+        
         // 清理缓存
         this.definitions.clear();
         this.cacheManager.clear();
@@ -827,5 +848,27 @@ export class VocabularyManager {
     isWordMastered(word: string): boolean {
         const wordDef = this.cacheManager.getDefinition(word.toLowerCase());
         return wordDef?.mastered === true;
+    }
+
+    /**
+     * 队列处理形态学分析（避免未处理的 Promise）
+     * @param word 要分析的单词
+     * @param visited 已访问的单词集合
+     */
+    private async queueMorphologyAnalysis(word: string, visited: Set<string>): Promise<void> {
+        try {
+            const result = await this.morphologyService.analyzeWord(word);
+            if (result && result.baseForm !== word) {
+                // 用原型再次查找
+                const baseDefinition = this.getDefinition(result.baseForm, visited);
+                if (baseDefinition) {
+                    // 缓存活用形到原型的映射
+                    this.cacheManager.setDefinition(word, baseDefinition);
+                }
+            }
+        } catch (error) {
+            // 错误已在调用处处理，这里静默失败
+            throw error;
+        }
     }
 }
