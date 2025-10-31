@@ -47,17 +47,76 @@ export class VocabularyManager {
      * 加载所有启用的生词本
      */
     async loadAllVocabularyBooks(): Promise<void> {
-        this.definitions.clear();
-        this.cacheManager.invalidate();
+        // 显示加载状态
+        this.showLoadingIndicator('正在加载生词本...');
 
-        const loadPromises = this.settings.vocabularyBooks
-            .filter(book => book.enabled)
-            .map(book => this.loadVocabularyBook(book));
+        try {
+            const startTime = Date.now();
+            
+            this.definitions.clear();
+            this.cacheManager.invalidate();
 
-        await Promise.all(loadPromises);
+            const loadPromises = this.settings.vocabularyBooks
+                .filter(book => book.enabled)
+                .map(book => this.loadVocabularyBook(book));
 
-        // 重建缓存
-        this.cacheManager.rebuild(this.definitions);
+            await Promise.all(loadPromises);
+
+            // 重建缓存
+            this.cacheManager.rebuild(this.definitions);
+
+            const elapsed = Date.now() - startTime;
+            console.log(`[HiWords] 生词本加载完成，耗时 ${elapsed}ms`);
+
+            // 显示成功状态
+            this.showSuccessMessage(`生词本加载完成 (${this.settings.vocabularyBooks.filter(b => b.enabled).length}个)`);
+        } catch (error) {
+            this.showErrorMessage(error, '生词本加载失败');
+        } finally {
+            this.hideLoadingIndicator();
+        }
+    }
+
+    /**
+     * 显示加载状态指示
+     */
+    private showLoadingIndicator(message: string): void {
+        // 触发自定义事件，通知UI显示加载状态
+        if (this.app.workspace) {
+            this.app.workspace.trigger('hi-words:loading-show', message);
+        }
+    }
+
+    /**
+     * 隐藏加载状态指示
+     */
+    private hideLoadingIndicator(): void {
+        // 触发自定义事件，通知UI隐藏加载状态
+        if (this.app.workspace) {
+            this.app.workspace.trigger('hi-words:loading-hide');
+        }
+    }
+
+    /**
+     * 显示成功消息
+     */
+    private showSuccessMessage(message: string): void {
+        // 触发自定义事件，通知UI显示成功消息
+        if (this.app.workspace) {
+            this.app.workspace.trigger('hi-words:success-message', message);
+        }
+    }
+
+    /**
+     * 显示错误消息
+     */
+    private showErrorMessage(error: unknown, context: string): void {
+        const userFriendlyMessage = this.formatErrorMessage(error, context);
+        // 触发自定义事件，通知UI显示错误消息
+        if (this.app.workspace) {
+            this.app.workspace.trigger('hi-words:error-message', userFriendlyMessage);
+        }
+        console.error(`[HiWords] ${context}:`, error);
     }
 
     /**

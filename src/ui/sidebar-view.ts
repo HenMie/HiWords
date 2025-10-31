@@ -198,7 +198,11 @@ export class HiWordsSidebarView extends ItemView {
     private async scanCurrentDocument() {
         if (!this.currentFile) return;
 
+        // 显示加载状态
+        this.showLoadingIndicator('正在扫描文档中的生词...');
+
         try {
+            const startTime = Date.now();
             let content: string;
             
             // 根据文件类型提取内容
@@ -250,11 +254,120 @@ export class HiWordsSidebarView extends ItemView {
             
             // 标记缓存失效
             this.cacheInvalidated = true;
+
+            const elapsed = Date.now() - startTime;
+            console.log(`[HiWords] 文档扫描完成，耗时 ${elapsed}ms，找到 ${this.currentWords.length} 个生词`);
+
+            // 显示成功状态
+            this.showSuccessMessage(`文档扫描完成，找到 ${this.currentWords.length} 个生词`);
         } catch (error) {
             console.error('Failed to scan document:', error);
             this.currentWords = [];
             this.cacheInvalidated = true;
+            this.showErrorMessage(error, '文档扫描失败');
+        } finally {
+            this.hideLoadingIndicator();
         }
+    }
+
+    /**
+     * 显示加载状态指示
+     */
+    private showLoadingIndicator(message: string): void {
+        const container = this.containerEl.querySelector('.hi-words-sidebar');
+        if (!container) return;
+
+        // 移除已存在的加载指示器
+        const existingLoading = container.querySelector('.hi-words-loading');
+        if (existingLoading) {
+            existingLoading.remove();
+        }
+
+        // 创建新的加载指示器
+        const loadingEl = container.createEl('div', { cls: 'hi-words-loading' }) as HTMLElement;
+        loadingEl.innerHTML = `
+            <div class="hi-words-spinner"></div>
+            <div class="hi-words-loading-text">${message}</div>
+        `;
+        loadingEl.style.display = 'flex';
+    }
+
+    /**
+     * 隐藏加载状态指示
+     */
+    private hideLoadingIndicator(): void {
+        const loadingEl = this.containerEl.querySelector('.hi-words-loading') as HTMLElement;
+        if (loadingEl) {
+            loadingEl.style.display = 'none';
+        }
+    }
+
+    /**
+     * 显示成功消息
+     */
+    private showSuccessMessage(message: string): void {
+        const container = this.containerEl.querySelector('.hi-words-sidebar');
+        if (!container) return;
+
+        // 移除已存在的消息
+        const existingMessage = container.querySelector('.hi-words-message');
+        if (existingMessage) {
+            existingMessage.remove();
+        }
+
+        // 创建成功消息
+        const messageEl = container.createEl('div', { cls: 'hi-words-message hi-words-success' }) as HTMLElement;
+        messageEl.textContent = message;
+        messageEl.style.display = 'block';
+
+        // 3秒后自动隐藏
+        setTimeout(() => {
+            if (messageEl.parentNode) {
+                messageEl.style.display = 'none';
+            }
+        }, 3000);
+    }
+
+    /**
+     * 显示错误消息
+     */
+    private showErrorMessage(error: unknown, context: string): void {
+        const container = this.containerEl.querySelector('.hi-words-sidebar');
+        if (!container) return;
+
+        // 移除已存在的消息
+        const existingMessage = container.querySelector('.hi-words-message');
+        if (existingMessage) {
+            existingMessage.remove();
+        }
+
+        // 格式化错误信息
+        let userFriendlyMessage = context;
+        if (error instanceof Error) {
+            if (error.message.includes('ENOENT') || error.message.includes('not found')) {
+                userFriendlyMessage = `${context}：文件不存在`;
+            } else if (error.message.includes('EACCES') || error.message.includes('permission')) {
+                userFriendlyMessage = `${context}：权限不足`;
+            } else if (error.message.includes('parse') || error.message.includes('JSON')) {
+                userFriendlyMessage = `${context}：文件格式错误`;
+            } else {
+                userFriendlyMessage = `${context}：未知错误`;
+            }
+        }
+
+        // 创建错误消息
+        const messageEl = container.createEl('div', { cls: 'hi-words-message hi-words-error' }) as HTMLElement;
+        messageEl.textContent = userFriendlyMessage;
+        messageEl.style.display = 'block';
+
+        // 5秒后自动隐藏
+        setTimeout(() => {
+            if (messageEl.parentNode) {
+                messageEl.style.display = 'none';
+            }
+        }, 5000);
+
+        console.error(`[HiWords] ${context}:`, error);
     }
 
     /**

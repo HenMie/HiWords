@@ -473,7 +473,10 @@
     border-radius: 12px;
     padding: 4px;
     border: 1px solid var(--background-modifier-border-hover);
-    position: relative;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .hi-words-tab {
@@ -1006,6 +1009,61 @@
     to {
         transform: rotate(360deg);
     }
+}
+
+/* 侧边栏加载指示器样式 */
+.hi-words-loading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    background-color: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+.hi-words-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--background-modifier-border);
+    border-top-color: var(--interactive-accent);
+    border-radius: 50%;
+    animation: hi-words-spin 1s linear infinite;
+}
+
+@keyframes hi-words-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.hi-words-loading-text {
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+/* 侧边栏消息样式 */
+.hi-words-message {
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    display: none;
+}
+
+.hi-words-message.hi-words-success {
+    background-color: color-mix(in srgb, var(--color-green) 15%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-green) 25%, transparent);
+    color: var(--text-normal);
+}
+
+.hi-words-message.hi-words-error {
+    background-color: color-mix(in srgb, var(--color-red) 15%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-red) 25%, transparent);
+    color: var(--text-normal);
 }
 
 /* 形态学分析提示样式 */
