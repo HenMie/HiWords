@@ -1,9 +1,8 @@
 import { App, MarkdownRenderer, MarkdownView, Notice, setIcon, TFile, Component } from 'obsidian';
 import { VocabularyManager, MasteredService } from '../core';
-import { WordDefinition, MarkdownLinkBinder } from '../utils';
+import { WordDefinition, MarkdownLinkBinder, WordActionUtils } from '../utils';
 import { playWordTTS } from '../utils';
 import { t } from '../i18n';
-import { AddWordModal } from './add-word-modal';
 import HiWordsPlugin from '../../main';
 
 export class DefinitionPopover extends Component {
@@ -18,6 +17,7 @@ export class DefinitionPopover extends Component {
     private hoverIntentTimer: number | null = null; // 悬停意图定时器，避免频繁抖动
     private lastShowTs = 0; // 上一次显示时间戳，做最小间隔限制
     private linkBinder: MarkdownLinkBinder; // Markdown 链接绑定器
+    private wordActionUtils: WordActionUtils; // 单词操作工具类
     private static readonly SHOW_DELAY_MS = 120; // 悬停到显示的延迟
     private static readonly MIN_INTERVAL_MS = 150; // 两次显示的最小间隔
 
@@ -26,6 +26,7 @@ export class DefinitionPopover extends Component {
         this.app = plugin.app;
         this.plugin = plugin;
         this.linkBinder = new MarkdownLinkBinder(plugin.app);
+        this.wordActionUtils = new WordActionUtils(plugin.app, plugin);
 
         this.eventHandlers = {
             mouseover: this.handleMouseOver.bind(this),
@@ -316,16 +317,9 @@ export class DefinitionPopover extends Component {
             contentEl.classList.add('hi-words-definition');
         }
 
-        // 添加点击事件到释义内容区域，打开编辑模态框
-        contentEl.style.cursor = 'pointer';
-        contentEl.title = '点击编辑单词';
-        contentEl.addEventListener('click', (e) => {
-            e.stopPropagation();
-            // 检查点击是否在链接上，如果是则不打开编辑器
-            if ((e.target as HTMLElement).closest('a')) {
-                return;
-            }
-            this.openWordEditor(wordDef);
+        // 使用工具类添加点击事件
+        this.wordActionUtils.addDefinitionClickListener(contentEl, wordDef, () => {
+            this.removeTooltip();
         });
 
         if (!wordDef.definition || wordDef.definition.trim() === '') {
@@ -397,12 +391,10 @@ export class DefinitionPopover extends Component {
                     const displayName = fileName.endsWith('.canvas') ? fileName.slice(0, -7) : fileName;
                     sourceEl.textContent = `${t('sidebar.source_prefix')}${displayName}`;
                     
-                    // 添加点击事件到来源信息：导航到源文件
-                    sourceEl.style.cursor = 'pointer';
-                    sourceEl.addEventListener('click', (e) => {
-                        e.stopPropagation(); // 阻止事件冒泡
-                        this.navigateToSource(detailDef);
-                        // 点击跳转后清理预览框
+                    // 使用工具类添加点击事件
+                    this.wordActionUtils.addSourceClickListener(sourceEl, detailDef);
+                    // 添加点击跳转后清理预览框的行为
+                    sourceEl.addEventListener('click', () => {
                         this.removeTooltip();
                     });
                     
@@ -452,58 +444,6 @@ export class DefinitionPopover extends Component {
             this.activeTooltip = null;
         }
         this.currentTargetEl = null;
-    }
-
-    /**
-     * 导航到单词源文件
-     */
-    private async navigateToSource(wordDef: any) {
-        try {
-            const file = this.app.vault.getAbstractFileByPath(wordDef.source);
-            if (file instanceof TFile) {
-                // 如果是 Canvas 文件，直接打开
-                if (file.extension === 'canvas') {
-                    await this.app.workspace.openLinkText(file.path, '');
-                } else {
-                    // 如果是 Markdown 文件，打开并尝试定位到单词
-                    await this.app.workspace.openLinkText(file.path, '');
-                    // 等待一个短暂时间让文件加载
-                    setTimeout(() => {
-                        const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-                        if (activeView && activeView.file?.path === file.path) {
-                            // 尝试在文件中查找单词
-                            const editor = activeView.editor;
-                            const content = editor.getValue();
-                            const wordIndex = content.toLowerCase().indexOf(wordDef.word.toLowerCase());
-                            if (wordIndex !== -1) {
-                                const pos = editor.offsetToPos(wordIndex);
-                                editor.setCursor(pos);
-                                editor.scrollIntoView({ from: pos, to: pos }, true);
-                            }
-                        }
-                    }, 100);
-                }
-            }
-        } catch (error) {
-            console.error('导航到源文件失败:', error);
-        }
-    }
-
-    /**
-     * 打开单词编辑模态框
-     */
-    private openWordEditor(wordDef: WordDefinition) {
-        try {
-            // 关闭当前的悬浮卡片
-            this.removeTooltip();
-
-            // 打开编辑模态框
-            const editModal = new AddWordModal(this.app, this.plugin, wordDef.word, true);
-            editModal.open();
-        } catch (error) {
-            console.error('打开单词编辑器失败:', error);
-            new Notice('打开单词编辑器失败');
-        }
     }
 
     /**

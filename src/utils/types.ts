@@ -85,3 +85,6 @@ export interface WordMatch {
     color: string;
     baseForm?: string; // 词汇的原型形式，用于悬浮卡片查找
 }
+
+// 导出工具类
+export { WordActionUtils } from './word-action-utils';

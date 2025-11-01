@@ -1,9 +1,8 @@
 import { ItemView, WorkspaceLeaf, TFile, MarkdownView, MarkdownRenderer, setIcon, Notice } from 'obsidian';
 import HiWordsPlugin from '../../main';
-import { WordDefinition, mapCanvasColorToCSSVar, getColorWithOpacity, playWordTTS, MarkdownLinkBinder, Debouncer, removeOverlappingMatches } from '../utils';
+import { WordDefinition, mapCanvasColorToCSSVar, getColorWithOpacity, playWordTTS, MarkdownLinkBinder, Debouncer, removeOverlappingMatches, WordActionUtils } from '../utils';
 import { t } from '../i18n';
 import { WordMatcherService } from '../core/word-matcher-service';
-import { AddWordModal } from './add-word-modal';
 
 export const SIDEBAR_VIEW_TYPE = 'hi-words-sidebar';
 
@@ -19,6 +18,7 @@ export class HiWordsSidebarView extends ItemView {
     private measureScheduled = false; // 是否已安排 RAF 测量
     private delegatedBound = false; // 是否已绑定根级事件委托
     private linkBinder: MarkdownLinkBinder; // Markdown 链接绑定器
+    private wordActionUtils: WordActionUtils; // 单词操作工具类
     private wordMatcherService: WordMatcherService; // 单词匹配服务
     // 排序缓存优化
     private sortedWordsCache: WordDefinition[] = [];
@@ -32,6 +32,7 @@ export class HiWordsSidebarView extends ItemView {
         super(leaf);
         this.plugin = plugin;
         this.linkBinder = new MarkdownLinkBinder(plugin.app);
+        this.wordActionUtils = new WordActionUtils(plugin.app, plugin);
         this.wordMatcherService = new WordMatcherService(plugin.vocabularyManager);
         this.updateDebouncer = new Debouncer(() => {
             void this.updateView();
@@ -632,17 +633,8 @@ export class HiWordsSidebarView extends ItemView {
                 cls: this.plugin.settings.blurDefinitions ? 'hi-words-definition blur-enabled' : 'hi-words-definition'
             });
 
-            // 添加点击事件到释义内容区域，打开编辑模态框
-            defContainer.style.cursor = 'pointer';
-            defContainer.title = '点击编辑单词';
-            defContainer.addEventListener('click', (e) => {
-                e.stopPropagation();
-                // 检查点击是否在链接上，如果是则不打开编辑器
-                if ((e.target as HTMLElement).closest('a')) {
-                    return;
-                }
-                this.openWordEditor(wordDef);
-            });
+            // 使用工具类添加点击事件
+            this.wordActionUtils.addDefinitionClickListener(defContainer, wordDef);
 
             // 渲染 Markdown 内容
             try {
@@ -673,12 +665,8 @@ export class HiWordsSidebarView extends ItemView {
             const bookName = this.getBookNameFromPath(wordDef.source);
             source.createEl('span', { text: `${t('sidebar.source_prefix')}${bookName}`, cls: 'hi-words-source-text' });
             
-            // 添加点击事件到来源信息：导航到源文件
-            source.style.cursor = 'pointer';
-            source.addEventListener('click', (e) => {
-                e.stopPropagation(); // 阻止事件冒泡
-                this.navigateToSource(wordDef);
-            });
+            // 使用工具类添加点击事件
+            this.wordActionUtils.addSourceClickListener(source, wordDef);
         }
         
         // 添加已掌握状态样式
@@ -773,20 +761,7 @@ export class HiWordsSidebarView extends ItemView {
                     return;
                 }
 
-                // 来源跳转
-                const sourceEl = target.closest('.hi-words-word-source') as HTMLElement | null;
-                if (sourceEl && root.contains(sourceEl)) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const card = sourceEl.closest('.hi-words-word-card') as HTMLElement | null;
-                    const wordText = card?.querySelector('.hi-words-word-text') as HTMLElement | null;
-                    const word = wordText?.textContent?.trim();
-                    if (word) {
-                        const detail = this.currentWords.find((w) => w.word === word);
-                        if (detail) this.navigateToSource(detail);
-                    }
-                    return;
-                }
+                // 来源跳转 - 现在由工具类处理，这里可以移除重复逻辑
             },
             { capture: true } as any
         );
@@ -882,56 +857,6 @@ export class HiWordsSidebarView extends ItemView {
      */
     private bindInternalLinksAndTags(root: HTMLElement, sourcePath: string, hoverParent: HTMLElement) {
         this.linkBinder.bindInternalLinksAndTags(root, sourcePath, hoverParent);
-    }
-
-    /**
-     * 导航到单词源文件
-     */
-    private async navigateToSource(wordDef: WordDefinition) {
-        try {
-            const file = this.app.vault.getAbstractFileByPath(wordDef.source);
-            if (file instanceof TFile) {
-                // 如果是 Canvas 文件，直接打开
-                if (file.extension === 'canvas') {
-                    await this.app.workspace.openLinkText(file.path, '');
-                } else {
-                    // 如果是 Markdown 文件，打开并尝试定位到单词
-                    await this.app.workspace.openLinkText(file.path, '');
-                    // 等待一个短暂时间让文件加载
-                    setTimeout(() => {
-                        const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-                        if (activeView && activeView.file?.path === file.path) {
-                            // 尝试在文件中查找单词
-                            const editor = activeView.editor;
-                            const content = editor.getValue();
-                            const wordIndex = content.toLowerCase().indexOf(wordDef.word.toLowerCase());
-                            if (wordIndex !== -1) {
-                                const pos = editor.offsetToPos(wordIndex);
-                                editor.setCursor(pos);
-                                editor.scrollIntoView({ from: pos, to: pos }, true);
-                            }
-                        }
-                    }, 100);
-                }
-            }
-        } catch (error) {
-            console.error('导航到源文件失败:', error);
-        }
-    }
-
-
-    /**
-     * 打开单词编辑模态框
-     */
-    private openWordEditor(wordDef: WordDefinition) {
-        try {
-            // 打开编辑模态框
-            const editModal = new AddWordModal(this.app, this.plugin, wordDef.word, true);
-            editModal.open();
-        } catch (error) {
-            console.error('打开单词编辑器失败:', error);
-            new Notice('打开单词编辑器失败');
-        }
     }
 
     /**
