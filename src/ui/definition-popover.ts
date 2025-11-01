@@ -273,6 +273,9 @@ export class DefinitionPopover extends Component {
         const tooltip = document.createElement('div');
         tooltip.className = 'hi-words-tooltip';
 
+        // 触发侧边栏滚动定位到对应词汇
+        this.triggerSidebarScroll(wordDef);
+
         // 标题容器
         const titleContainer = document.createElement('div');
         titleContainer.className = 'hi-words-tooltip-title-container';
@@ -470,6 +473,26 @@ export class DefinitionPopover extends Component {
             }
         } catch (error) {
             console.error('导航到源文件失败:', error);
+        }
+    }
+
+    /**
+     * 触发侧边栏滚动到指定词汇
+     */
+    private triggerSidebarScroll(wordDef: WordDefinition) {
+        try {
+            // 查找所有打开的侧边栏视图
+            const sidebarLeaves = this.app.workspace.getLeavesOfType('hi-words-sidebar');
+
+            sidebarLeaves.forEach(leaf => {
+                const sidebarView = leaf.view as any;
+                // 检查侧边栏视图是否有滚动同步方法
+                if (sidebarView && typeof sidebarView.syncToWord === 'function') {
+                    sidebarView.syncToWord(wordDef.nodeId);
+                }
+            });
+        } catch (error) {
+            console.error('触发侧边栏滚动失败:', error);
         }
     }
 

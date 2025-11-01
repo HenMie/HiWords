@@ -72,6 +72,8 @@ export interface HiWordsSettings {
     groupInnerPadding?: number; // 分组内边距
     groupInnerColumns?: number; // 分组内部列数
     groupInnerGap?: number; // 分组内部行列间距
+    // 滚动同步设置
+    scrollSyncEnabled?: boolean; // 启用侧边栏滚动同步
 }
 
 // 词汇匹配信息

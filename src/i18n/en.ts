@@ -37,6 +37,8 @@ export default {
         mode_color: "Color mode (green = 4)",
         blur_definitions: "Blur content",
         blur_definitions_desc: "Blur content by default, reveal on hover. Great for learning—recall before seeing the answer",
+        scroll_sync_enabled: "Scroll sync",
+        scroll_sync_enabled_desc: "Automatically scroll sidebar vocabulary list to match current reading position",
         show_word_source: "Show word source",
         show_word_source_desc: "Display the vocabulary book name in tooltips and the sidebar",
         // TTS template

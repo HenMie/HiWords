@@ -37,6 +37,8 @@ export default {
         mode_color: "颜色模式（绿色=4）",
         blur_definitions: "模糊内容",
         blur_definitions_desc: "默认模糊显示内容，鼠标悬停时显示清晰内容。适合学习时先回忆再查看答案",
+        scroll_sync_enabled: "滚动同步",
+        scroll_sync_enabled_desc: "侧边栏词汇列表自动跟随文档滚动位置同步显示",
         show_word_source: "显示词书来源",
         show_word_source_desc: "在浮窗和侧边栏中显示单词来自的生词本名称",
         // 发音地址模板

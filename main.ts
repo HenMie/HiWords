@@ -35,7 +35,9 @@ const DEFAULT_SETTINGS: HiWordsSettings = {
     maxColumns: 6,
     groupInnerPadding: 24,
     groupInnerColumns: 2,
-    groupInnerGap: 12
+    groupInnerGap: 12,
+    // 滚动同步设置
+    scrollSyncEnabled: true // 默认启用滚动同步
 };
 
 export default class HiWordsPlugin extends Plugin {

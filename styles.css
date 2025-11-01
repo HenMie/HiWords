@@ -891,6 +891,52 @@
     color: var(--text-normal);
 }
 
+/* 滚动同步高亮样式 */
+.hi-words-word-card.visible-word {
+    background-color: color-mix(in srgb, var(--interactive-accent) 10%, var(--background-secondary));
+    border-color: var(--interactive-accent);
+    transform: translateX(-2px);
+    box-shadow: 0 4px 16px rgba(var(--interactive-accent-rgb), 0.2);
+    transition: all 0.3s ease;
+}
+
+.hi-words-word-card.visible-word .hi-words-word-text {
+    color: var(--interactive-accent);
+    font-weight: 700;
+}
+
+.hi-words-word-card.visible-word::before {
+    content: '';
+    position: absolute;
+    left: -4px;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: var(--interactive-accent);
+    border-radius: 2px 0 0 2px;
+    box-shadow: 0 0 8px rgba(var(--interactive-accent-rgb), 0.4);
+}
+
+/* 悬浮卡片触发的滚动高亮（更明显的视觉效果） */
+.hi-words-word-card.visible-word.hover-triggered {
+    background-color: color-mix(in srgb, var(--interactive-accent) 15%, var(--background-secondary));
+    border-color: var(--interactive-accent);
+    transform: translateX(-3px) scale(1.02);
+    box-shadow: 0 6px 20px rgba(var(--interactive-accent-rgb), 0.3);
+}
+
+.hi-words-word-card.visible-word.hover-triggered .hi-words-word-text {
+    color: var(--interactive-accent);
+    font-weight: 800;
+    text-shadow: 0 0 2px rgba(var(--interactive-accent-rgb), 0.2);
+}
+
+.hi-words-word-card.visible-word.hover-triggered::before {
+    width: 5px;
+    left: -5px;
+    box-shadow: 0 0 12px rgba(var(--interactive-accent-rgb), 0.6);
+}
+
 /* PDF 高亮特定样式 */
 .hi-words-pdf-highlight {
     /* 继承基础高亮样式，但针对 PDF 做优化 */
