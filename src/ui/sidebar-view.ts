@@ -1,8 +1,9 @@
-import { ItemView, WorkspaceLeaf, TFile, MarkdownView, MarkdownRenderer, setIcon } from 'obsidian';
+import { ItemView, WorkspaceLeaf, TFile, MarkdownView, MarkdownRenderer, setIcon, Notice } from 'obsidian';
 import HiWordsPlugin from '../../main';
 import { WordDefinition, mapCanvasColorToCSSVar, getColorWithOpacity, playWordTTS, MarkdownLinkBinder, Debouncer, removeOverlappingMatches } from '../utils';
 import { t } from '../i18n';
 import { WordMatcherService } from '../core/word-matcher-service';
+import { AddWordModal } from './add-word-modal';
 
 export const SIDEBAR_VIEW_TYPE = 'hi-words-sidebar';
 
@@ -631,6 +632,18 @@ export class HiWordsSidebarView extends ItemView {
                 cls: this.plugin.settings.blurDefinitions ? 'hi-words-definition blur-enabled' : 'hi-words-definition'
             });
 
+            // 添加点击事件到释义内容区域，打开编辑模态框
+            defContainer.style.cursor = 'pointer';
+            defContainer.title = '点击编辑单词';
+            defContainer.addEventListener('click', (e) => {
+                e.stopPropagation();
+                // 检查点击是否在链接上，如果是则不打开编辑器
+                if ((e.target as HTMLElement).closest('a')) {
+                    return;
+                }
+                this.openWordEditor(wordDef);
+            });
+
             // 渲染 Markdown 内容
             try {
                 const activeView = this.app.workspace.getActiveViewOfType(MarkdownView) || this.lastActiveMarkdownView;
@@ -906,6 +919,20 @@ export class HiWordsSidebarView extends ItemView {
         }
     }
 
+
+    /**
+     * 打开单词编辑模态框
+     */
+    private openWordEditor(wordDef: WordDefinition) {
+        try {
+            // 打开编辑模态框
+            const editModal = new AddWordModal(this.app, this.plugin, wordDef.word, true);
+            editModal.open();
+        } catch (error) {
+            console.error('打开单词编辑器失败:', error);
+            new Notice('打开单词编辑器失败');
+        }
+    }
 
     /**
      * 打开生词本文件

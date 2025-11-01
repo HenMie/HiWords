@@ -3,6 +3,7 @@ import { VocabularyManager, MasteredService } from '../core';
 import { WordDefinition, MarkdownLinkBinder } from '../utils';
 import { playWordTTS } from '../utils';
 import { t } from '../i18n';
+import { AddWordModal } from './add-word-modal';
 import HiWordsPlugin from '../../main';
 
 export class DefinitionPopover extends Component {
@@ -307,13 +308,25 @@ export class DefinitionPopover extends Component {
         // 内容
         const contentEl = document.createElement('div');
         contentEl.className = 'hi-words-tooltip-content';
-        
+
         // 如果启用了模糊效果，为内容添加模糊样式
         if (this.plugin.settings.blurDefinitions) {
             contentEl.classList.add('hi-words-definition', 'blur-enabled');
         } else {
             contentEl.classList.add('hi-words-definition');
         }
+
+        // 添加点击事件到释义内容区域，打开编辑模态框
+        contentEl.style.cursor = 'pointer';
+        contentEl.title = '点击编辑单词';
+        contentEl.addEventListener('click', (e) => {
+            e.stopPropagation();
+            // 检查点击是否在链接上，如果是则不打开编辑器
+            if ((e.target as HTMLElement).closest('a')) {
+                return;
+            }
+            this.openWordEditor(wordDef);
+        });
 
         if (!wordDef.definition || wordDef.definition.trim() === '') {
             contentEl.textContent = t('sidebar.no_definition');
@@ -473,6 +486,23 @@ export class DefinitionPopover extends Component {
             }
         } catch (error) {
             console.error('导航到源文件失败:', error);
+        }
+    }
+
+    /**
+     * 打开单词编辑模态框
+     */
+    private openWordEditor(wordDef: WordDefinition) {
+        try {
+            // 关闭当前的悬浮卡片
+            this.removeTooltip();
+
+            // 打开编辑模态框
+            const editModal = new AddWordModal(this.app, this.plugin, wordDef.word, true);
+            editModal.open();
+        } catch (error) {
+            console.error('打开单词编辑器失败:', error);
+            new Notice('打开单词编辑器失败');
         }
     }
 
