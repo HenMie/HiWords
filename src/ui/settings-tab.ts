@@ -300,18 +300,6 @@ export class HiWordsSettingTab extends PluginSettingTab {
                     this.plugin.app.workspace.trigger('hi-words:settings-changed');
                 }));
 
-        // 滚动同步功能
-        new Setting(containerEl)
-            .setName(t('settings.scroll_sync_enabled') || 'Enable scroll sync')
-            .setDesc(t('settings.scroll_sync_enabled_desc') || 'Automatically scroll sidebar vocabulary list to match current reading position')
-            .addToggle(toggle => toggle
-                .setValue(this.plugin.settings.scrollSyncEnabled ?? true)
-                .onChange(async (value) => {
-                    this.plugin.settings.scrollSyncEnabled = value;
-                    await this.plugin.saveSettings();
-                    // 触发侧边栏更新以应用滚动同步设置
-                    this.plugin.app.workspace.trigger('hi-words:settings-changed');
-                }));
 
         // 是否显示词书来源
         new Setting(containerEl)

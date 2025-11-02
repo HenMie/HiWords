@@ -23,10 +23,6 @@ export class HiWordsSidebarView extends ItemView {
     // 排序缓存优化
     private sortedWordsCache: WordDefinition[] = [];
     private cacheInvalidated = true;
-    // 滚动同步相关
-    private wordPositions: Map<string, number> = new Map(); // 存储单词在文档中的位置
-    private lastScrollTop: number = 0; // 上次滚动位置
-    private scrollDebouncer: Debouncer; // 滚动防抖器
 
     constructor(leaf: WorkspaceLeaf, plugin: HiWordsPlugin) {
         super(leaf);
@@ -37,9 +33,6 @@ export class HiWordsSidebarView extends ItemView {
         this.updateDebouncer = new Debouncer(() => {
             void this.updateView();
         }, 0); // 初始延迟为 0，后续通过 scheduleUpdate 指定
-        this.scrollDebouncer = new Debouncer(() => {
-            this.handleDocumentScroll();
-        }, 100); // 滚动防抖延迟
     }
 
     /**
@@ -105,11 +98,6 @@ export class HiWordsSidebarView extends ItemView {
         container.addClass('hi-words-sidebar');
         this.bindDelegatedHandlers(container as HTMLElement);
 
-        // 为侧边栏容器添加滚动监听器，以跟踪用户滚动操作
-        const sidebarScrollHandler = () => {
-            (this as any)._lastUserScrollTime = Date.now();
-        };
-        container.addEventListener('scroll', sidebarScrollHandler, { passive: true });
 
         // 初始化显示
         this.scheduleUpdate(0);
@@ -119,8 +107,6 @@ export class HiWordsSidebarView extends ItemView {
             this.app.workspace.on('active-leaf-change', (leaf: WorkspaceLeaf | null) => {
                 if (leaf === this.leaf) return; // 自身变为激活视图时不刷新
                 this.scheduleUpdate(120);
-                // 重新绑定滚动监听器
-                this.bindScrollListeners();
             })
         );
 
@@ -153,23 +139,14 @@ export class HiWordsSidebarView extends ItemView {
         this.registerEvent(
             this.app.workspace.on('hi-words:settings-changed' as any, () => {
                 this.scheduleUpdate(100);
-                // 重新绑定滚动监听器以应用新的设置
-                setTimeout(() => {
-                    this.bindScrollListeners();
-                }, 150);
             })
         );
 
-        // 延迟绑定滚动监听器，确保DOM已加载
-        setTimeout(() => {
-            this.bindScrollListeners();
-        }, 500);
     }
 
     async onClose() {
         // 清理资源
         this.wordMatcherService.destroy();
-        this.unbindScrollListeners();
     }
 
     /**
@@ -248,30 +225,38 @@ export class HiWordsSidebarView extends ItemView {
             // 使用与文章高亮相同的重叠处理逻辑，优先保留更长的匹配
             const filteredMatches = removeOverlappingMatches(matches);
 
-            // 创建一个 Map 来存储每个单词的首次出现位置
-            const wordPositionMap = new Map<string, { wordDef: WordDefinition, position: number }>();
+            // 改进的位置计算：创建一个 Map 来存储每个单词的所有出现位置
+            const wordAllPositionsMap = new Map<string, { wordDef: WordDefinition, positions: number[] }>();
 
-            // 遍历过滤后的匹配，记录每个单词的首次出现位置
+            // 遍历过滤后的匹配，记录每个单词的所有出现位置
             for (const match of filteredMatches) {
                 const definition = match.payload as WordDefinition;
                 if (definition && definition.nodeId) {
-                    // 使用 nodeId 作为唯一标识，避免重复添加同一个单词的不同变形
-                    if (!wordPositionMap.has(definition.nodeId)) {
-                        wordPositionMap.set(definition.nodeId, {
+                    if (!wordAllPositionsMap.has(definition.nodeId)) {
+                        wordAllPositionsMap.set(definition.nodeId, {
                             wordDef: definition,
-                            position: match.from
+                            positions: []
                         });
-                    } else {
-                        // 如果已经存在，保留更早出现的位置
-                        const existing = wordPositionMap.get(definition.nodeId)!;
-                        if (match.from < existing.position) {
-                            wordPositionMap.set(definition.nodeId, {
-                                wordDef: definition,
-                                position: match.from
-                            });
-                        }
                     }
+                    wordAllPositionsMap.get(definition.nodeId)!.positions.push(match.from);
                 }
+            }
+
+            // 对每个单词的位置进行排序，并选择最佳代表位置
+            const wordPositionMap = new Map<string, { wordDef: WordDefinition, position: number }>();
+            const contentLength = content.length;
+            
+            for (const [nodeId, { wordDef, positions }] of wordAllPositionsMap.entries()) {
+                // 对位置进行排序
+                positions.sort((a, b) => a - b);
+                
+                // 使用改进的位置选择策略
+                const bestPosition = this.selectBestPosition(positions, contentLength);
+                
+                wordPositionMap.set(nodeId, {
+                    wordDef,
+                    position: bestPosition
+                });
             }
 
             // 按照单词在文档中首次出现的位置排序
@@ -279,14 +264,8 @@ export class HiWordsSidebarView extends ItemView {
             foundWordsWithPosition.sort((a, b) => a.position - b.position);
             this.currentWords = foundWordsWithPosition.map(item => item.wordDef);
 
-            // 存储单词位置信息用于滚动同步，并进行更精确的位置计算
-            this.wordPositions.clear();
-            const contentLength = content.length;
-            foundWordsWithPosition.forEach(item => {
-                // 将字符位置转换为相对位置（0-1之间的比例）
-                const relativePosition = contentLength > 0 ? item.position / contentLength : 0;
-                this.wordPositions.set(item.wordDef.nodeId, item.position);
-            });
+            // 存储单词位置信息用于鼠标位置映射
+            // 注意：这里我们保留位置信息，但不再用于文档滚动同步
             
             // 标记缓存失效
             this.cacheInvalidated = true;
@@ -304,6 +283,54 @@ export class HiWordsSidebarView extends ItemView {
         } finally {
             this.hideLoadingIndicator();
         }
+    }
+
+    /**
+     * 从单词的所有出现位置中选择最佳代表位置
+     * 改进版本：更平衡的位置选择策略，确保文档各部分都有合适的代表
+     * @param positions 单词的所有出现位置（已排序）
+     * @param contentLength 文档总长度
+     * @returns 最佳代表位置
+     */
+    private selectBestPosition(positions: number[], contentLength: number): number {
+        if (positions.length === 1) {
+            return positions[0];
+        }
+
+        // 将文档分为三个部分：前1/3、中1/3、后1/3
+        const firstThirdThreshold = contentLength / 3;
+        const secondThirdThreshold = (contentLength * 2) / 3;
+
+        // 策略1：优先选择在文档前1/3部分的首次出现
+        const earlyPosition = positions.find(pos => pos <= firstThirdThreshold);
+        if (earlyPosition !== undefined) {
+            return earlyPosition;
+        }
+
+        // 策略2：如果没有在前1/3部分出现，选择在中1/3部分的首次出现
+        const middlePosition = positions.find(pos => pos > firstThirdThreshold && pos <= secondThirdThreshold);
+        if (middlePosition !== undefined) {
+            return middlePosition;
+        }
+
+        // 策略3：如果只出现在后1/3部分，选择该部分的首次出现
+        // 但确保不会太集中在文档末尾
+        const latePosition = positions.find(pos => pos > secondThirdThreshold);
+        if (latePosition !== undefined) {
+            // 如果位置太接近文档末尾（最后5%），稍微向前调整
+            const lastFivePercentThreshold = contentLength * 0.95;
+            if (latePosition > lastFivePercentThreshold && positions.length > 1) {
+                // 尝试选择一个稍微靠前的位置
+                const adjustedPosition = positions.find(pos => pos <= lastFivePercentThreshold);
+                if (adjustedPosition !== undefined) {
+                    return adjustedPosition;
+                }
+            }
+            return latePosition;
+        }
+
+        // 策略4：如果以上都不满足，选择首次出现
+        return positions[0];
     }
 
     /**
@@ -879,245 +906,9 @@ export class HiWordsSidebarView extends ItemView {
     }
 
     /**
-     * 绑定滚动监听器
-     */
-    private bindScrollListeners() {
-        this.unbindScrollListeners(); // 先清理之前的监听器
-
-        // 获取当前活动的编辑器视图
-        const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-        if (!activeView || !activeView.file) return;
-
-        // 监听编辑器滚动
-        const editorScrollHandler = () => {
-            if (!this.plugin.settings.scrollSyncEnabled) return;
-            this.scrollDebouncer.trigger();
-        };
-
-        // 监听阅读模式滚动
-        const readingViewScrollHandler = (event: Event) => {
-            if (!this.plugin.settings.scrollSyncEnabled) return;
-            this.scrollDebouncer.trigger();
-        };
-
-        // 绑定编辑器滚动事件
-        const editorScroller = activeView.containerEl.querySelector('.cm-scroller') as HTMLElement;
-        if (editorScroller) {
-            editorScroller.addEventListener('scroll', editorScrollHandler);
-            // 存储清理函数
-            this.editorScrollCleanup = () => {
-                editorScroller.removeEventListener('scroll', editorScrollHandler);
-            };
-        }
-
-        // 绑定阅读模式滚动事件
-        const markdownViewEl = activeView.containerEl.querySelector('.markdown-preview-view');
-        if (markdownViewEl) {
-            markdownViewEl.addEventListener('scroll', readingViewScrollHandler);
-            // 存储清理函数
-            this.readingScrollCleanup = () => {
-                markdownViewEl.removeEventListener('scroll', readingViewScrollHandler);
-            };
-        }
-    }
-
-    /**
-     * 解绑滚动监听器
-     */
-    private unbindScrollListeners() {
-        if (this.editorScrollCleanup) {
-            this.editorScrollCleanup();
-            this.editorScrollCleanup = null;
-        }
-        if (this.readingScrollCleanup) {
-            this.readingScrollCleanup();
-            this.readingScrollCleanup = null;
-        }
-    }
-
-    /**
-     * 处理文档滚动事件
-     */
-    private handleDocumentScroll() {
-        const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-        if (!activeView || !activeView.file || activeView.file !== this.currentFile) return;
-
-        // 检查侧边栏是否处于活动状态，避免侧边栏滚动时触发同步
-        const sidebarContainer = this.containerEl.querySelector('.hi-words-sidebar') as HTMLElement;
-        if (sidebarContainer && this.isElementScrolledByUser(sidebarContainer)) {
-            return; // 如果用户正在手动滚动侧边栏，则跳过自动同步
-        }
-
-        let currentScrollTop = 0;
-        let viewportHeight = 0;
-
-        // 获取当前滚动位置
-        const editorScroller = activeView.containerEl.querySelector('.cm-scroller') as HTMLElement;
-        if (editorScroller) {
-            // 编辑模式
-            currentScrollTop = editorScroller.scrollTop;
-            viewportHeight = editorScroller.clientHeight;
-        } else {
-            // 阅读模式
-            const markdownViewEl = activeView.containerEl.querySelector('.markdown-preview-view') as HTMLElement;
-            if (markdownViewEl) {
-                currentScrollTop = markdownViewEl.scrollTop;
-                viewportHeight = markdownViewEl.clientHeight;
-            }
-        }
-
-        // 避免重复处理相同位置
-        if (Math.abs(currentScrollTop - this.lastScrollTop) < 15) return;
-        this.lastScrollTop = currentScrollTop;
-
-        // 查找当前可见区域内的单词
-        const visibleWords = this.findVisibleWords(currentScrollTop, viewportHeight);
-        if (visibleWords.length > 0) {
-            this.syncSidebarScroll(visibleWords[0].nodeId);
-        }
-    }
-
-    /**
-     * 检查元素是否被用户滚动（通过检查最近的滚动活动）
-     */
-    private isElementScrolledByUser(element: HTMLElement): boolean {
-        // 简化的检查：如果元素最近被滚动过，则认为是用户操作
-        // 这里可以使用时间戳来跟踪最近的用户滚动操作
-        const now = Date.now();
-        const recentlyScrolled = (this as any)._lastUserScrollTime &&
-                               (now - (this as any)._lastUserScrollTime) < 1000;
-        return recentlyScrolled;
-    }
-
-    /**
-     * 查找当前可见区域内的单词
-     */
-    private findVisibleWords(scrollTop: number, viewportHeight: number): WordDefinition[] {
-        if (this.currentWords.length === 0) return [];
-
-        // 获取文档总高度（估算）
-        const totalHeight = this.getDocumentHeight();
-        if (totalHeight <= 0) return [];
-
-        const visibleStart = scrollTop - 100; // 提前100px开始显示
-        const visibleEnd = scrollTop + viewportHeight + 100; // 延后100px结束显示
-
-        // 找到所有可见的单词，并按与可见区域中心的距离排序
-        const visibleCenter = scrollTop + viewportHeight / 2;
-        const visibleWords = this.currentWords.filter(word => {
-            const position = this.wordPositions.get(word.nodeId);
-            if (position === undefined) return false;
-
-            // 使用相对位置计算实际像素位置
-            const relativePosition = this.getRelativePosition(word.nodeId);
-            const estimatedPosition = relativePosition * totalHeight;
-
-            return estimatedPosition >= visibleStart && estimatedPosition <= visibleEnd;
-        });
-
-        // 按距离可见区域中心的距离排序，优先显示最中心的单词
-        return visibleWords.sort((a, b) => {
-            const posA = this.getRelativePosition(a.nodeId) * totalHeight;
-            const posB = this.getRelativePosition(b.nodeId) * totalHeight;
-            const distA = Math.abs(posA - visibleCenter);
-            const distB = Math.abs(posB - visibleCenter);
-            return distA - distB;
-        });
-    }
-
-    /**
-     * 获取文档的总高度
-     */
-    private getDocumentHeight(): number {
-        const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-        if (!activeView) return 0;
-
-        const editorScroller = activeView.containerEl.querySelector('.cm-scroller') as HTMLElement;
-        if (editorScroller) {
-            // 编辑模式
-            return editorScroller.scrollHeight;
-        } else {
-            // 阅读模式
-            const markdownViewEl = activeView.containerEl.querySelector('.markdown-preview-view') as HTMLElement;
-            if (markdownViewEl) {
-                return markdownViewEl.scrollHeight;
-            }
-        }
-
-        return 0;
-    }
-
-    /**
-     * 获取单词的相对位置（0-1之间）
-     */
-    private getRelativePosition(wordNodeId: string): number {
-        const position = this.wordPositions.get(wordNodeId);
-        if (position === undefined) return 0;
-
-        // 基于所有单词的位置计算相对位置
-        const positions = Array.from(this.wordPositions.values());
-        if (positions.length === 0) return 0;
-
-        const minPosition = Math.min(...positions);
-        const maxPosition = Math.max(...positions);
-
-        if (maxPosition === minPosition) return 0.5; // 所有单词在同一位置，返回中间
-
-        return (position - minPosition) / (maxPosition - minPosition);
-    }
-
-    /**
-     * 同步侧边栏滚动到指定单词
-     */
-    private syncSidebarScroll(wordNodeId: string) {
-        const container = this.containerEl.querySelector('.hi-words-sidebar') as HTMLElement;
-        if (!container) return;
-
-        // 查找对应的单词卡片
-        const wordCard = container.querySelector(`[data-word-id="${wordNodeId}"]`) as HTMLElement;
-        if (!wordCard) return;
-
-        // 清除之前的高亮
-        this.clearVisibleWordHighlights();
-
-        // 高亮当前可见的单词卡片
-        wordCard.addClass('visible-word');
-
-        // 获取单词卡片的位置
-        const cardTop = wordCard.offsetTop;
-        const containerHeight = container.clientHeight;
-        const cardHeight = wordCard.offsetHeight;
-
-        // 计算目标滚动位置，使单词卡片居中显示
-        const targetScrollTop = cardTop - (containerHeight - cardHeight) / 2;
-
-        // 平滑滚动到目标位置
-        container.scrollTo({
-            top: targetScrollTop,
-            behavior: 'smooth'
-        });
-    }
-
-    /**
-     * 清除所有可见单词的高亮
-     */
-    private clearVisibleWordHighlights() {
-        const container = this.containerEl.querySelector('.hi-words-sidebar') as HTMLElement;
-        if (!container) return;
-
-        const highlightedCards = container.querySelectorAll('.visible-word') as NodeListOf<HTMLElement>;
-        highlightedCards.forEach(card => {
-            card.removeClass('visible-word');
-            card.removeClass('hover-triggered');
-        });
-    }
-
-    /**
      * 外部调用：同步侧边栏滚动到指定词汇（用于悬浮卡片触发）
      */
     public syncToWord(wordNodeId: string) {
-        if (!this.plugin.settings.scrollSyncEnabled) return;
-
         const container = this.containerEl.querySelector('.hi-words-sidebar') as HTMLElement;
         if (!container) return;
 
@@ -1125,12 +916,8 @@ export class HiWordsSidebarView extends ItemView {
         const wordCard = container.querySelector(`[data-word-id="${wordNodeId}"]`) as HTMLElement;
         if (!wordCard) return;
 
-        // 清除之前的高亮
-        this.clearVisibleWordHighlights();
-
-        // 高亮当前目标词汇卡片，添加悬浮触发特殊样式
+        // 高亮当前目标词汇卡片
         wordCard.addClass('visible-word');
-        wordCard.addClass('hover-triggered');
 
         // 获取单词卡片的位置
         const cardTop = wordCard.offsetTop;
@@ -1146,18 +933,11 @@ export class HiWordsSidebarView extends ItemView {
             behavior: 'smooth'
         });
 
-        // 标记用户最近通过悬浮卡片进行了定位，避免自动滚动覆盖
-        (this as any)._lastUserScrollTime = Date.now();
-
-        // 延迟移除悬浮触发特殊样式，保持3秒后恢复普通高亮样式
+        // 延迟移除高亮样式，保持3秒后恢复
         setTimeout(() => {
             if (wordCard && wordCard.hasClass('visible-word')) {
-                wordCard.removeClass('hover-triggered');
+                wordCard.removeClass('visible-word');
             }
         }, 3000);
     }
-
-    // 清理函数
-    private editorScrollCleanup: (() => void) | null = null;
-    private readingScrollCleanup: (() => void) | null = null;
 }
