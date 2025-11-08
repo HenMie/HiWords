@@ -12,3 +12,4 @@ export * from './canvas-utils';
 export * from './debounce-utils';
 export * from './korean-text-utils';
 export * from './markdown-link-binder';
+export * from './sentence-extractor';

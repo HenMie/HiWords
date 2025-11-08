@@ -185,9 +185,13 @@ export class CanvasService {
                 // 构建纯文本内容，不包含 frontmatter
                 let textContent = wordDef.word;
 
-                // 添加定义
+                if (wordDef.etymology) {
+                    textContent += `\n[${wordDef.etymology}]`;
+                }
+
                 if (wordDef.definition) {
-                    textContent += '\n' + wordDef.definition;
+                    const needsBlankLine = !!wordDef.etymology;
+                    textContent += `${needsBlankLine ? '\n\n' : '\n'}${wordDef.definition}`;
                 }
 
                 // 更新节点内容

@@ -202,12 +202,11 @@ export class VocabularyManager {
 
         // 缓存中没有找到，执行完整搜索
         for (const definitions of this.definitions.values()) {
-            // 先检查主单词（原型）
-            const foundByMainWord = definitions.find(def => def.word === normalizedWord);
-            if (foundByMainWord) {
-                // 更新缓存
-                this.cacheManager.setDefinition(normalizedWord, foundByMainWord);
-                return foundByMainWord;
+            for (const def of definitions) {
+                if (this.normalizeWordValue(def.word) === normalizedWord) {
+                    this.cacheManager.setDefinition(normalizedWord, def);
+                    return def;
+                }
             }
         }
 
@@ -355,11 +354,19 @@ export class VocabularyManager {
     /**
      * 添加词汇到 Canvas 文件
      */
-    async addWordToCanvas(bookPath: string, word: string, definition: string, color?: number, etymology?: string): Promise<boolean> {
+    async addWordToCanvas(
+        bookPath: string,
+        word: string,
+        definition: string,
+        color?: number,
+        etymology?: string
+    ): Promise<boolean> {
         try {
+            const trimmedWord = word.trim();
+
             // 1. 创建词汇定义（使用临时节点ID）
             const wordDef: WordDefinition = {
-                word,
+                word: trimmedWord,
                 definition,
                 etymology,
                 source: bookPath,
@@ -374,7 +381,7 @@ export class VocabularyManager {
             this.cacheManager.rebuild(this.definitions);
             
             // 4. 异步写入文件并更新真实nodeId
-            this.scheduleCanvasSync(bookPath, wordDef);
+            this.scheduleCanvasSync(bookPath, { ...wordDef });
             
             return true;
         } catch (error) {
@@ -415,18 +422,33 @@ export class VocabularyManager {
     /**
      * 更新 Canvas 文件中的词汇 - 增量更新优化版本
      */
-    async updateWordInCanvas(bookPath: string, nodeId: string, word: string, definition: string, color?: number, etymology?: string): Promise<boolean> {
+    async updateWordInCanvas(
+        bookPath: string,
+        nodeId: string,
+        word: string,
+        definition: string,
+        color?: number,
+        etymology?: string
+    ): Promise<boolean> {
         try {
             // 0. 获取原有的词汇定义，保留其他属性（如 mastered）
             const oldWordDef = await this.getWordDefinitionByNodeId(bookPath, nodeId);
+            const trimmedWord = word.trim();
 
             // 1. 先更新Canvas文件
-            const success = await this.canvasService.updateWordInCanvas(bookPath, nodeId, word, definition, color, etymology);
+            const success = await this.canvasService.updateWordInCanvas(
+                bookPath,
+                nodeId,
+                trimmedWord,
+                definition,
+                color,
+                etymology
+            );
 
             if (success) {
                 // 2. 创建更新后的词汇定义，保留原有的 mastered 等属性
                 const updatedWordDef: WordDefinition = {
-                    word,
+                    word: trimmedWord,
                     definition,
                     etymology,
                     source: bookPath,
@@ -482,7 +504,7 @@ export class VocabularyManager {
         }
         
         // 检查是否已存在（避免重复）
-        const existingIndex = bookWords.findIndex(w => w.word === wordDef.word);
+        const existingIndex = bookWords.findIndex(w => this.normalizeWordValue(w.word) === this.normalizeWordValue(wordDef.word));
         if (existingIndex >= 0) {
             bookWords[existingIndex] = wordDef; // 更新
         } else {
@@ -542,7 +564,7 @@ export class VocabularyManager {
         if (!this.pendingSyncWords.has(bookPath)) {
             this.pendingSyncWords.set(bookPath, []);
         }
-        this.pendingSyncWords.get(bookPath)!.push(wordDef);
+        this.pendingSyncWords.get(bookPath)!.push({ ...wordDef });
 
         // 设置新的定时器（延迟1秒批量同步）
         const timeout = window.setTimeout(() => {
@@ -595,6 +617,13 @@ export class VocabularyManager {
         const colorNum = parseInt(colorString, 10);
         // 验证是否为有效的 Canvas 颜色数字 (1-6)
         return (colorNum >= 1 && colorNum <= 6) ? colorNum : 0;
+    }
+
+    /**
+     * 规范化单词（用于比较和缓存键）
+     */
+    private normalizeWordValue(word: string): string {
+        return word.trim().toLowerCase();
     }
     
     /**

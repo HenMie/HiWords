@@ -187,20 +187,17 @@ export class HiWordsSettingTab extends PluginSettingTab {
         const { containerEl } = this;
         containerEl.empty();
 
-        // 基础设置
-        this.addBasicSettings();
-
-        // 生词本管理
         this.addVocabularyBooksSection();
-
-        // 自动布局设置（移动到最后）
+        this.addFileNodeParseModeSettings();
+        this.addHighlightingSection();
+        this.addLearningFeaturesSection();
         this.addAutoLayoutSettings();
     }
 
     /**
      * 添加基础设置
      */
-    private addBasicSettings() {
+    private addHighlightingSection() {
         const { containerEl } = this;
 
         // 启用自动高亮
@@ -243,63 +240,7 @@ export class HiWordsSettingTab extends PluginSettingTab {
                     this.plugin.refreshHighlighter();
                 }));
 
-        // 启用已掌握功能
-        new Setting(containerEl)
-            .setName(t('settings.enable_mastered_feature'))
-            .setDesc(t('settings.enable_mastered_feature_desc'))
-            .addToggle(toggle => toggle
-                .setValue(this.plugin.settings.enableMasteredFeature)
-                .onChange(async (value) => {
-                    this.plugin.settings.enableMasteredFeature = value;
-                    // 当启用已掌握功能时，自动启用侧边栏分组显示
-                    this.plugin.settings.showMasteredInSidebar = value;
-                    await this.plugin.saveSettings();
-                    this.plugin.refreshHighlighter();
-                    // 触发侧边栏更新
-                    this.plugin.app.workspace.trigger('hi-words:mastered-changed');
-                    this.display();
-                }));
-
-        // 已掌握判定模式（分组/颜色）
-        const masteredMode = new Setting(containerEl)
-            .setName(t('settings.mastered_detection') || 'Mastered detection mode')
-            .setDesc(t('settings.mastered_detection_desc') || 'Choose how to detect "mastered": by group or by color (green = 4)');
-        masteredMode.addDropdown(dropdown => dropdown
-            .addOption('group', t('settings.mode_group') || 'Group mode')
-            .addOption('color', t('settings.mode_color') || 'Color mode (green = 4)')
-            .setValue(this.plugin.settings.masteredDetection ?? 'group')
-            .onChange(async (value) => {
-                // 保存并同步到各子模块
-                (this.plugin.settings as any).masteredDetection = value as 'group' | 'color';
-                await this.plugin.saveSettings();
-                // 同步给 VocabularyManager/Parser/Editor
-                if (this.plugin.vocabularyManager?.updateSettings) {
-                    this.plugin.vocabularyManager.updateSettings(this.plugin.settings as any);
-                }
-                // 重新加载以按新模式解析 mastered 状态
-                await this.plugin.vocabularyManager.loadAllVocabularyBooks();
-                this.plugin.refreshHighlighter();
-                // 通知工作区应用
-                this.plugin.app.workspace.trigger('hi-words:settings-changed');
-            }));
-        // 当功能未启用时禁用选择
-        if (!this.plugin.settings.enableMasteredFeature) {
-            masteredMode.setDisabled(true);
-        }
-
-        // 模糊定义内容
-        new Setting(containerEl)
-            .setName(t('settings.blur_definitions'))
-            .setDesc(t('settings.blur_definitions_desc'))
-            .addToggle(toggle => toggle
-                .setValue(this.plugin.settings.blurDefinitions)
-                .onChange(async (value) => {
-                    this.plugin.settings.blurDefinitions = value;
-                    await this.plugin.saveSettings();
-                    // 触发侧边栏更新以应用模糊效果
-                    this.plugin.app.workspace.trigger('hi-words:settings-changed');
-                }));
-
+        this.addHighlightScopeSettings();
 
         // 是否显示词书来源
         new Setting(containerEl)
@@ -313,7 +254,108 @@ export class HiWordsSettingTab extends PluginSettingTab {
                     this.plugin.app.workspace.trigger('hi-words:settings-changed');
                 }));
 
-        // 发音地址模板（点击主词发音）
+    }
+
+    private addHighlightScopeSettings() {
+        const { containerEl } = this;
+
+        new Setting(containerEl)
+            .setName(t('settings.highlight_mode') || 'Highlight scope')
+            .setDesc(t('settings.highlight_mode_desc') || 'Define how folders are included in highlighting')
+            .addDropdown(dropdown => dropdown
+                .addOption('all', t('settings.mode_all') || 'All notes')
+                .addOption('exclude', t('settings.mode_exclude') || 'Exclude folders')
+                .addOption('include', t('settings.mode_include') || 'Only specified folders')
+                .setValue(this.plugin.settings.highlightMode || 'all')
+                .onChange(async (value: 'all' | 'exclude' | 'include') => {
+                    this.plugin.settings.highlightMode = value;
+                    await this.plugin.saveSettings();
+                    this.plugin.refreshHighlighter();
+                }));
+
+        new Setting(containerEl)
+            .setName(t('settings.highlight_paths') || 'Folder list')
+            .setDesc(t('settings.highlight_paths_desc') || 'Comma-separated folder list. Example: Archive, Templates, Private/Diary');
+
+        const textAreaContainer = containerEl.createDiv({ cls: 'hi-words-textarea-container' });
+        const textArea = textAreaContainer.createEl('textarea');
+        textArea.placeholder = t('settings.highlight_paths_placeholder') || 'e.g.: Archive, Templates, Private/Diary';
+        textArea.value = this.plugin.settings.highlightPaths || '';
+        textArea.rows = 3;
+        textArea.addEventListener('blur', async () => {
+            this.plugin.settings.highlightPaths = textArea.value;
+            await this.plugin.saveSettings();
+            this.plugin.refreshHighlighter();
+        });
+    }
+
+    private addFileNodeParseModeSettings() {
+        const { containerEl } = this;
+
+        new Setting(containerEl)
+            .setName(t('settings.file_node_parse_mode') || 'File node parse mode')
+            .setDesc(t('settings.file_node_parse_mode_desc') || 'Choose how file nodes are parsed into vocabulary entries')
+            .addDropdown(dropdown => dropdown
+                .addOption('filename-with-content', t('settings.mode_filename_with_content') || 'Filename with content fallback')
+                .addOption('filename', t('settings.mode_filename') || 'Filename only')
+                .addOption('content', t('settings.mode_content') || 'Parse file content')
+                .setValue(this.plugin.settings.fileNodeParseMode || 'filename-with-content')
+                .onChange(async (value) => {
+                    this.plugin.settings.fileNodeParseMode = value as any;
+                    await this.plugin.saveSettings();
+                    new Notice(t('notices.file_parse_mode_updated') || '文件节点解析模式已更新，重新加载单词本后生效');
+                }));
+    }
+
+    private addLearningFeaturesSection() {
+        const { containerEl } = this;
+
+        new Setting(containerEl)
+            .setName(t('settings.enable_mastered_feature'))
+            .setDesc(t('settings.enable_mastered_feature_desc'))
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.enableMasteredFeature)
+                .onChange(async (value) => {
+                    this.plugin.settings.enableMasteredFeature = value;
+                    this.plugin.settings.showMasteredInSidebar = value;
+                    await this.plugin.saveSettings();
+                    this.plugin.refreshHighlighter();
+                    this.plugin.app.workspace.trigger('hi-words:mastered-changed');
+                    this.display();
+                }));
+
+        const masteredMode = new Setting(containerEl)
+            .setName(t('settings.mastered_detection') || 'Mastered detection mode')
+            .setDesc(t('settings.mastered_detection_desc') || 'Choose how to detect "mastered": by group or by color (green = 4)');
+        masteredMode.addDropdown(dropdown => dropdown
+            .addOption('group', t('settings.mode_group') || 'Group mode')
+            .addOption('color', t('settings.mode_color') || 'Color mode (green = 4)')
+            .setValue(this.plugin.settings.masteredDetection ?? 'group')
+            .onChange(async (value) => {
+                (this.plugin.settings as any).masteredDetection = value as 'group' | 'color';
+                await this.plugin.saveSettings();
+                if (this.plugin.vocabularyManager?.updateSettings) {
+                    this.plugin.vocabularyManager.updateSettings(this.plugin.settings as any);
+                }
+                await this.plugin.vocabularyManager.loadAllVocabularyBooks();
+                this.plugin.refreshHighlighter();
+                this.plugin.app.workspace.trigger('hi-words:settings-changed');
+            }));
+        if (!this.plugin.settings.enableMasteredFeature) {
+            masteredMode.setDisabled(true);
+        }
+
+        new Setting(containerEl)
+            .setName(t('settings.blur_definitions'))
+            .setDesc(t('settings.blur_definitions_desc'))
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.blurDefinitions)
+                .onChange(async (value) => {
+                    this.plugin.settings.blurDefinitions = value;
+                    await this.plugin.saveSettings();
+                    this.plugin.app.workspace.trigger('hi-words:settings-changed');
+                }));
+
         new Setting(containerEl)
             .setName(t('settings.tts_template') || 'TTS template')
             .setDesc(t('settings.tts_template_desc') || 'Use {{word}} as placeholder, e.g. https://dict.youdao.com/dictvoice?audio={{word}}&type=2')
@@ -325,7 +367,68 @@ export class HiWordsSettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 }));
 
-        // 调试模式
+        const aiSettings = this.plugin.settings.aiDictionary ?? {
+            apiUrl: 'https://api.openai.com/v1/chat/completions',
+            apiKey: '',
+            model: 'gpt-4o-mini',
+            prompt: ''
+        };
+        this.plugin.settings.aiDictionary = aiSettings;
+        const defaultPrompt = 'Please provide a concise definition for the word "{{word}}" based on this context:\\n\\nSentence: {{sentence}}\\n\\nFormat:\\n1) Part of speech\\n2) English definition\\n3) Chinese translation\\n4) Example sentence (use the original sentence if appropriate)';
+
+        new Setting(containerEl)
+            .setName(t('settings.ai_dictionary') || 'AI Dictionary')
+            .setHeading();
+
+        new Setting(containerEl)
+            .setName(t('settings.ai_api_url') || 'API URL')
+            .setDesc(t('settings.ai_api_url_desc') || 'API endpoint (auto-detects: OpenAI, Claude, Gemini)')
+            .addText(text => text
+                .setPlaceholder('https://api.openai.com/v1/chat/completions')
+                .setValue(aiSettings.apiUrl || '')
+                .onChange(async (val) => {
+                    this.plugin.settings.aiDictionary!.apiUrl = val.trim();
+                    await this.plugin.saveSettings();
+                }));
+
+        new Setting(containerEl)
+            .setName(t('settings.ai_api_key') || 'API Key')
+            .setDesc(t('settings.ai_api_key_desc') || 'Your AI API key')
+            .addText(text => {
+                text.inputEl.type = 'password';
+                text.setPlaceholder('sk-...')
+                    .setValue(aiSettings.apiKey || '')
+                    .onChange(async (val) => {
+                        this.plugin.settings.aiDictionary!.apiKey = val.trim();
+                        await this.plugin.saveSettings();
+                    });
+            });
+
+        new Setting(containerEl)
+            .setName(t('settings.ai_model') || 'Model')
+            .setDesc(t('settings.ai_model_desc') || 'AI model name (e.g., gpt-4o-mini, deepseek-chat)')
+            .addText(text => text
+                .setPlaceholder('gpt-4o-mini')
+                .setValue(aiSettings.model || '')
+                .onChange(async (val) => {
+                    this.plugin.settings.aiDictionary!.model = val.trim();
+                    await this.plugin.saveSettings();
+                }));
+
+        new Setting(containerEl)
+            .setName(t('settings.ai_prompt') || 'Custom Prompt')
+            .setDesc(t('settings.ai_prompt_desc') || 'Use {{word}} and {{sentence}} as placeholders. The AI will use this prompt to generate definitions.');
+
+        const promptContainer = containerEl.createDiv({ cls: 'hi-words-textarea-container' });
+        const promptTextArea = promptContainer.createEl('textarea');
+        promptTextArea.placeholder = defaultPrompt;
+        promptTextArea.value = aiSettings.prompt || defaultPrompt;
+        promptTextArea.rows = 6;
+        promptTextArea.addEventListener('blur', async () => {
+            this.plugin.settings.aiDictionary!.prompt = promptTextArea.value;
+            await this.plugin.saveSettings();
+        });
+
         new Setting(containerEl)
             .setName(t('settings.debug_mode') || 'Debug mode')
             .setDesc(t('settings.debug_mode_desc') || 'Enable detailed logging in the console for troubleshooting')
@@ -334,10 +437,8 @@ export class HiWordsSettingTab extends PluginSettingTab {
                 .onChange(async (value) => {
                     this.plugin.settings.debugMode = value;
                     await this.plugin.saveSettings();
-                    // 通知相关服务更新调试模式
                     this.plugin.app.workspace.trigger('hi-words:settings-changed');
                 }));
-
     }
 
     /**

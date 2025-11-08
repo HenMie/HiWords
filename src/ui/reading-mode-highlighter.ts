@@ -12,7 +12,7 @@ export function registerReadingModeHighlighter(plugin: {
   settings: HiWordsSettings;
   vocabularyManager: VocabularyManager;
   registerMarkdownPostProcessor: (
-    processor: (el: HTMLElement, ctx: unknown) => void
+    processor: (el: HTMLElement, ctx: any) => void
   ) => void;
 }): void {
   // 使用统一的词汇匹配服务
@@ -93,9 +93,15 @@ export function registerReadingModeHighlighter(plugin: {
     }
   };
 
-  plugin.registerMarkdownPostProcessor((el) => {
+  plugin.registerMarkdownPostProcessor((el, ctx) => {
     try {
       if (!plugin.settings.enableAutoHighlight) return;
+
+      const filePath: string | undefined = ctx?.sourcePath;
+      const shouldHighlightFn = (plugin as any).shouldHighlightFile as ((path: string) => boolean) | undefined;
+      if (filePath && shouldHighlightFn && !shouldHighlightFn(filePath)) {
+        return;
+      }
       
       // 检查是否在主编辑器的阅读模式中
       // 排除侧边栏、悬停预览等其他容器

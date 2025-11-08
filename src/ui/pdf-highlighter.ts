@@ -110,6 +110,12 @@ export function registerPDFHighlighter(plugin: {
   const processAllPDFLayers = () => {
     if (!plugin.settings.enableAutoHighlight) return;
     
+    const activeFile = plugin.app.workspace.getActiveFile();
+    const shouldHighlightFn = (plugin as any).shouldHighlightFile as ((path: string) => boolean) | undefined;
+    if (activeFile?.path && shouldHighlightFn && !shouldHighlightFn(activeFile.path)) {
+      return;
+    }
+    
     // 重建Trie以获取最新的词汇列表
     wordMatcherService.buildTrie();
     

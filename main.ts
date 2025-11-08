@@ -1,10 +1,10 @@
 import { App, Plugin, TFile, Notice, WorkspaceLeaf, Editor, MarkdownView } from 'obsidian';
 import { Extension } from '@codemirror/state';
 // 使用新的模块化导入
-import { HiWordsSettings } from './src/utils';
+import { HiWordsSettings, extractSentenceFromEditorMultiline } from './src/utils';
 import { registerReadingModeHighlighter } from './src/ui/reading-mode-highlighter';
 import { registerPDFHighlighter, cleanupPDFHighlighter } from './src/ui/pdf-highlighter';
-import { VocabularyManager, MasteredService, WordHighlighter, createWordHighlighterExtension, highlighterManager, KoreanMorphologyService, MorphologyIndexManager } from './src/core';
+import { VocabularyManager, MasteredService, createWordHighlighterExtension, highlighterManager } from './src/core';
 import { DefinitionPopover, HiWordsSettingTab, HiWordsSidebarView, SIDEBAR_VIEW_TYPE, AddWordModal } from './src/ui';
 import { i18n, t } from './src/i18n';
 
@@ -36,6 +36,15 @@ const DEFAULT_SETTINGS: HiWordsSettings = {
     groupInnerPadding: 24,
     groupInnerColumns: 2,
     groupInnerGap: 12,
+    aiDictionary: {
+        apiUrl: 'https://api.openai.com/v1/chat/completions',
+        apiKey: '',
+        model: 'gpt-4o-mini',
+        prompt: 'Please provide a concise definition for the word "{{word}}" based on this context:\\n\\nSentence: {{sentence}}\\n\\nFormat:\\n1) Part of speech\\n2) English definition\\n3) Chinese translation\\n4) Example sentence (use the original sentence if appropriate)'
+    },
+    highlightMode: 'all',
+    highlightPaths: '',
+    fileNodeParseMode: 'filename-with-content'
 };
 
 export default class HiWordsPlugin extends Plugin {
@@ -44,7 +53,6 @@ export default class HiWordsPlugin extends Plugin {
     definitionPopover: DefinitionPopover;
     masteredService: MasteredService;
     editorExtensions: Extension[] = [];
-    highlighterInstance: WordHighlighter | null = null;
     private isSidebarInitialized = false;
     private isLoadingVocabulary = false;
     private vocabularyLoadPromise: Promise<void> | null = null;
@@ -140,7 +148,10 @@ export default class HiWordsPlugin extends Plugin {
      */
     private setupEditorExtensions() {
         if (this.settings.enableAutoHighlight) {
-            const extension = createWordHighlighterExtension(this.vocabularyManager);
+            const extension = createWordHighlighterExtension(
+                this.vocabularyManager,
+                (filePath) => this.shouldHighlightFile(filePath)
+            );
             this.editorExtensions = [extension];
             this.registerEditorExtension(this.editorExtensions);
         }
@@ -182,8 +193,9 @@ export default class HiWordsPlugin extends Plugin {
                     return;
                 }
 
+                const sentence = extractSentenceFromEditorMultiline(editor);
                 // 使用 addOrEditWord 方法，自动判断是添加还是编辑
-                this.addOrEditWord(selectedText);
+                this.addOrEditWord(selectedText, sentence);
             }
         });
     }
@@ -279,7 +291,8 @@ export default class HiWordsPlugin extends Plugin {
                         item
                             .setTitle(t(titleKey))
                             .onClick(() => {
-                                this.addOrEditWord(word);
+                                const sentence = extractSentenceFromEditorMultiline(editor);
+                                this.addOrEditWord(word, sentence);
                             });
                     });
                 }
@@ -287,6 +300,41 @@ export default class HiWordsPlugin extends Plugin {
         );
     }
 
+
+    /**
+     * 根据设置判断文件是否需要高亮
+     */
+    private shouldHighlightFile(filePath: string): boolean {
+        const mode = this.settings.highlightMode || 'all';
+        if (mode === 'all') {
+            return true;
+        }
+
+        const pathsStr = this.settings.highlightPaths || '';
+        const paths = pathsStr
+            .split(',')
+            .map((p) => p.trim())
+            .filter((p) => p.length > 0);
+
+        if (paths.length === 0) {
+            return mode === 'exclude';
+        }
+
+        const normalizedFile = filePath.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+        const isMatched = paths.some((path) => {
+            const normalizedPath = path.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+            return normalizedFile === normalizedPath || normalizedFile.startsWith(`${normalizedPath}/`);
+        });
+
+        if (mode === 'exclude') {
+            return !isMatched;
+        }
+        if (mode === 'include') {
+            return isMatched;
+        }
+
+        return true;
+    }
 
     /**
      * 刷新高亮器
@@ -368,16 +416,17 @@ export default class HiWordsPlugin extends Plugin {
      * 检查单词是否已存在，如果存在则打开编辑模式，否则打开添加模式
      * @param word 要添加或编辑的单词
      */
-    addOrEditWord(word: string) {
+    addOrEditWord(word: string, sentence: string = '') {
         // 检查单词是否已存在
-        const exists = this.vocabularyManager.hasWord(word);
+        const normalizedWord = word.trim();
+        const exists = this.vocabularyManager.hasWord(normalizedWord);
         
         if (exists) {
             // 如果单词已存在，打开编辑模式
-            new AddWordModal(this.app, this, word, true).open();
+            new AddWordModal(this.app, this, normalizedWord, sentence, true).open();
         } else {
             // 如果单词不存在，打开添加模式
-            new AddWordModal(this.app, this, word).open();
+            new AddWordModal(this.app, this, normalizedWord, sentence).open();
         }
     }
 

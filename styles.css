@@ -453,6 +453,85 @@
     font-family: var(--font-monospace);
 }
 
+/* 新表单样式（兼容新版模态） */
+.hiwords-form-item {
+    margin: 8px 0 20px 0;
+}
+
+.hiwords-form-item-label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 400;
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+.hiwords-definition-label-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.hiwords-word-definition-input {
+    width: 100%;
+    min-height: 100px;
+    margin: 8px 0;
+}
+
+.hiwords-modal-button-container {
+    margin-top: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.hiwords-button-group-left,
+.hiwords-button-group-right {
+    display: flex;
+    gap: 8px;
+}
+
+.hiwords-button-group-right {
+    margin-left: auto;
+}
+
+.hiwords-auto-fill-btn {
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.hiwords-auto-fill-btn:hover {
+    background-color: var(--background-modifier-hover);
+    color: var(--interactive-accent);
+}
+
+.hiwords-auto-fill-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.hiwords-auto-fill-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+.hiwords-auto-fill-btn.hiwords-loading {
+    pointer-events: none;
+}
+
+.hiwords-auto-fill-btn.hiwords-loading .hiwords-auto-fill-icon {
+    animation: hiwords-spin 1s linear infinite;
+}
+
 /* 侧边栏样式 */
 .hi-words-sidebar {
     display: flex;
@@ -567,12 +646,16 @@
         border-radius: 8px;
         padding: 3px;
     }
+
+    .hi-words-word-list {
+        column-count: 1;
+    }
 }
 
 .hi-words-word-list {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+    column-count: auto;
+    column-width: 280px;
+    column-gap: 12px;
     width: 100%;
     box-sizing: border-box;
 }
@@ -589,8 +672,11 @@
     position: relative;
     overflow: hidden;
     width: 100%;
+    margin-bottom: 12px;
     box-sizing: border-box;
     min-width: 0;
+    break-inside: avoid;
+    display: inline-block;
 }
 
 .hi-words-word-card:hover {

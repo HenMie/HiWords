@@ -72,6 +72,18 @@ export interface HiWordsSettings {
     groupInnerPadding?: number; // 分组内边距
     groupInnerColumns?: number; // 分组内部列数
     groupInnerGap?: number; // 分组内部行列间距
+    // AI 词典配置
+    aiDictionary?: {
+        apiUrl: string; // AI API 地址
+        apiKey: string; // API Key
+        model: string; // 模型名称
+        prompt: string; // 自定义 prompt 模板
+    };
+    // 高亮范围设置
+    highlightMode?: 'all' | 'exclude' | 'include';
+    highlightPaths?: string;
+    // 文件节点解析模式
+    fileNodeParseMode?: 'filename' | 'content' | 'filename-with-content';
 }
 
 // 词汇匹配信息

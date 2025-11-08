@@ -68,6 +68,7 @@ export class VocabularyCacheManager {
                 this.wordDefinitionCache.set(normalizedWord, def);
                 allWords.add(normalizedWord);
                 bookWords.add(normalizedWord);
+
             }
             
             // 保存该书本的单词列表

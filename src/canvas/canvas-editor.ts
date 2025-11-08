@@ -29,15 +29,19 @@ export class CanvasEditor {
      * @param etymology 可选的词源
      * @returns 操作是否成功
      */
-    async addWordToCanvas(bookPath: string, word: string, definition: string, color?: number, etymology?: string): Promise<boolean> {
+    async addWordToCanvas(
+        bookPath: string,
+        word: string,
+        definition: string,
+        color?: number,
+        etymology?: string
+    ): Promise<boolean> {
         try {
             const file = this.app.vault.getAbstractFileByPath(bookPath);
             if (!file || !(file instanceof TFile) || !CanvasParser.isCanvasFile(file)) {
                 console.error(`无效的 Canvas 文件: ${bookPath}`);
                 return false;
             }
-
-            // 删除别名相关处理
 
             // 使用原子更新，避免并发覆盖
             const parser = new CanvasParser(this.app, this.settings);
@@ -91,8 +95,13 @@ export class CanvasEditor {
 
                 // 构建文本
                 let nodeText = word;
-                if (etymology) nodeText = `${nodeText}\n[${etymology}]`;
-                if (definition) nodeText = `${nodeText}\n${etymology ? '' : '\n'}${definition}`;
+                if (etymology) {
+                    nodeText += `\n[${etymology}]`;
+                }
+                if (definition) {
+                    const needsBlankLine = !!etymology;
+                    nodeText += `${needsBlankLine ? '\n\n' : '\n'}${definition}`;
+                }
 
                 const newNode: CanvasNode = {
                     id: nodeId,
@@ -129,15 +138,20 @@ export class CanvasEditor {
      * @param etymology 可选的词源
      * @returns 操作是否成功
      */
-    async updateWordInCanvas(bookPath: string, nodeId: string, word: string, definition: string, color?: number, etymology?: string): Promise<boolean> {
+    async updateWordInCanvas(
+        bookPath: string,
+        nodeId: string,
+        word: string,
+        definition: string,
+        color?: number,
+        etymology?: string
+    ): Promise<boolean> {
         try {
             const file = this.app.vault.getAbstractFileByPath(bookPath);
             if (!file || !(file instanceof TFile) || !CanvasParser.isCanvasFile(file)) {
                 console.error(`无效的 Canvas 文件: ${bookPath}`);
                 return false;
             }
-
-            // 删除别名相关处理
 
             let updated = false;
             const parser = new CanvasParser(this.app, this.settings);
@@ -153,8 +167,13 @@ export class CanvasEditor {
                 }
 
                 let nodeText = word;
-                if (etymology) nodeText = `${nodeText}\n[${etymology}]`;
-                if (definition) nodeText = `${nodeText}\n${etymology ? '' : '\n'}${definition}`;
+                if (etymology) {
+                    nodeText += `\n[${etymology}]`;
+                }
+                if (definition) {
+                    const needsBlankLine = !!etymology;
+                    nodeText += `${needsBlankLine ? '\n\n' : '\n'}${definition}`;
+                }
 
                 canvasData.nodes[index].text = nodeText;
                 if (color !== undefined) {

@@ -67,6 +67,21 @@ export interface LanguagePack {
         columns_desc: string;
         group_inner_layout: string;
         group_inner_layout_desc: string;
+        // Highlighting scope
+        highlight_mode?: string;
+        highlight_mode_desc?: string;
+        mode_all?: string;
+        mode_exclude?: string;
+        mode_include?: string;
+        highlight_paths?: string;
+        highlight_paths_desc?: string;
+        highlight_paths_placeholder?: string;
+        // File node parsing
+        file_node_parse_mode?: string;
+        file_node_parse_mode_desc?: string;
+        mode_filename_with_content?: string;
+        mode_filename?: string;
+        mode_content?: string;
     };
     sidebar: {
         title: string;
@@ -104,8 +119,6 @@ export interface LanguagePack {
         select_book: string;
         color_label: string;
         color_gray: string;
-        aliases_label: string;
-        aliases_placeholder: string;
         definition_placeholder: string;
         add_button: string;
         cancel_button: string;

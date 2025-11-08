@@ -153,24 +153,40 @@ export class CanvasParser {
             
             // 解析剩余行，寻找词源和定义
             let definitionStartIndex = 1;
-            
+
             // 检查第二行是否为词源格式 [词源]
-            if (lines.length > 1) {
-                const secondLine = lines[1].trim();
-                const etymologyMatch = secondLine.match(/^\[(.+)\]$/);
+            if (lines.length > definitionStartIndex) {
+                const maybeEtymology = lines[definitionStartIndex].trim();
+                const etymologyMatch = maybeEtymology.match(/^\[(.+)\]$/);
                 if (etymologyMatch) {
-                    etymology = etymologyMatch[1]; // 只保存括号内的内容
-                    definitionStartIndex = 2;
+                    etymology = etymologyMatch[1];
+                    definitionStartIndex++;
                 }
             }
-            
-            // 获取定义部分（从词源后或第二行开始）
+
+            // 跳过旧格式中的斜体别名行
+            while (lines.length > definitionStartIndex) {
+                const line = lines[definitionStartIndex].trim();
+                if (!line) {
+                    definitionStartIndex++;
+                    continue;
+                }
+
+                if (line.startsWith('*') && line.endsWith('*') && line.length > 2) {
+                    definitionStartIndex++;
+                    continue;
+                }
+
+                break;
+            }
+
+            // 获取定义部分（从词源/别名之后开始）
             if (lines.length > definitionStartIndex) {
                 definition = lines.slice(definitionStartIndex).join('\n').trim();
             }
 
             const result = {
-                word: word.toLowerCase(), // 统一转为小写进行匹配
+                word,
                 definition,
                 etymology: etymology || undefined,
                 source: sourcePath,
@@ -187,8 +203,7 @@ export class CanvasParser {
     }
 
     /**
-     * 解析文本节点，提取单词、别名和定义（包装通用文本解析）
-     * 优化版本：支持主名字换行后的斜体格式作为别名格式
+     * 解析文本节点，提取单词和定义（包装通用文本解析）
      */
     private parseTextNode(node: CanvasNode, sourcePath: string): WordDefinition | null {
         if (!node.text) return null;
@@ -207,9 +222,41 @@ export class CanvasParser {
             if (!(abs instanceof TFile)) return null;
             if (abs.extension !== 'md') return null;
 
-            const md = await this.app.vault.read(abs);
-            // 对于文件节点，source 统一记录为 Canvas 文件路径（生词本路径）
-            return this.parseFromText(md, node, sourcePath);
+            const mode = this.settings?.fileNodeParseMode || 'filename-with-content';
+            const fileName = abs.basename;
+            const normalizedFileName = fileName.toLowerCase();
+
+            if (mode === 'filename') {
+                return {
+                    word: normalizedFileName,
+                    definition: '',
+                    source: sourcePath,
+                    nodeId: node.id,
+                    color: node.color,
+                    mastered: false
+                };
+            }
+
+            const md = await this.app.vault.cachedRead(abs);
+
+            if (mode === 'content') {
+                return this.parseFromText(md, node, sourcePath);
+            }
+
+            // filename-with-content
+            const parsed = this.parseFromText(md, node, sourcePath);
+            if (parsed) {
+                return parsed;
+            }
+
+            return {
+                word: normalizedFileName,
+                definition: '',
+                source: sourcePath,
+                nodeId: node.id,
+                color: node.color,
+                mastered: false
+            };
         } catch (error) {
             console.error('解析文件节点失败:', error);
             return null;

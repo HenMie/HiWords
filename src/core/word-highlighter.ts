@@ -1,9 +1,4 @@
-import {
-    RangeSetBuilder,
-    Extension,
-    StateField,
-    StateEffect
-} from '@codemirror/state';
+import { RangeSetBuilder, Extension, StateField, StateEffect } from '@codemirror/state';
 import {
     EditorView,
     Decoration,
@@ -14,6 +9,7 @@ import {
     PluginValue,
     WidgetType
 } from '@codemirror/view';
+import { editorViewField } from 'obsidian';
 import { VocabularyManager } from './vocabulary-manager';
 import {
     WordMatch,
@@ -104,10 +100,12 @@ export class WordHighlighter implements PluginValue {
     private cachedMatches: Map<string, WordMatch[]> = new Map();
     private lastDocVersion = 0;
     private lastDocHash = '';
+    protected shouldHighlightFile?: (filePath: string) => boolean;
 
-    constructor(view: EditorView, vocabularyManager: VocabularyManager) {
+    constructor(view: EditorView, vocabularyManager: VocabularyManager, shouldHighlightFile?: (filePath: string) => boolean) {
         this.editorView = view;
         this.vocabularyManager = vocabularyManager;
+        this.shouldHighlightFile = shouldHighlightFile;
         this.wordMatcherService = new WordMatcherService(vocabularyManager);
         this.decorations = this.buildDecorations(view);
         
@@ -157,6 +155,18 @@ export class WordHighlighter implements PluginValue {
      * 构建装饰器
      */
     private buildDecorations(view: EditorView): DecorationSet {
+        if (this.shouldHighlightFile) {
+            try {
+                const fileContext = view.state.field(editorViewField, false) as any;
+                const filePath = fileContext?.file?.path;
+                if (filePath && !this.shouldHighlightFile(filePath)) {
+                    return Decoration.none;
+                }
+            } catch (err) {
+                console.warn('HiWords: failed to evaluate highlight scope', err);
+            }
+        }
+
         const startTime = performance.now();
         const builder = new RangeSetBuilder<Decoration>();
         const matches: WordMatch[] = [];
@@ -363,7 +373,10 @@ export class WordHighlighter implements PluginValue {
 }
 
 // 创建编辑器扩展
-export function createWordHighlighterExtension(vocabularyManager: VocabularyManager): Extension {
+export function createWordHighlighterExtension(
+    vocabularyManager: VocabularyManager,
+    shouldHighlightFile?: (filePath: string) => boolean
+): Extension {
     const pluginSpec: PluginSpec<WordHighlighter> = {
         decorations: (value: WordHighlighter) => value.decorations,
     };
@@ -371,7 +384,7 @@ export function createWordHighlighterExtension(vocabularyManager: VocabularyMana
     // 创建一个工厂函数来传递 vocabularyManager
     class WordHighlighterWithManager extends WordHighlighter {
         constructor(view: EditorView) {
-            super(view, vocabularyManager);
+            super(view, vocabularyManager, shouldHighlightFile);
         }
     }
 
