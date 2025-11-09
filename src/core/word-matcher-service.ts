@@ -104,7 +104,25 @@ export class WordMatcherService {
      * 检查是否允许跨空格匹配（只允许名词+名词的情况）
      * 这个方法可以直接传给 Trie.findAllMatches
      */
-    public canSkipSpace = (textBeforeSpace: string, textAfterSpace: string, spacePosition: number): boolean => {
+    public canSkipSpace = (fullText: string, matchStart: number, spacePosition: number): boolean => {
+        if (matchStart < 0 || spacePosition <= matchStart) {
+            return false;
+        }
+
+        const charBeforeMatch = matchStart > 0 ? fullText[matchStart - 1] : '';
+        const startsFromWhitespace = matchStart === 0 || /\s/.test(charBeforeMatch);
+        if (!startsFromWhitespace) {
+            return false;
+        }
+
+        const rawBefore = fullText.substring(matchStart, spacePosition);
+        const textAfterSpace = fullText.substring(spacePosition + 1);
+        const textBeforeSpace = rawBefore.replace(/\s+$/u, '');
+
+        if (!textBeforeSpace) {
+            return false;
+        }
+
         // 只对韩语文本进行检查
         if (!this.morphologyService.isKoreanText(textBeforeSpace) || 
             !this.morphologyService.isKoreanText(textAfterSpace)) {
