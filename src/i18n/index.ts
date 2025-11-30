@@ -198,9 +198,10 @@ export class I18n {
     /**
      * 获取翻译文本
      * @param key 翻译键，支持点号分隔的路径，如 'sidebar.title'
+     * @param fallback 可选的后备值，当翻译键不存在时返回
      * @returns 翻译后的文本
      */
-    public t(key: string): string {
+    public t(key: string, fallback?: string): string {
         const locale = this.getCurrentLocale();
         const pack = languagePacks[locale];
         const keys = key.split('.');
@@ -210,12 +211,48 @@ export class I18n {
             if (result && result[k] !== undefined) {
                 result = result[k];
             } else {
-                console.warn(`翻译键 ${key} 不存在于 ${locale} 语言包中`);
+                // 尝试从英语语言包获取后备值
+                if (locale !== 'en') {
+                    const enResult = this.getFromPack(languagePacks['en'], keys);
+                    if (enResult !== null) {
+                        return enResult;
+                    }
+                }
+                
+                // 如果提供了后备值，使用后备值
+                if (fallback !== undefined) {
+                    return fallback;
+                }
+                
+                // 否则返回键名本身（仅在开发环境中输出警告）
+                if (process.env.NODE_ENV === 'development') {
+                    console.warn(`翻译键 ${key} 不存在于 ${locale} 语言包中`);
+                }
                 return key;
             }
         }
         
         return result;
+    }
+    
+    /**
+     * 从语言包中获取翻译
+     * @param pack 语言包
+     * @param keys 翻译键数组
+     * @returns 翻译文本或 null
+     */
+    private getFromPack(pack: LanguagePack, keys: string[]): string | null {
+        let result: any = pack;
+        
+        for (const k of keys) {
+            if (result && result[k] !== undefined) {
+                result = result[k];
+            } else {
+                return null;
+            }
+        }
+        
+        return typeof result === 'string' ? result : null;
     }
 }
 

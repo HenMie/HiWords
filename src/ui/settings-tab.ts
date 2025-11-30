@@ -1,6 +1,6 @@
 import { App, PluginSettingTab, Setting, TFile, Notice, Modal } from 'obsidian';
 import HiWordsPlugin from '../../main';
-import { VocabularyBook, HighlightStyle } from '../utils';
+import { VocabularyBook, HighlightStyle, MasteredDetectionMode, HighlightMode, FileNodeParseMode } from '../utils';
 import { CanvasParser } from '../canvas';
 import { t } from '../i18n';
 
@@ -301,7 +301,7 @@ export class HiWordsSettingTab extends PluginSettingTab {
                 .addOption('content', t('settings.mode_content') || 'Parse file content')
                 .setValue(this.plugin.settings.fileNodeParseMode || 'filename-with-content')
                 .onChange(async (value) => {
-                    this.plugin.settings.fileNodeParseMode = value as any;
+                    this.plugin.settings.fileNodeParseMode = value as FileNodeParseMode;
                     await this.plugin.saveSettings();
                     new Notice(t('notices.file_parse_mode_updated') || '文件节点解析模式已更新，重新加载单词本后生效');
                 }));
@@ -332,10 +332,10 @@ export class HiWordsSettingTab extends PluginSettingTab {
             .addOption('color', t('settings.mode_color') || 'Color mode (green = 4)')
             .setValue(this.plugin.settings.masteredDetection ?? 'group')
             .onChange(async (value) => {
-                (this.plugin.settings as any).masteredDetection = value as 'group' | 'color';
+                this.plugin.settings.masteredDetection = value as MasteredDetectionMode;
                 await this.plugin.saveSettings();
                 if (this.plugin.vocabularyManager?.updateSettings) {
-                    this.plugin.vocabularyManager.updateSettings(this.plugin.settings as any);
+                    this.plugin.vocabularyManager.updateSettings(this.plugin.settings);
                 }
                 await this.plugin.vocabularyManager.loadAllVocabularyBooks();
                 this.plugin.refreshHighlighter();
@@ -500,7 +500,7 @@ export class HiWordsSettingTab extends PluginSettingTab {
         }
 
         // 验证 Canvas 文件
-        const parser = new CanvasParser(this.app, this.plugin.settings as any);
+        const parser = new CanvasParser(this.app, this.plugin.settings);
         const isValid = await parser.validateCanvasFile(file);
         if (!isValid) {
             new Notice(t('notices.invalid_canvas_file'));

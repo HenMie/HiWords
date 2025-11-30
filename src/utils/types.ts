@@ -40,6 +40,23 @@ export interface VocabularyBook {
 // 高亮样式类型
 export type HighlightStyle = 'underline' | 'background' | 'bold' | 'dotted' | 'wavy';
 
+/** 已掌握判定模式 */
+export type MasteredDetectionMode = 'group' | 'color';
+
+/** 高亮范围模式 */
+export type HighlightMode = 'all' | 'exclude' | 'include';
+
+/** 文件节点解析模式 */
+export type FileNodeParseMode = 'filename' | 'content' | 'filename-with-content';
+
+/** AI 词典配置 */
+export interface AIDictionaryConfig {
+    apiUrl: string; // AI API 地址
+    apiKey: string; // API Key
+    model: string; // 模型名称
+    prompt: string; // 自定义 prompt 模板
+}
+
 // 插件设置
 export interface HiWordsSettings {
     vocabularyBooks: VocabularyBook[];
@@ -51,7 +68,7 @@ export interface HiWordsSettings {
     blurDefinitions: boolean; // 模糊定义内容，悬停时显示
     showWordSource?: boolean; // 是否显示词书来源信息
     // 已掌握判定模式：'group'（根据是否位于 Mastered 分组）或 'color'（根据颜色是否为绿色4）
-    masteredDetection?: 'group' | 'color';
+    masteredDetection?: MasteredDetectionMode;
     // 发音地址模板（如：https://dict.youdao.com/dictvoice?audio={{word}}&type=2）
     ttsTemplate?: string;
     // 调试模式（开启后在控制台输出详细日志）
@@ -73,17 +90,12 @@ export interface HiWordsSettings {
     groupInnerColumns?: number; // 分组内部列数
     groupInnerGap?: number; // 分组内部行列间距
     // AI 词典配置
-    aiDictionary?: {
-        apiUrl: string; // AI API 地址
-        apiKey: string; // API Key
-        model: string; // 模型名称
-        prompt: string; // 自定义 prompt 模板
-    };
+    aiDictionary?: AIDictionaryConfig;
     // 高亮范围设置
-    highlightMode?: 'all' | 'exclude' | 'include';
+    highlightMode?: HighlightMode;
     highlightPaths?: string;
     // 文件节点解析模式
-    fileNodeParseMode?: 'filename' | 'content' | 'filename-with-content';
+    fileNodeParseMode?: FileNodeParseMode;
 }
 
 // 词汇匹配信息

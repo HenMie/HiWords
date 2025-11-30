@@ -1,5 +1,5 @@
-import { App, TFile, Notice } from 'obsidian';
-import { WordDefinition, VocabularyBook, HiWordsSettings } from '../utils';
+import { App, TFile, Notice, EventRef } from 'obsidian';
+import { WordDefinition, VocabularyBook, HiWordsSettings, logAndFormatError, CANVAS_SYNC } from '../utils';
 import { KoreanMorphologyService } from './korean-morphology-service';
 import { MorphologyIndexManager } from './morphology-index-manager';
 import { CanvasService } from './canvas-service';
@@ -25,6 +25,9 @@ export class VocabularyManager {
     // 异步操作队列管理
     private analysisQueue: Array<{ word: string; definition: WordDefinition }> = [];
     private isProcessingQueue = false;
+
+    // 文件监听器引用（用于清理）
+    private fileWatcherRefs: EventRef[] = [];
 
     constructor(app: App, settings: HiWordsSettings) {
         this.app = app;
@@ -149,23 +152,10 @@ export class VocabularyManager {
     
     /**
      * 格式化错误信息为用户友好的提示
+     * @deprecated 请使用 logAndFormatError 工具函数
      */
     private formatErrorMessage(error: unknown, context: string): string {
-        if (error instanceof Error) {
-            if (error.message.includes('ENOENT') || error.message.includes('not found')) {
-                return `${context}：文件不存在，请检查文件路径`;
-            }
-            if (error.message.includes('EACCES') || error.message.includes('permission')) {
-                return `${context}：权限不足，请检查文件权限`;
-            }
-            if (error.message.includes('parse') || error.message.includes('JSON')) {
-                return `${context}：文件格式错误，请检查文件内容`;
-            }
-            if (error.message.includes('corrupt')) {
-                return `${context}：文件已损坏，请尝试重新创建`;
-            }
-        }
-        return `${context}：未知错误，请查看控制台获取详细信息`;
+        return logAndFormatError(error, context);
     }
 
     /**
@@ -566,10 +556,10 @@ export class VocabularyManager {
         }
         this.pendingSyncWords.get(bookPath)!.push({ ...wordDef });
 
-        // 设置新的定时器（延迟1秒批量同步）
+        // 设置新的定时器（使用常量配置的批量同步延迟）
         const timeout = window.setTimeout(() => {
             this.syncPendingWords(bookPath);
-        }, 1000);
+        }, CANVAS_SYNC.BATCH_DELAY);
 
         this.syncTimeouts.set(bookPath, timeout);
     }
@@ -712,6 +702,12 @@ export class VocabularyManager {
         this.cacheManager.clear();
         this.memoryOnlyWords.clear();
         this.pendingSyncWords.clear();
+        
+        // 注销文件监听器
+        for (const ref of this.fileWatcherRefs) {
+            this.app.vault.offref(ref);
+        }
+        this.fileWatcherRefs = [];
         
         // 清理形态学分析服务
         if (this.morphologyService) {
@@ -884,22 +880,24 @@ export class VocabularyManager {
      */
     private registerFileWatchers(): void {
         // 监听文件修改
-        this.app.vault.on('modify', async (file) => {
+        const modifyRef = this.app.vault.on('modify', async (file) => {
             if (file instanceof TFile && file.extension === 'md') {
                 const content = await this.app.vault.read(file);
                 await this.morphologyIndexManager.indexNote(file, content);
             }
         });
+        this.fileWatcherRefs.push(modifyRef);
 
         // 监听文件删除
-        this.app.vault.on('delete', (file) => {
+        const deleteRef = this.app.vault.on('delete', (file) => {
             if (file instanceof TFile && file.extension === 'md') {
                 this.morphologyIndexManager.removeNoteIndex(file.path);
             }
         });
+        this.fileWatcherRefs.push(deleteRef);
 
         // 监听文件重命名
-        this.app.vault.on('rename', (file, oldPath) => {
+        const renameRef = this.app.vault.on('rename', (file, oldPath) => {
             if (file instanceof TFile && file.extension === 'md') {
                 // 先删除旧索引
                 this.morphologyIndexManager.removeNoteIndex(oldPath);
@@ -909,6 +907,7 @@ export class VocabularyManager {
                 });
             }
         });
+        this.fileWatcherRefs.push(renameRef);
     }
 
 

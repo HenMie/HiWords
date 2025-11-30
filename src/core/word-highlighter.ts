@@ -16,16 +16,12 @@ import {
     WordDefinition,
     mapCanvasColorToCSSVar,
     TrieMatch,
-    Debouncer
+    Debouncer,
+    DEBOUNCE_DELAY,
+    PERFORMANCE_THRESHOLD
 } from '../utils';
 import { removeOverlappingMatches } from '../utils/trie';
 import { WordMatcherService } from './word-matcher-service';
-
-// 防抖延迟时间（毫秒）
-const DEBOUNCE_DELAY = 300;
-
-// 性能监控阈值（毫秒）
-const PERFORMANCE_THRESHOLD = 100;
 
 // 状态效果：强制更新高亮
 const forceUpdateEffect = StateEffect.define<boolean>();

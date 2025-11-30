@@ -14,7 +14,8 @@ export class WordMatcherService {
     constructor(vocabularyManager: VocabularyManager) {
         this.vocabularyManager = vocabularyManager;
         this.trie = new Trie();
-        this.morphologyService = new KoreanMorphologyService();
+        // 复用 VocabularyManager 中的形态学服务，避免重复创建实例
+        this.morphologyService = vocabularyManager.getMorphologyService();
         this.buildTrie();
     }
 
@@ -156,10 +157,11 @@ export class WordMatcherService {
 
     /**
      * 清理资源
+     * 注意：morphologyService 是从 VocabularyManager 共享的，不在此处销毁
      */
     public destroy(): void {
         this.trie.clear();
-        this.morphologyService.destroy();
+        // morphologyService 由 VocabularyManager 管理，不在此处销毁
     }
 }
 

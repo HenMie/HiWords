@@ -1,6 +1,21 @@
 import { ItemView, WorkspaceLeaf, TFile, MarkdownView, MarkdownRenderer, setIcon, Notice } from 'obsidian';
 import HiWordsPlugin from '../../main';
-import { WordDefinition, mapCanvasColorToCSSVar, getColorWithOpacity, playWordTTS, MarkdownLinkBinder, Debouncer, removeOverlappingMatches, WordActionUtils } from '../utils';
+import { 
+    WordDefinition, 
+    mapCanvasColorToCSSVar, 
+    getColorWithOpacity, 
+    playWordTTS, 
+    MarkdownLinkBinder, 
+    Debouncer, 
+    removeOverlappingMatches, 
+    WordActionUtils,
+    COLLAPSIBLE,
+    SIDEBAR_UPDATE_DELAY,
+    MESSAGE_AUTO_HIDE,
+    PDF_TEXT_EXTRACT_DELAY,
+    DOCUMENT_POSITION,
+    WORD_CARD_HIGHLIGHT_DURATION
+} from '../utils';
 import { t } from '../i18n';
 import { WordMatcherService } from '../core/word-matcher-service';
 
@@ -45,13 +60,12 @@ export class HiWordsSidebarView extends ItemView {
             this.measureScheduled = false;
             if (this.measureQueue.length === 0) return;
 
-            const MAX_COLLAPSED = 140; // 与 CSS 保持一致
             const items = this.measureQueue.splice(0, this.measureQueue.length);
 
-            // 先读后写：先生成读集
+            // 先读后写：先生成读集（使用常量配置的最大折叠高度）
             const results: Array<{ el: HTMLElement; needsToggle: boolean }> = items.map((el) => ({
                 el,
-                needsToggle: el.scrollHeight > MAX_COLLAPSED + 4,
+                needsToggle: el.scrollHeight > COLLAPSIBLE.MAX_HEIGHT + COLLAPSIBLE.TOLERANCE,
             }));
 
             // 再统一写
@@ -100,13 +114,13 @@ export class HiWordsSidebarView extends ItemView {
 
 
         // 初始化显示
-        this.scheduleUpdate(0);
+        this.scheduleUpdate(SIDEBAR_UPDATE_DELAY.IMMEDIATE);
 
         // 监听活动文件变化（忽略自身视图激活，避免首次点击被重渲打断）
         this.registerEvent(
             this.app.workspace.on('active-leaf-change', (leaf: WorkspaceLeaf | null) => {
                 if (leaf === this.leaf) return; // 自身变为激活视图时不刷新
-                this.scheduleUpdate(120);
+                this.scheduleUpdate(SIDEBAR_UPDATE_DELAY.TAB_SWITCH);
             })
         );
 
@@ -114,7 +128,7 @@ export class HiWordsSidebarView extends ItemView {
         this.registerEvent(
             this.app.workspace.on('editor-change', () => {
                 // 延迟更新，避免频繁刷新
-                this.scheduleUpdate(500);
+                this.scheduleUpdate(SIDEBAR_UPDATE_DELAY.EDITOR_CHANGE);
             })
         );
 
@@ -123,7 +137,7 @@ export class HiWordsSidebarView extends ItemView {
             this.app.vault.on('modify', (file) => {
                 // 如果修改的是 Canvas 文件，则刷新侧边栏
                 if (file instanceof TFile && file.extension === 'canvas') {
-                    this.scheduleUpdate(250);
+                    this.scheduleUpdate(SIDEBAR_UPDATE_DELAY.CANVAS_MODIFY);
                 }
             })
         );
@@ -131,14 +145,14 @@ export class HiWordsSidebarView extends ItemView {
         // 监听已掌握功能状态变化
         this.registerEvent(
             this.app.workspace.on('hi-words:mastered-changed' as any, () => {
-                this.scheduleUpdate(100);
+                this.scheduleUpdate(SIDEBAR_UPDATE_DELAY.SETTINGS_CHANGE);
             })
         );
 
         // 监听设置变化（如模糊效果开关）
         this.registerEvent(
             this.app.workspace.on('hi-words:settings-changed' as any, () => {
-                this.scheduleUpdate(100);
+                this.scheduleUpdate(SIDEBAR_UPDATE_DELAY.SETTINGS_CHANGE);
             })
         );
 
@@ -297,9 +311,9 @@ export class HiWordsSidebarView extends ItemView {
             return positions[0];
         }
 
-        // 将文档分为三个部分：前1/3、中1/3、后1/3
-        const firstThirdThreshold = contentLength / 3;
-        const secondThirdThreshold = (contentLength * 2) / 3;
+        // 将文档分为三个部分：前1/3、中1/3、后1/3（使用常量配置）
+        const firstThirdThreshold = contentLength * DOCUMENT_POSITION.FIRST_THIRD_RATIO;
+        const secondThirdThreshold = contentLength * DOCUMENT_POSITION.SECOND_THIRD_RATIO;
 
         // 策略1：优先选择在文档前1/3部分的首次出现
         const earlyPosition = positions.find(pos => pos <= firstThirdThreshold);
@@ -317,11 +331,11 @@ export class HiWordsSidebarView extends ItemView {
         // 但确保不会太集中在文档末尾
         const latePosition = positions.find(pos => pos > secondThirdThreshold);
         if (latePosition !== undefined) {
-            // 如果位置太接近文档末尾（最后5%），稍微向前调整
-            const lastFivePercentThreshold = contentLength * 0.95;
-            if (latePosition > lastFivePercentThreshold && positions.length > 1) {
+            // 如果位置太接近文档末尾，稍微向前调整
+            const endThreshold = contentLength * DOCUMENT_POSITION.END_RATIO;
+            if (latePosition > endThreshold && positions.length > 1) {
                 // 尝试选择一个稍微靠前的位置
-                const adjustedPosition = positions.find(pos => pos <= lastFivePercentThreshold);
+                const adjustedPosition = positions.find(pos => pos <= endThreshold);
                 if (adjustedPosition !== undefined) {
                     return adjustedPosition;
                 }
@@ -383,12 +397,12 @@ export class HiWordsSidebarView extends ItemView {
         messageEl.textContent = message;
         messageEl.style.display = 'block';
 
-        // 3秒后自动隐藏
+        // 自动隐藏成功消息
         setTimeout(() => {
             if (messageEl.parentNode) {
                 messageEl.style.display = 'none';
             }
-        }, 3000);
+        }, MESSAGE_AUTO_HIDE.SUCCESS);
     }
 
     /**
@@ -423,12 +437,12 @@ export class HiWordsSidebarView extends ItemView {
         messageEl.textContent = userFriendlyMessage;
         messageEl.style.display = 'block';
 
-        // 5秒后自动隐藏
+        // 自动隐藏错误消息
         setTimeout(() => {
             if (messageEl.parentNode) {
                 messageEl.style.display = 'none';
             }
-        }, 5000);
+        }, MESSAGE_AUTO_HIDE.ERROR);
 
         console.error(`[HiWords] ${context}:`, error);
     }
@@ -824,7 +838,7 @@ export class HiWordsSidebarView extends ItemView {
     private async extractPDFText(): Promise<string> {
         try {
             // 等待 PDF 视图加载并获取文本层内容
-            await new Promise(resolve => setTimeout(resolve, 500));
+            await new Promise(resolve => setTimeout(resolve, PDF_TEXT_EXTRACT_DELAY));
             
             // 查找所有 PDF 文本层
             const textLayers = document.querySelectorAll('.textLayer');
@@ -933,11 +947,11 @@ export class HiWordsSidebarView extends ItemView {
             behavior: 'smooth'
         });
 
-        // 延迟移除高亮样式，保持3秒后恢复
+        // 延迟移除高亮样式
         setTimeout(() => {
             if (wordCard && wordCard.hasClass('visible-word')) {
                 wordCard.removeClass('visible-word');
             }
-        }, 3000);
+        }, WORD_CARD_HIGHLIGHT_DURATION);
     }
 }

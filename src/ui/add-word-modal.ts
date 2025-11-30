@@ -1,6 +1,6 @@
 import { App, Modal, Notice, setIcon } from 'obsidian';
 import type { VocabularyBook, WordDefinition } from '../utils';
-import { isKoreanText } from '../utils/korean-text-utils';
+import { isKoreanText, INPUT_FOCUS_DELAY } from '../utils';
 import HiWordsPlugin from '../../main';
 import { t } from '../i18n';
 import { DictionaryService } from '../services/dictionary-service';
@@ -81,7 +81,7 @@ export class AddWordModal extends Modal {
                 titleEl.textContent = `${t(titleKey)} "${this.word}"`;
             });
             if (!this.word) {
-                setTimeout(() => wordInput?.focus(), 50);
+                setTimeout(() => wordInput?.focus(), INPUT_FOCUS_DELAY);
             }
         }
 
@@ -192,7 +192,7 @@ export class AddWordModal extends Modal {
             } else if (this.word) {
                 definitionInput.focus();
             }
-        }, 50);
+        }, INPUT_FOCUS_DELAY);
 
         const buttonContainer = contentEl.createDiv({ cls: 'hiwords-modal-button-container' });
         const leftButtonGroup = buttonContainer.createDiv({ cls: 'hiwords-button-group-left' });

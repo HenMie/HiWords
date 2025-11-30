@@ -1,7 +1,7 @@
 import { App, Plugin, TFile, Notice, WorkspaceLeaf, Editor, MarkdownView } from 'obsidian';
 import { Extension } from '@codemirror/state';
 // 使用新的模块化导入
-import { HiWordsSettings, extractSentenceFromEditorMultiline } from './src/utils';
+import { HiWordsSettings, extractSentenceFromEditorMultiline, HIGHLIGHTER_REFRESH, PLUGIN_UNLOAD_TIMEOUT } from './src/utils';
 import { registerReadingModeHighlighter } from './src/ui/reading-mode-highlighter';
 import { registerPDFHighlighter, cleanupPDFHighlighter } from './src/ui/pdf-highlighter';
 import { VocabularyManager, MasteredService, createWordHighlighterExtension, highlighterManager } from './src/core';
@@ -263,13 +263,13 @@ export default class HiWordsPlugin extends Plugin {
                         this.refreshHighlighter();
                     } else {
                         // 当切换文件时，可能需要更新高亮
-                        this.registerTimeout(() => this.refreshHighlighter(), 100);
+                        this.registerTimeout(() => this.refreshHighlighter(), HIGHLIGHTER_REFRESH.FILE_SWITCH);
 
                         // 索引新的当前文档
                         this.registerTimeout(async () => {
                             await this.indexCurrentDocument();
                             this.refreshHighlighter();
-                        }, 200);
+                        }, HIGHLIGHTER_REFRESH.INDEX_COMPLETE);
                     }
                 }
             })
@@ -449,14 +449,14 @@ export default class HiWordsPlugin extends Plugin {
 
             // 清理词汇管理器（带超时保护）
             if (this.vocabularyManager) {
-                // 等待异步操作完成，最多等待2秒
+                // 等待异步操作完成，超时时间由常量配置
                 const destroyPromise = this.vocabularyManager.destroy ? 
                     this.vocabularyManager.destroy() : 
                     Promise.resolve();
                     
                 Promise.race([
                     destroyPromise,
-                    new Promise(resolve => setTimeout(resolve, 2000))
+                    new Promise(resolve => setTimeout(resolve, PLUGIN_UNLOAD_TIMEOUT))
                 ]).then(() => {
                     this.vocabularyManager.clear();
                 });
