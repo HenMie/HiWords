@@ -456,6 +456,7 @@
 /* 新表单样式（兼容新版模态） */
 .hiwords-form-item {
     margin: 8px 0 20px 0;
+    width: 100%;
 }
 
 .hiwords-form-item-label {
@@ -464,6 +465,13 @@
     font-weight: 400;
     color: var(--text-muted);
     font-size: 14px;
+}
+
+/* 单词和词源输入框全宽度样式 */
+.word-input,
+.etymology-input {
+    width: 100% !important;
+    max-width: 100% !important;
 }
 
 .hiwords-definition-label-container {

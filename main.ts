@@ -303,8 +303,9 @@ export default class HiWordsPlugin extends Plugin {
 
     /**
      * 根据设置判断文件是否需要高亮
+     * 使用箭头函数确保在作为回调传递时绑定当前实例
      */
-    private shouldHighlightFile(filePath: string): boolean {
+    private shouldHighlightFile = (filePath: string): boolean => {
         const mode = this.settings.highlightMode || 'all';
         if (mode === 'all') {
             return true;
@@ -334,7 +335,7 @@ export default class HiWordsPlugin extends Plugin {
         }
 
         return true;
-    }
+    };
 
     /**
      * 刷新高亮器

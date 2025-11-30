@@ -17,6 +17,12 @@ export function registerReadingModeHighlighter(plugin: {
 }): void {
   // 使用统一的词汇匹配服务
   const wordMatcherService = new WordMatcherService(plugin.vocabularyManager);
+  const debugEnabled = plugin.settings?.debugMode ?? false;
+  const debugLog = (...args: any[]) => {
+    if (debugEnabled) {
+      console.debug('[HiWords][ReadingMode]', ...args);
+    }
+  };
 
   const EXCLUDE_SELECTOR = [
     'pre',
@@ -58,6 +64,7 @@ export function registerReadingModeHighlighter(plugin: {
       textNodes.push(current as Text);
       current = walker.nextNode();
     }
+    debugLog('text nodes collected', { count: textNodes.length });
 
     for (const textNode of textNodes) {
       const text = textNode.nodeValue || '';
@@ -70,6 +77,7 @@ export function registerReadingModeHighlighter(plugin: {
         payload: any;
       }>;
       if (!matches || matches.length === 0) continue;
+      debugLog('matches found in text node', { textSnippet: text.slice(0, 60), matchCount: matches.length });
 
       // 使用优化的重叠处理函数，优先保留更长的匹配
       const filtered = removeOverlappingMatches(matches);
@@ -98,31 +106,67 @@ export function registerReadingModeHighlighter(plugin: {
       if (!plugin.settings.enableAutoHighlight) return;
 
       const filePath: string | undefined = ctx?.sourcePath;
-      const shouldHighlightFn = (plugin as any).shouldHighlightFile as ((path: string) => boolean) | undefined;
-      if (filePath && shouldHighlightFn && !shouldHighlightFn(filePath)) {
+      const rawShouldHighlightFn = (plugin as any).shouldHighlightFile as ((this: typeof plugin, path: string) => boolean) | undefined;
+      const shouldHighlightFn = rawShouldHighlightFn ? rawShouldHighlightFn.bind(plugin) : undefined;
+      debugLog('postProcessor triggered', { filePath, hasShouldHighlightFn: Boolean(shouldHighlightFn) });
+      if (filePath && shouldHighlightFn) {
+        const allowHighlight = shouldHighlightFn(filePath);
+        debugLog('shouldHighlightFile result', { filePath, allowHighlight });
+        if (!allowHighlight) {
+          debugLog('skip highlighting due to shouldHighlightFile');
+          return;
+        }
+      }
+      
+      // 忽略插件自有的定义渲染区域，避免在侧边栏词卡等处重复处理
+      if (el.closest('.markdown-source-view, .is-live-preview')) {
+        debugLog('skip: source/live preview node');
+        return;
+      }
+
+      // 仅在主编辑区的 Markdown 阅读视图中高亮，排除侧边栏与弹出容器
+      const containerEl = (ctx as any)?.containerEl as HTMLElement | undefined;
+      const lookupTarget = containerEl ?? el;
+      const readingView = lookupTarget.closest('.markdown-reading-view, .markdown-preview-view, .markdown-rendered');
+      const lookupRoot = readingView ?? lookupTarget;
+      const leafContent =
+        lookupRoot.closest('.workspace-leaf-content') ||
+        el.closest('.workspace-leaf-content');
+      if (!leafContent) {
+        debugLog('skip: unable to find workspace leaf content', {
+          readingViewFound: Boolean(readingView),
+          elementClasses: (el as HTMLElement).className,
+        });
+        return;
+      }
+      if (!readingView) {
+        debugLog('fallback without explicit reading view match', {
+          elementClasses: (el as HTMLElement).className,
+          leafClasses: leafContent.className,
+        });
+      }
+
+      const leafType = leafContent.getAttribute('data-type');
+      if (leafType !== 'markdown') {
+        debugLog('skip: leaf is not markdown', { leafType });
+        return;
+      }
+
+      const isInSideDock = Boolean(leafContent.closest('.workspace-sidedock'));
+      const isInFloatingContainer = Boolean(
+        leafContent.closest('.hover-popover, .popover, .suggestion-container, .modal')
+      );
+
+      if (isInSideDock || isInFloatingContainer) {
+        debugLog('skip: rendered inside unsupported container', { isInSideDock, isInFloatingContainer });
         return;
       }
       
-      // 检查是否在主编辑器的阅读模式中
-      // 排除侧边栏、悬停预览等其他容器
-      const isInMainEditor = !el.closest('.workspace-leaf-content[data-type="hover-editor"]') && // 排除悬停预览
-                            !el.closest('.workspace-leaf-content[data-type="file-explorer"]') && // 排除文件浏览器
-                            !el.closest('.workspace-leaf-content[data-type="outline"]') && // 排除大纲
-                            !el.closest('.workspace-leaf-content[data-type="backlink"]') && // 排除反向链接
-                            !el.closest('.workspace-leaf-content[data-type="tag"]') && // 排除标签面板
-                            !el.closest('.workspace-leaf-content[data-type="search"]') && // 排除搜索结果
-                            !el.closest('.hover-popover') && // 排除悬停弹出框
-                            !el.closest('.popover') && // 排除其他弹出框
-                            !el.closest('.suggestion-container') && // 排除建议容器
-                            !el.closest('.modal') && // 排除模态框
-                            !el.closest('.workspace-split.mod-right-split') && // 排除右侧边栏
-                            !el.closest('.workspace-split.mod-left-split'); // 排除左侧边栏
-      
-      if (!isInMainEditor) return;
-      
       // 重建Trie以获取最新的词汇列表
+      debugLog('start highlighting');
       wordMatcherService.buildTrie();
       processElement(el);
+      debugLog('highlighting finished');
     } catch (e) {
       console.error('阅读模式高亮处理失败:', e);
     }
