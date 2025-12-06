@@ -1,9 +1,10 @@
 import { App, TFile, Notice, EventRef } from 'obsidian';
-import { WordDefinition, VocabularyBook, HiWordsSettings, logAndFormatError, CANVAS_SYNC } from '../utils';
+import { WordDefinition, VocabularyBook, HiWordsSettings, logAndFormatError, CANVAS_SYNC, MorphologyLanguage } from '../utils';
 import { KoreanMorphologyService } from './korean-morphology-service';
 import { MorphologyIndexManager } from './morphology-index-manager';
 import { CanvasService } from './canvas-service';
 import { VocabularyCacheManager } from './vocabulary-cache-manager';
+import { UnifiedMorphologyService } from './unified-morphology-service';
 
 export class VocabularyManager {
     private app: App;
@@ -13,7 +14,7 @@ export class VocabularyManager {
     private settings: HiWordsSettings;
     
     // 形态学分析相关
-    private morphologyService: KoreanMorphologyService;
+    private unifiedMorphologyService: UnifiedMorphologyService;
     private morphologyIndexManager: MorphologyIndexManager;
     
     // 增量更新优化
@@ -37,10 +38,15 @@ export class VocabularyManager {
         this.canvasService = new CanvasService(app, settings);
         this.cacheManager = new VocabularyCacheManager();
         
-        // 初始化形态学分析服务
-        this.morphologyService = new KoreanMorphologyService(this.app);
-        this.morphologyService.setDebugMode(settings.debugMode ?? false);
-        this.morphologyIndexManager = new MorphologyIndexManager(this.morphologyService);
+        // 初始化统一形态学分析服务（支持韩语和日语按需加载）
+        this.unifiedMorphologyService = new UnifiedMorphologyService(this.app);
+        this.unifiedMorphologyService.setDebugMode(settings.debugMode ?? false);
+        
+        // 形态学索引管理器使用韩语服务（兼容现有逻辑）
+        // 后续可以扩展为支持多语言
+        const koreanService = new KoreanMorphologyService(this.app);
+        koreanService.setDebugMode(settings.debugMode ?? false);
+        this.morphologyIndexManager = new MorphologyIndexManager(koreanService);
 
         // 监听文件变化，自动更新形态学索引
         this.registerFileWatchers();
@@ -58,6 +64,9 @@ export class VocabularyManager {
             
             this.definitions.clear();
             this.cacheManager.invalidate();
+
+            // 预加载所需的形态学服务（根据词书配置按需加载）
+            await this.unifiedMorphologyService.preloadServices(this.settings.vocabularyBooks);
 
             const loadPromises = this.settings.vocabularyBooks
                 .filter(book => book.enabled)
@@ -200,10 +209,11 @@ export class VocabularyManager {
             }
         }
 
-        // 如果是韩语单词，尝试形态学分析
-        if (this.morphologyService.isKoreanText(normalizedWord)) {
+        // 检查是否需要形态学分析（韩语或日语）
+        const detectedLang = this.unifiedMorphologyService.detectLanguage(normalizedWord);
+        if (detectedLang !== 'unknown') {
             // 异步分析单词，获取原型（使用安全的异步处理）
-            this.queueMorphologyAnalysis(normalizedWord, visited).catch(error => {
+            this.queueMorphologyAnalysis(normalizedWord, visited, detectedLang).catch(error => {
                 console.warn(`[HiWords] 形态学分析失败 ${normalizedWord}:`, error);
             });
         }
@@ -290,10 +300,14 @@ export class VocabularyManager {
         this.cacheManager.invalidate();
         // 同步给 CanvasService
         this.canvasService.updateSettings(settings);
-        // 同步调试模式到韩语形态学服务
-        if (this.morphologyService) {
-            this.morphologyService.setDebugMode(settings.debugMode ?? false);
+        // 同步调试模式到统一形态学服务
+        if (this.unifiedMorphologyService) {
+            this.unifiedMorphologyService.setDebugMode(settings.debugMode ?? false);
         }
+        // 更新形态学服务加载状态（根据词书配置按需加载/卸载）
+        this.unifiedMorphologyService.updateServices(settings.vocabularyBooks).catch(error => {
+            console.warn('[HiWords] 更新形态学服务失败:', error);
+        });
     }
 
     /**
@@ -710,8 +724,8 @@ export class VocabularyManager {
         this.fileWatcherRefs = [];
         
         // 清理形态学分析服务
-        if (this.morphologyService) {
-            this.morphologyService.destroy();
+        if (this.unifiedMorphologyService) {
+            this.unifiedMorphologyService.destroy();
         }
         if (this.morphologyIndexManager) {
             this.morphologyIndexManager.destroy();
@@ -829,10 +843,26 @@ export class VocabularyManager {
     // ==================== 形态学分析相关方法 ====================
 
     /**
-     * 获取形态学分析服务
+     * 获取韩语形态学分析服务（兼容旧接口）
+     * @deprecated 请使用 getUnifiedMorphologyService()
      */
     getMorphologyService(): KoreanMorphologyService {
-        return this.morphologyService;
+        // 返回已加载的韩语服务或创建新实例
+        const koreanService = this.unifiedMorphologyService.getKoreanService();
+        if (koreanService) {
+            return koreanService;
+        }
+        // 如果未加载，创建临时实例（不推荐）
+        const tempService = new KoreanMorphologyService(this.app);
+        tempService.setDebugMode(this.settings.debugMode ?? false);
+        return tempService;
+    }
+
+    /**
+     * 获取统一形态学服务
+     */
+    getUnifiedMorphologyService(): UnifiedMorphologyService {
+        return this.unifiedMorphologyService;
     }
 
     /**
@@ -864,10 +894,11 @@ export class VocabularyManager {
 
     /**
      * 通过形态素分析获取词汇的原型（用于悬浮卡片等场景）
+     * 支持韩语和日语
      */
-    async analyzeWordToBaseForm(word: string): Promise<string | null> {
+    async analyzeWordToBaseForm(word: string, language: MorphologyLanguage = 'auto'): Promise<string | null> {
         try {
-            const result = await this.morphologyService.analyzeWord(word);
+            const result = await this.unifiedMorphologyService.analyzeWord(word, language);
             return result ? result.baseForm : null;
         } catch (error) {
             console.error('形态素分析失败:', error);
@@ -941,10 +972,17 @@ export class VocabularyManager {
      * 队列处理形态学分析（避免未处理的 Promise）
      * @param word 要分析的单词
      * @param visited 已访问的单词集合
+     * @param language 检测到的语言
      */
-    private async queueMorphologyAnalysis(word: string, visited: Set<string>): Promise<void> {
+    private async queueMorphologyAnalysis(
+        word: string, 
+        visited: Set<string>,
+        language: 'korean' | 'japanese' | 'unknown' = 'unknown'
+    ): Promise<void> {
         try {
-            const result = await this.morphologyService.analyzeWord(word);
+            // 使用统一形态学服务进行分析
+            const morphologyLang = language === 'unknown' ? 'auto' : language;
+            const result = await this.unifiedMorphologyService.analyzeWord(word, morphologyLang);
             if (result && result.baseForm !== word) {
                 // 用原型再次查找
                 const baseDefinition = this.getDefinition(result.baseForm, visited);

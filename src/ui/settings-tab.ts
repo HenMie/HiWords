@@ -1,6 +1,6 @@
 import { App, PluginSettingTab, Setting, TFile, Notice, Modal } from 'obsidian';
 import HiWordsPlugin from '../../main';
-import { VocabularyBook, HighlightStyle, MasteredDetectionMode, HighlightMode, FileNodeParseMode } from '../utils';
+import { VocabularyBook, HighlightStyle, MasteredDetectionMode, HighlightMode, FileNodeParseMode, MorphologyLanguage } from '../utils';
 import { CanvasParser } from '../canvas';
 import { t } from '../i18n';
 
@@ -541,6 +541,21 @@ export class HiWordsSettingTab extends PluginSettingTab {
             const setting = new Setting(containerEl)
                 .setName(book.name)
                 .setDesc(`${t('settings.path')}: ${book.path}`);
+
+            // 形态学语言选择
+            setting.addDropdown(dropdown => dropdown
+                .addOption('none', t('settings.morphology_none') || '禁用')
+                .addOption('korean', t('settings.morphology_korean') || '韩语')
+                .addOption('japanese', t('settings.morphology_japanese') || '日语')
+                .addOption('auto', t('settings.morphology_auto') || '自动检测')
+                .setValue(book.morphology || 'none')
+                .onChange(async (value) => {
+                    book.morphology = value as MorphologyLanguage;
+                    await this.plugin.saveSettings();
+                    // 重新加载词书以应用形态学设置
+                    await this.plugin.vocabularyManager.loadAllVocabularyBooks();
+                    this.plugin.refreshHighlighter();
+                }));
 
             // 重新加载按钮
             setting.addButton(button => button

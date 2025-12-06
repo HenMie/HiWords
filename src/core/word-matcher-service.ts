@@ -1,21 +1,22 @@
-import { Trie, generateCommonInflections } from '../utils';
-import { KoreanMorphologyService } from './korean-morphology-service';
+import { Trie, generateCommonInflections, generateJapaneseInflections, isKoreanText, isJapaneseText, MorphologyLanguage } from '../utils';
+import type { UnifiedMorphologyService } from './unified-morphology-service';
 import type { VocabularyManager } from './vocabulary-manager';
 
 /**
  * 词汇匹配服务
  * 提供统一的高亮匹配逻辑，供编辑模式、阅读模式、PDF模式共享使用
+ * 支持韩语和日语形态学匹配
  */
 export class WordMatcherService {
     private trie: Trie;
-    private morphologyService: KoreanMorphologyService;
+    private unifiedMorphologyService: UnifiedMorphologyService;
     private vocabularyManager: VocabularyManager;
 
     constructor(vocabularyManager: VocabularyManager) {
         this.vocabularyManager = vocabularyManager;
         this.trie = new Trie();
-        // 复用 VocabularyManager 中的形态学服务，避免重复创建实例
-        this.morphologyService = vocabularyManager.getMorphologyService();
+        // 复用 VocabularyManager 中的统一形态学服务
+        this.unifiedMorphologyService = vocabularyManager.getUnifiedMorphologyService();
         this.buildTrie();
     }
 
@@ -31,6 +32,9 @@ export class WordMatcherService {
             ? this.vocabularyManager.getAllWords()
             : this.vocabularyManager.getAllWordsForHighlight();
 
+        // 获取词书配置以确定每个词的形态学语言
+        const settings = this.vocabularyManager.getSettings();
+
         for (const baseWord of baseWords) {
             const definition = this.vocabularyManager.getDefinition(baseWord);
             if (definition) {
@@ -40,11 +44,15 @@ export class WordMatcherService {
                 // 获取已索引的活用形
                 const indexedInflectionForms = this.vocabularyManager.getAllInflectionForms(baseWord);
 
-                // 为韩语单词生成常见活用形
-                const commonInflectionForms = generateCommonInflections(baseWord);
+                // 根据词书配置或自动检测语言来生成活用形
+                const bookConfig = settings.vocabularyBooks.find(b => b.path === definition.source);
+                const morphologyLang = bookConfig?.morphology || 'none';
+                
+                // 生成活用形
+                const generatedInflectionForms = this.generateInflectionsForWord(baseWord, morphologyLang);
 
                 // 合并已索引的和生成的活用形
-                const allInflectionForms = new Set([...indexedInflectionForms, ...commonInflectionForms]);
+                const allInflectionForms = new Set([...indexedInflectionForms, ...generatedInflectionForms]);
 
                 for (const inflectionForm of allInflectionForms) {
                     if (inflectionForm !== baseWord) {
@@ -54,6 +62,35 @@ export class WordMatcherService {
                 }
             }
         }
+    }
+
+    /**
+     * 根据语言配置为单词生成活用形
+     */
+    private generateInflectionsForWord(baseWord: string, morphologyLang: MorphologyLanguage): string[] {
+        if (morphologyLang === 'none') {
+            return [];
+        }
+
+        if (morphologyLang === 'korean') {
+            return generateCommonInflections(baseWord);
+        }
+
+        if (morphologyLang === 'japanese') {
+            return generateJapaneseInflections(baseWord);
+        }
+
+        // auto 模式：根据文本特征自动检测语言
+        if (morphologyLang === 'auto') {
+            if (isKoreanText(baseWord)) {
+                return generateCommonInflections(baseWord);
+            }
+            if (isJapaneseText(baseWord)) {
+                return generateJapaneseInflections(baseWord);
+            }
+        }
+
+        return [];
     }
 
     /**
@@ -124,10 +161,15 @@ export class WordMatcherService {
             return false;
         }
 
-        // 只对韩语文本进行检查
-        if (!this.morphologyService.isKoreanText(textBeforeSpace) || 
-            !this.morphologyService.isKoreanText(textAfterSpace)) {
-            return true; // 非韩语文本保持原有行为
+        // 检测文本语言
+        const langBefore = this.unifiedMorphologyService.detectLanguage(textBeforeSpace);
+        const langAfter = this.unifiedMorphologyService.detectLanguage(textAfterSpace);
+
+        // 只对韩语文本进行跨空格名词检查
+        if (langBefore !== 'korean' || langAfter !== 'korean') {
+            // 日语通常不需要跨空格匹配（因为没有空格分隔）
+            // 其他语言保持原有行为
+            return langBefore === 'unknown' && langAfter === 'unknown';
         }
 
         // 提取空格后的第一个词（可能包含多个字符）

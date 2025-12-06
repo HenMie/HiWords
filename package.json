@@ -1,12 +1,12 @@
 {
-	"name": "hi-words",
-	"version": "0.5.1",
+	"name": "hi-words-chouann",
+	"version": "0.5.2",
 	"description": "Effortlessly grow your vocabulary as you read, with automatic highlighting and translation of unfamiliar words. (Personal fork with customizations)",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production && npm run copy-wasm",
-		"copy-wasm": "copy node_modules\\lindera-wasm-ko-dic\\lindera_wasm_bg.wasm . && copy node_modules\\lindera-wasm-ko-dic\\lindera_wasm.js .",
+		"copy-wasm": "copy node_modules\\lindera-wasm-ko-dic\\lindera_wasm_bg.wasm . && copy node_modules\\lindera-wasm-ko-dic\\lindera_wasm.js . && copy node_modules\\lindera-wasm-ipadic\\lindera_wasm_bg.wasm lindera_wasm_ja_bg.wasm && copy node_modules\\lindera-wasm-ipadic\\lindera_wasm.js lindera_wasm_ja.js",
 		"version": "node version-bump.mjs && git add manifest.json versions.json"
 	},
 	"keywords": [],
@@ -24,6 +24,7 @@
 	},
 	"dependencies": {
 		"eomi-js": "^0.2.4",
-		"lindera-wasm-ko-dic": "^1.0.0"
+		"lindera-wasm-ko-dic": "^1.0.0",
+		"lindera-wasm-ipadic": "^1.2.0"
 	}
 }

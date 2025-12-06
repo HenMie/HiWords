@@ -84,6 +84,11 @@ export default {
         ai_model_desc: "例如：gpt-4o-mini、deepseek-chat",
         ai_prompt: "自定义 Prompt",
         ai_prompt_desc: "可使用 {{word}} 与 {{sentence}} 占位符，AI 将根据该提示生成释义",
+        // 形态学语言选项
+        morphology_none: "禁用",
+        morphology_korean: "韩语",
+        morphology_japanese: "日语",
+        morphology_auto: "自动检测",
     },
     
     // 侧边栏

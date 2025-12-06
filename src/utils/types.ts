@@ -30,11 +30,15 @@ export interface WordDefinition {
     mastered?: boolean; // 是否已掌握
 }
 
+// 形态学语言类型
+export type MorphologyLanguage = 'none' | 'korean' | 'japanese' | 'auto';
+
 // 生词本配置
 export interface VocabularyBook {
     path: string; // Canvas 文件路径
     name: string; // 显示名称
     enabled: boolean; // 是否启用
+    morphology?: MorphologyLanguage; // 形态学语言，默认 'none'
 }
 
 // 高亮样式类型

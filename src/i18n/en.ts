@@ -84,6 +84,11 @@ export default {
         ai_model_desc: "Model name, e.g. gpt-4o-mini, deepseek-chat",
         ai_prompt: "Custom Prompt",
         ai_prompt_desc: "Use {{word}} and {{sentence}} placeholders. The AI will use this prompt to generate definitions.",
+        // Morphology language options
+        morphology_none: "Disabled",
+        morphology_korean: "Korean",
+        morphology_japanese: "Japanese",
+        morphology_auto: "Auto detect",
     },
     
     // Sidebar
