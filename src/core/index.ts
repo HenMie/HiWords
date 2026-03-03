@@ -13,6 +13,12 @@ export { CanvasService } from './canvas-service';
 export { VocabularyCacheManager } from './vocabulary-cache-manager';
 export { MorphologyLoader } from './morphology-loader';
 export { UnifiedMorphologyService } from './unified-morphology-service';
+export { MorphologyAssetManager } from './morphology-asset-manager';
+export type {
+    MorphologyAssetProvider,
+    MorphologyAssetLanguage,
+    MorphologyAssetState
+} from './morphology-asset-manager';
 export type { MorphologyResult, DocumentMorphologyResult } from './unified-morphology-service';
 export type {
     MorphologyAnalyzeOptions,

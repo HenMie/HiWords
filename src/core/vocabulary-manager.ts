@@ -5,6 +5,7 @@ import { MorphologyIndexManager } from './morphology-index-manager';
 import { CanvasService } from './canvas-service';
 import { VocabularyCacheManager } from './vocabulary-cache-manager';
 import { UnifiedMorphologyService } from './unified-morphology-service';
+import type { MorphologyAssetProvider } from './morphology-asset-manager';
 
 export class VocabularyManager {
     private app: App;
@@ -32,7 +33,7 @@ export class VocabularyManager {
     private morphologyDecisionCache: Map<string, string | null> = new Map();
     private morphologyDecisionInFlight: Map<string, Promise<string | null>> = new Map();
 
-    constructor(app: App, settings: HiWordsSettings) {
+    constructor(app: App, settings: HiWordsSettings, morphologyAssetProvider?: MorphologyAssetProvider) {
         this.app = app;
         this.settings = settings;
         if (!this.settings.morphologyEngineMode) {
@@ -47,7 +48,7 @@ export class VocabularyManager {
         this.cacheManager = new VocabularyCacheManager();
         
         // 初始化统一形态学分析服务（支持韩语和日语按需加载）
-        this.unifiedMorphologyService = new UnifiedMorphologyService(this.app);
+        this.unifiedMorphologyService = new UnifiedMorphologyService(this.app, morphologyAssetProvider);
         this.unifiedMorphologyService.setDebugMode(settings.debugMode ?? false);
         
         // 形态学索引管理器使用统一形态学服务（支持多语言）

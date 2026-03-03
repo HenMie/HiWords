@@ -74,6 +74,14 @@ export default {
         ai_model_desc: "Modellname, z. B. gpt-4o-mini, deepseek-chat",
         ai_prompt: "Benutzerdefinierter Prompt",
         ai_prompt_desc: "Verwenden Sie {{word}} und {{sentence}} als Platzhalter. Die KI nutzt diesen Prompt zur Definitionserstellung",
+        morphology_assets: "Morphologie-Ressourcen",
+        morphology_assets_desc: "Lade koreanische/japanische Morphologie-Ressourcen bei Bedarf herunter oder lösche sie, um die Plugin-Größe zu reduzieren",
+        morphology_asset_status_loading: "Ressourcenstatus wird geprüft...",
+        morphology_asset_status_downloaded: "Heruntergeladen ({0})",
+        morphology_asset_status_missing: "Nicht heruntergeladen",
+        morphology_asset_status_downloading: "Wird heruntergeladen...",
+        morphology_asset_download: "Herunterladen",
+        morphology_asset_delete: "Löschen",
     },
 
     // Sidebar
@@ -140,6 +148,9 @@ export default {
         definition_fetched: "Definition abgerufen",
         definition_fetch_failed: "Definition konnte nicht abgerufen werden",
         word_required: "Das Wort darf nicht leer sein",
+        morphology_asset_downloaded: "{0}-Morphologie-Ressource heruntergeladen",
+        morphology_asset_deleted: "{0}-Morphologie-Ressource gelöscht",
+        morphology_asset_operation_failed: "{0}-Morphologie-Ressource konnte nicht verwaltet werden",
     },
 
     // Modals

@@ -1,6 +1,7 @@
 import esbuild from "esbuild";
 import process from "process";
 import builtins from "builtin-modules";
+import { readFileSync } from "node:fs";
 
 const banner =
 `/*
@@ -10,6 +11,16 @@ if you want to view the source, please visit the github repository of this plugi
 `;
 
 const prod = (process.argv[2] === "production");
+const loadPackageVersion = (packageName) => {
+	const packageJsonUrl = new URL(`./node_modules/${packageName}/package.json`, import.meta.url);
+	const packageJson = JSON.parse(readFileSync(packageJsonUrl, "utf8"));
+	if (!packageJson?.version || typeof packageJson.version !== "string") {
+		throw new Error(`[build] Cannot resolve version for ${packageName}`);
+	}
+	return packageJson.version;
+};
+const linderaKoVersion = loadPackageVersion("lindera-wasm-ko-dic");
+const linderaJaVersion = loadPackageVersion("lindera-wasm-ipadic");
 
 const context = await esbuild.context({
 	banner: {
@@ -37,6 +48,10 @@ const context = await esbuild.context({
 	logLevel: "info",
 	sourcemap: prod ? false : "inline",
 	treeShaking: true,
+	define: {
+		__LINDERA_WASM_KO_VERSION__: JSON.stringify(linderaKoVersion),
+		__LINDERA_WASM_JA_VERSION__: JSON.stringify(linderaJaVersion)
+	},
 	outfile: "main.js",
 	minify: prod,
 	loader: {

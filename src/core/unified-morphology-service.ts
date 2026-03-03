@@ -10,6 +10,7 @@ import { getScriptStatistics, isJapaneseText } from '../utils/japanese-text-util
 import { MorphologyLoader } from './morphology-loader';
 import type { KoreanMorphologyService } from './korean-morphology-service';
 import type { JapaneseMorphologyService } from './japanese-morphology-service';
+import type { MorphologyAssetProvider } from './morphology-asset-manager';
 import type {
     MorphologyAnalyzeOptions,
     MorphologyCandidate,
@@ -59,8 +60,8 @@ export class UnifiedMorphologyService {
     private loader: MorphologyLoader;
     private debugMode: boolean = false;
 
-    constructor(app?: unknown) {
-        this.loader = new MorphologyLoader(app);
+    constructor(app?: unknown, assetProvider?: MorphologyAssetProvider) {
+        this.loader = new MorphologyLoader(app, assetProvider);
     }
 
     /**

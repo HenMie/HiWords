@@ -89,6 +89,14 @@ export default {
         morphology_korean: "韩语",
         morphology_japanese: "日语",
         morphology_auto: "自动检测",
+        morphology_assets: "形态学资源管理",
+        morphology_assets_desc: "按需下载或删除韩语/日语形态学分析资源，以控制插件占用空间",
+        morphology_asset_status_loading: "正在检查资源状态...",
+        morphology_asset_status_downloaded: "已下载（{0}）",
+        morphology_asset_status_missing: "未下载",
+        morphology_asset_status_downloading: "下载中...",
+        morphology_asset_download: "下载",
+        morphology_asset_delete: "删除",
     },
     
     // 侧边栏
@@ -157,6 +165,9 @@ export default {
         definition_fetched: "已获取释义",
         definition_fetch_failed: "获取释义失败",
         word_required: "单词不能为空",
+        morphology_asset_downloaded: "{0}形态学资源已下载",
+        morphology_asset_deleted: "{0}形态学资源已删除",
+        morphology_asset_operation_failed: "{0}形态学资源操作失败",
     },
     
     // 模态框

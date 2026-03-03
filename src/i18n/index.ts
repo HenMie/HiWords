@@ -82,6 +82,14 @@ export interface LanguagePack {
         mode_filename_with_content?: string;
         mode_filename?: string;
         mode_content?: string;
+        morphology_assets?: string;
+        morphology_assets_desc?: string;
+        morphology_asset_status_loading?: string;
+        morphology_asset_status_downloaded?: string;
+        morphology_asset_status_missing?: string;
+        morphology_asset_status_downloading?: string;
+        morphology_asset_download?: string;
+        morphology_asset_delete?: string;
     };
     sidebar: {
         title: string;
@@ -110,6 +118,9 @@ export interface LanguagePack {
         book_added: string;
         book_reloaded: string;
         book_removed: string;
+        morphology_asset_downloaded?: string;
+        morphology_asset_deleted?: string;
+        morphology_asset_operation_failed?: string;
     };
     modals: {
         add_word_title: string;

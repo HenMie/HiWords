@@ -14,6 +14,9 @@ HiWords 是一个在阅读时帮助你积累词汇的 Obsidian 插件，会自�
 - **统一多语言形态学引擎（韩语 + 日语）**  
   通过 `UnifiedMorphologyService` 聚合 `lindera-wasm-ko-dic` 与 `lindera-wasm-ipadic`（`src/core/unified-morphology-service.ts`），在自动语言检测后走统一分析链路，并支持候选结果评分与可追踪决策（source/POS/context/book-language 权重）。
 
+- **形态学资源按需下载（减小插件本体）**  
+  韩语/日语分析所需 WASM 词典改为首次使用时自动下载并缓存到插件目录（`src/core/morphology-asset-manager.ts`），不再在构建产物中强制附带全部词典文件。
+
 - **形态学策略可切换（Hybrid / Legacy）**  
   新增 `Morphology Engine` 与 `Morphology Fallback` 两项设置（`src/ui/settings-tab.ts`）：  
   `Hybrid` 以逆向分析为主，`Legacy` 保持历史“活用生成优先”行为；`Conservative` 仅在分析器不可用时启用生成兜底，`Aggressive` 则始终启用。
@@ -75,6 +78,7 @@ HiWords 是一个在阅读时帮助你积累词汇的 Obsidian 插件，会自�
 - **自动高亮**：开启后，编辑器、阅读模式、PDF 视图共用形态学索引。  
 - **形态学引擎模式**：`Hybrid`（推荐）与 `Legacy` 可切换，平衡准确率与兼容行为。  
 - **形态学兜底策略**：`Conservative`（推荐）仅在必要时生成活用，`Aggressive` 始终生成。  
+- **形态学资源下载**：首次启用韩语/日语形态学时会联网下载对应 WASM 资源并本地缓存。  
 - **Mastered 功能**：支持“移动到 Mastered 分组”或“以颜色区分”两种模式。  
 - **自动布局**：控制 Canvas 词卡尺寸、列数、间距，保持画布整洁。  
 - **调试模式**：在控制台查看形态学分析与索引详情，便于排查错漏。  

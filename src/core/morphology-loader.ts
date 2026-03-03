@@ -2,6 +2,7 @@ import type { MorphologyLanguage, VocabularyBook } from '../utils/types';
 import { KoreanMorphologyService } from './korean-morphology-service';
 // 日语服务将在后续任务中实现，这里先用类型占位
 import type { JapaneseMorphologyService } from './japanese-morphology-service';
+import type { MorphologyAssetProvider } from './morphology-asset-manager';
 
 /**
  * 形态学服务加载器
@@ -14,9 +15,11 @@ export class MorphologyLoader {
     private japaneseLoading: Promise<JapaneseMorphologyService> | null = null;
     private app: unknown;
     private debugMode: boolean = false;
+    private assetProvider: MorphologyAssetProvider | null = null;
 
-    constructor(app?: unknown) {
+    constructor(app?: unknown, assetProvider?: MorphologyAssetProvider) {
         this.app = app;
+        this.assetProvider = assetProvider ?? null;
     }
 
     /**
@@ -103,7 +106,7 @@ export class MorphologyLoader {
      * 加载韩语形态学服务
      */
     private async loadKoreanService(): Promise<KoreanMorphologyService> {
-        const service = new KoreanMorphologyService(this.app);
+        const service = new KoreanMorphologyService(this.app, this.assetProvider ?? undefined);
         service.setDebugMode(this.debugMode);
         return service;
     }
@@ -144,7 +147,7 @@ export class MorphologyLoader {
     private async loadJapaneseService(): Promise<JapaneseMorphologyService> {
         // 动态导入日语形态学服务，避免在不需要时加载
         const { JapaneseMorphologyService } = await import('./japanese-morphology-service');
-        const service = new JapaneseMorphologyService(this.app);
+        const service = new JapaneseMorphologyService(this.app, this.assetProvider ?? undefined);
         service.setDebugMode(this.debugMode);
         return service;
     }
@@ -244,4 +247,3 @@ export class MorphologyLoader {
         this.unloadJapaneseService();
     }
 }
-

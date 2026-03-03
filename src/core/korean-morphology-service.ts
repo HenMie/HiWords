@@ -1,7 +1,6 @@
 import init, { TokenizerBuilder } from 'lindera-wasm-ko-dic';
-// @ts-ignore
-import wasmBytes from '../../lindera_wasm_bg.wasm';
 import { isKoreanText } from '../utils/korean-text-utils';
+import type { MorphologyAssetProvider } from './morphology-asset-manager';
 import type {
     DocumentAnalysisResult,
     MorphologyAnalysisResult,
@@ -33,9 +32,11 @@ export class KoreanMorphologyService {
     private debugMode: boolean = false;
     private wordRulePipeline: TokenAnalysisRule[] | null = null;
     private documentRulePipeline: TokenAnalysisRule[] | null = null;
+    private assetProvider: MorphologyAssetProvider | null = null;
 
-    constructor(app?: any) {
+    constructor(app?: unknown, assetProvider?: MorphologyAssetProvider) {
         this.app = app;
+        this.assetProvider = assetProvider ?? null;
         // 按需初始化，不在构造函数中立即初始化
         this.initPromise = null;
     }
@@ -103,29 +104,18 @@ export class KoreanMorphologyService {
     private async initialize(): Promise<void> {
         const initMethods = [
             { 
-                name: 'WASM字节数组', 
-                method: async () => await init({ module_or_path: wasmBytes })
-            },
-            { 
-                name: '插件路径', 
+                name: '按需下载资源',
                 method: async () => {
-                    const pluginWasmUrl = 'app://local/.obsidian/plugins/HiWords/lindera_wasm_bg.wasm';
-                    const response = await fetch(pluginWasmUrl);
-                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                    const wasmBytes = await response.arrayBuffer();
+                    if (!this.assetProvider) {
+                        throw new Error('MorphologyAssetProvider is not configured');
+                    }
+                    const wasmBytes = await this.assetProvider.getWasmBytes('korean');
                     await init({ module_or_path: wasmBytes });
                 }
             },
             { 
                 name: '默认初始化', 
                 method: async () => await init({})
-            },
-            { 
-                name: 'Obsidian资源协议', 
-                method: async () => {
-                    const resourceUrl = `app://local/.obsidian/plugins/HiWords/lindera_wasm_bg.wasm`;
-                    await init({ module_or_path: resourceUrl });
-                }
             }
         ];
 
@@ -171,6 +161,10 @@ export class KoreanMorphologyService {
         
         // 等待初始化完成
         await this.initPromise;
+
+        if (!this.isInitialized) {
+            this.initPromise = null;
+        }
         
         return this.isInitialized;
     }

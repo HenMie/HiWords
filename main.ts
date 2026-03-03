@@ -4,7 +4,14 @@ import { Extension } from '@codemirror/state';
 import { HiWordsSettings, extractSentenceFromEditorMultiline, HIGHLIGHTER_REFRESH, PLUGIN_UNLOAD_TIMEOUT } from './src/utils';
 import { registerReadingModeHighlighter } from './src/ui/reading-mode-highlighter';
 import { registerPDFHighlighter, cleanupPDFHighlighter } from './src/ui/pdf-highlighter';
-import { VocabularyManager, MasteredService, createWordHighlighterExtension, highlighterManager } from './src/core';
+import {
+    VocabularyManager,
+    MasteredService,
+    MorphologyAssetManager,
+    createWordHighlighterExtension,
+    highlighterManager
+} from './src/core';
+import type { MorphologyAssetLanguage, MorphologyAssetState } from './src/core';
 import { DefinitionPopover, HiWordsSettingTab, HiWordsSidebarView, SIDEBAR_VIEW_TYPE, AddWordModal } from './src/ui';
 import { i18n, t } from './src/i18n';
 
@@ -52,6 +59,7 @@ const DEFAULT_SETTINGS: HiWordsSettings = {
 export default class HiWordsPlugin extends Plugin {
     settings: HiWordsSettings;
     vocabularyManager: VocabularyManager;
+    morphologyAssetManager: MorphologyAssetManager;
     definitionPopover: DefinitionPopover;
     masteredService: MasteredService;
     editorExtensions: Extension[] = [];
@@ -68,7 +76,8 @@ export default class HiWordsPlugin extends Plugin {
         i18n.setApp(this.app);
 
         // 初始化管理器
-        this.vocabularyManager = new VocabularyManager(this.app, this.settings);
+        this.morphologyAssetManager = new MorphologyAssetManager(this.app, this.manifest.id);
+        this.vocabularyManager = new VocabularyManager(this.app, this.settings, this.morphologyAssetManager);
 
         // 初始化已掌握服务
         this.masteredService = new MasteredService(this, this.vocabularyManager);
@@ -448,6 +457,18 @@ export default class HiWordsPlugin extends Plugin {
         if (this.masteredService) {
             this.masteredService.updateSettings();
         }
+    }
+
+    public async getMorphologyAssetState(language: MorphologyAssetLanguage): Promise<MorphologyAssetState> {
+        return this.morphologyAssetManager.getAssetState(language);
+    }
+
+    public async downloadMorphologyAsset(language: MorphologyAssetLanguage): Promise<MorphologyAssetState> {
+        return this.morphologyAssetManager.downloadAsset(language);
+    }
+
+    public async deleteMorphologyAsset(language: MorphologyAssetLanguage): Promise<void> {
+        await this.morphologyAssetManager.deleteAsset(language);
     }
 
     /**

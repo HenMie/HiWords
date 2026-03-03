@@ -1,9 +1,10 @@
-import { App, PluginSettingTab, Setting, TFile, Notice, Modal } from 'obsidian';
+import { App, PluginSettingTab, Setting, TFile, Notice, Modal, ButtonComponent } from 'obsidian';
 import HiWordsPlugin from '../../main';
 import { VocabularyBook, HighlightStyle, MasteredDetectionMode, FileNodeParseMode, MorphologyLanguage } from '../utils';
 import type { MorphologyEngineMode, MorphologyFallbackMode } from '../utils';
 import { CanvasParser } from '../canvas';
 import { t } from '../i18n';
+import type { MorphologyAssetLanguage } from '../core';
 
 export class HiWordsSettingTab extends PluginSettingTab {
     plugin: HiWordsPlugin;
@@ -191,8 +192,125 @@ export class HiWordsSettingTab extends PluginSettingTab {
         this.addVocabularyBooksSection();
         this.addFileNodeParseModeSettings();
         this.addHighlightingSection();
+        this.addMorphologyAssetSection();
         this.addLearningFeaturesSection();
         this.addAutoLayoutSettings();
+    }
+
+    private addMorphologyAssetSection(): void {
+        const { containerEl } = this;
+
+        new Setting(containerEl)
+            .setName(t('settings.morphology_assets') || 'Morphology assets')
+            .setDesc(t('settings.morphology_assets_desc') || 'Download or delete morphology resources on demand')
+            .setHeading();
+
+        this.addMorphologyAssetItem('korean');
+        this.addMorphologyAssetItem('japanese');
+    }
+
+    private addMorphologyAssetItem(language: MorphologyAssetLanguage): void {
+        const { containerEl } = this;
+        const languageLabel = this.getMorphologyLanguageLabel(language);
+        const setting = new Setting(containerEl)
+            .setName(languageLabel)
+            .setDesc(t('settings.morphology_asset_status_loading') || 'Checking resource status...');
+
+        let downloadButton: ButtonComponent | null = null;
+        let deleteButton: ButtonComponent | null = null;
+        let actionInProgress = false;
+
+        const refreshState = async (): Promise<void> => {
+            const state = await this.plugin.getMorphologyAssetState(language);
+            setting.setDesc(this.formatMorphologyAssetStatus(state.downloaded, state.byteLength, state.isDownloading || actionInProgress));
+            downloadButton?.setDisabled(state.downloaded || state.isDownloading || actionInProgress);
+            deleteButton?.setDisabled(!state.downloaded || state.isDownloading || actionInProgress);
+        };
+
+        setting.addButton(button => {
+            downloadButton = button;
+            button.setButtonText(t('settings.morphology_asset_download') || 'Download');
+            button.onClick(async () => {
+                await this.runMorphologyAssetAction(language, languageLabel, 'download', refreshState, (inProgress) => {
+                    actionInProgress = inProgress;
+                });
+            });
+            return button;
+        });
+
+        setting.addButton(button => {
+            deleteButton = button;
+            button.setButtonText(t('settings.morphology_asset_delete') || 'Delete');
+            button.setWarning();
+            button.onClick(async () => {
+                await this.runMorphologyAssetAction(language, languageLabel, 'delete', refreshState, (inProgress) => {
+                    actionInProgress = inProgress;
+                });
+            });
+            return button;
+        });
+
+        void refreshState().catch(error => {
+            console.error(`[HiWords] 获取 ${language} 形态学资源状态失败:`, error);
+            setting.setDesc(t('settings.morphology_asset_status_missing') || 'Not downloaded');
+        });
+    }
+
+    private async runMorphologyAssetAction(
+        language: MorphologyAssetLanguage,
+        languageLabel: string,
+        action: 'download' | 'delete',
+        refreshState: () => Promise<void>,
+        setActionState: (inProgress: boolean) => void
+    ): Promise<void> {
+        setActionState(true);
+        await refreshState();
+
+        try {
+            if (action === 'download') {
+                await this.plugin.downloadMorphologyAsset(language);
+                new Notice((t('notices.morphology_asset_downloaded') || '{0} morphology resource downloaded').replace('{0}', languageLabel));
+            } else {
+                await this.plugin.deleteMorphologyAsset(language);
+                new Notice((t('notices.morphology_asset_deleted') || '{0} morphology resource deleted').replace('{0}', languageLabel));
+            }
+        } catch (error) {
+            console.error(`[HiWords] ${action} ${language} 形态学资源失败:`, error);
+            new Notice((t('notices.morphology_asset_operation_failed') || 'Failed to manage {0} morphology resource').replace('{0}', languageLabel));
+        } finally {
+            setActionState(false);
+            await refreshState();
+        }
+    }
+
+    private getMorphologyLanguageLabel(language: MorphologyAssetLanguage): string {
+        if (language === 'korean') {
+            return t('settings.morphology_korean') || 'Korean';
+        }
+        return t('settings.morphology_japanese') || 'Japanese';
+    }
+
+    private formatMorphologyAssetStatus(downloaded: boolean, byteLength: number, isDownloading: boolean): string {
+        if (isDownloading) {
+            return t('settings.morphology_asset_status_downloading') || 'Downloading...';
+        }
+
+        if (!downloaded) {
+            return t('settings.morphology_asset_status_missing') || 'Not downloaded';
+        }
+
+        const size = this.formatByteSize(byteLength);
+        return (t('settings.morphology_asset_status_downloaded') || 'Downloaded ({0})').replace('{0}', size);
+    }
+
+    private formatByteSize(bytes: number): string {
+        if (bytes < 1024) {
+            return `${bytes} B`;
+        }
+        if (bytes < 1024 * 1024) {
+            return `${(bytes / 1024).toFixed(1)} KB`;
+        }
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
     }
 
     /**

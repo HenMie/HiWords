@@ -74,6 +74,14 @@ export default {
         ai_model_desc: "例：gpt-4o-mini、deepseek-chat",
         ai_prompt: "カスタムプロンプト",
         ai_prompt_desc: "{{word}} と {{sentence}} をプレースホルダとして使えます。AI はこのプロンプトに従って定義を生成します",
+        morphology_assets: "形態素リソース",
+        morphology_assets_desc: "プラグイン容量を抑えるため、韓国語/日本語の形態素解析リソースを必要時にダウンロードまたは削除します",
+        morphology_asset_status_loading: "リソース状態を確認中...",
+        morphology_asset_status_downloaded: "ダウンロード済み（{0}）",
+        morphology_asset_status_missing: "未ダウンロード",
+        morphology_asset_status_downloading: "ダウンロード中...",
+        morphology_asset_download: "ダウンロード",
+        morphology_asset_delete: "削除",
     },
 
     // Sidebar
@@ -140,6 +148,9 @@ export default {
         definition_fetched: "定義を取得しました",
         definition_fetch_failed: "定義の取得に失敗しました",
         word_required: "単語は必須です",
+        morphology_asset_downloaded: "{0} の形態素リソースをダウンロードしました",
+        morphology_asset_deleted: "{0} の形態素リソースを削除しました",
+        morphology_asset_operation_failed: "{0} の形態素リソース操作に失敗しました",
     },
 
     // Modals

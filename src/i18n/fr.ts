@@ -74,6 +74,14 @@ export default {
         ai_model_desc: "Nom du modèle, ex. gpt-4o-mini, deepseek-chat",
         ai_prompt: "Prompt personnalisé",
         ai_prompt_desc: "Utilisez les variables {{word}} et {{sentence}}. L'IA génèrera la définition selon ce prompt",
+        morphology_assets: "Ressources morphologiques",
+        morphology_assets_desc: "Téléchargez ou supprimez à la demande les ressources morphologiques coréennes/japonaises pour réduire la taille du plugin",
+        morphology_asset_status_loading: "Vérification de l'état des ressources...",
+        morphology_asset_status_downloaded: "Téléchargé ({0})",
+        morphology_asset_status_missing: "Non téléchargé",
+        morphology_asset_status_downloading: "Téléchargement...",
+        morphology_asset_download: "Télécharger",
+        morphology_asset_delete: "Supprimer",
     },
 
     // Sidebar
@@ -140,6 +148,9 @@ export default {
         definition_fetched: "Définition récupérée",
         definition_fetch_failed: "Impossible de récupérer la définition",
         word_required: "Le mot ne peut pas être vide",
+        morphology_asset_downloaded: "Ressource morphologique {0} téléchargée",
+        morphology_asset_deleted: "Ressource morphologique {0} supprimée",
+        morphology_asset_operation_failed: "Échec de la gestion de la ressource morphologique {0}",
     },
 
     // Modals

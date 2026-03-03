@@ -3,8 +3,7 @@
  * 使用 lindera-wasm-ipadic 进行日语单词的原型还原和活用形匹配
  */
 
-// @ts-ignore - WASM 文件由 copy-wasm 脚本复制到插件根目录
-import wasmJaBytes from '../../lindera_wasm_ja_bg.wasm';
+import type { MorphologyAssetProvider } from './morphology-asset-manager';
 
 import type {
     DocumentAnalysisResult,
@@ -39,9 +38,11 @@ export class JapaneseMorphologyService {
     private debugMode: boolean = false;
     private wordRulePipeline: TokenAnalysisRule[] | null = null;
     private documentRulePipeline: TokenAnalysisRule[] | null = null;
+    private assetProvider: MorphologyAssetProvider | null = null;
 
-    constructor(app?: unknown) {
+    constructor(app?: unknown, assetProvider?: MorphologyAssetProvider) {
         this.app = app;
+        this.assetProvider = assetProvider ?? null;
         this.initPromise = null;
     }
 
@@ -101,24 +102,20 @@ export class JapaneseMorphologyService {
             // 尝试多种初始化方式
             const initMethods = [
                 {
-                    name: 'WASM字节数组',
+                    name: '按需下载资源',
                     method: async () => {
-                        await init({ module_or_path: wasmJaBytes });
-                    }
-                },
-                {
-                    name: '插件路径',
-                    method: async () => {
-                        const pluginWasmUrl = 'app://local/.obsidian/plugins/HiWords/lindera_wasm_ja_bg.wasm';
-                        const response = await fetch(pluginWasmUrl);
-                        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                        const wasmBytes = await response.arrayBuffer();
+                        if (!this.assetProvider) {
+                            throw new Error('MorphologyAssetProvider is not configured');
+                        }
+                        const wasmBytes = await this.assetProvider.getWasmBytes('japanese');
                         await init({ module_or_path: wasmBytes });
                     }
                 },
                 {
                     name: '默认初始化',
-                    method: async () => await init({})
+                    method: async () => {
+                        await init({});
+                    }
                 }
             ];
 
@@ -165,6 +162,10 @@ export class JapaneseMorphologyService {
         }
 
         await this.initPromise;
+
+        if (!this.isInitialized) {
+            this.initPromise = null;
+        }
 
         return this.isInitialized;
     }

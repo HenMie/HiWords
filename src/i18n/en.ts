@@ -89,6 +89,14 @@ export default {
         morphology_korean: "Korean",
         morphology_japanese: "Japanese",
         morphology_auto: "Auto detect",
+        morphology_assets: "Morphology assets",
+        morphology_assets_desc: "Download or delete Korean/Japanese morphology resources on demand to reduce plugin footprint",
+        morphology_asset_status_loading: "Checking resource status...",
+        morphology_asset_status_downloaded: "Downloaded ({0})",
+        morphology_asset_status_missing: "Not downloaded",
+        morphology_asset_status_downloading: "Downloading...",
+        morphology_asset_download: "Download",
+        morphology_asset_delete: "Delete",
     },
     
     // Sidebar
@@ -157,6 +165,9 @@ export default {
         definition_fetched: "Definition fetched",
         definition_fetch_failed: "Failed to fetch definition",
         word_required: "Word cannot be empty",
+        morphology_asset_downloaded: "{0} morphology resource downloaded",
+        morphology_asset_deleted: "{0} morphology resource deleted",
+        morphology_asset_operation_failed: "Failed to manage {0} morphology resource",
     },
     
     // Modals
