@@ -11,11 +11,15 @@ HiWords 是一个在阅读时帮助你积累词汇的 Obsidian 插件，会自�
 
 ## Fork 新增特性
 
-- **韩语形态学引擎**  
-  集成 `lindera-wasm-ko-dic`（`src/core/korean-morphology-service.ts`），初始化时自动加载 WASM，并针对韩语词性做了专项处理：支持复合名词、派生动词以及不规则变化等，将活用形统一映射到 Canvas 中的原型词条。
+- **统一多语言形态学引擎（韩语 + 日语）**  
+  通过 `UnifiedMorphologyService` 聚合 `lindera-wasm-ko-dic` 与 `lindera-wasm-ipadic`（`src/core/unified-morphology-service.ts`），在自动语言检测后走统一分析链路，并支持候选结果评分与可追踪决策（source/POS/context/book-language 权重）。
 
-- **全模式形态学高亮**  
-  通过 `Trie` 前缀树与 `MorphologyIndexManager` 对 Markdown、阅读模式以及 PDF 视图进行统一的高亮匹配（`src/core/word-highlighter.ts`、`src/ui/pdf-highlighter.ts`）。高亮结果会自动去重并优先保留更长的匹配，所有编辑器实例由 `highlighterManager` 统一刷新。
+- **形态学策略可切换（Hybrid / Legacy）**  
+  新增 `Morphology Engine` 与 `Morphology Fallback` 两项设置（`src/ui/settings-tab.ts`）：  
+  `Hybrid` 以逆向分析为主，`Legacy` 保持历史“活用生成优先”行为；`Conservative` 仅在分析器不可用时启用生成兜底，`Aggressive` 则始终启用。
+
+- **全模式形态学高亮与快照一致性**  
+  通过 `Trie` + `MorphologyIndexManager` 对 Markdown、阅读模式、PDF 与侧边栏扫描保持一致匹配（`src/core/word-highlighter.ts`、`src/ui/pdf-highlighter.ts`、`src/core/word-matcher-service.ts`）。高亮结果自动去重并优先保留更长匹配，且基于版本化快照避免不同视图出现词表不一致。
 
 - **词汇添加与编辑体验升级**  
   新的模态框会异步解析韩语原型、记住最近使用的词书、支持词源字段，批量同步到 Canvas（`src/ui/add-word-modal.ts`）。选择已经存在的词条会直接进入编辑模式，避免重复输入。
@@ -51,6 +55,15 @@ HiWords 是一个在阅读时帮助你积累词汇的 Obsidian 插件，会自�
 
 3. 在设置页添加词书、启用自动高亮与悬浮释义，根据需要调整自动布局、Mastered 管理、TTS 模板或调试选项。
 
+## 使用 BRAT 安装
+
+1. 在 Obsidian 的社区插件中安装并启用 BRAT。  
+2. 打开 BRAT 设置，选择 `Add Beta plugin`。  
+3. 输入本仓库路径（`owner/repo`），例如 `yourname/HiWords`。  
+4. BRAT 会从 GitHub Release 下载 `manifest.json`、`main.js`、`styles.css` 并安装。
+
+> 发布说明（维护者）：发布 BRAT 版本时，请确保 `Release Tag`、`Release Name`、`manifest.json.version` 三者一致。
+
 ## 命令
 
 - `hi-words:refresh-vocabulary`：重新解析所有词书。
@@ -60,6 +73,8 @@ HiWords 是一个在阅读时帮助你积累词汇的 Obsidian 插件，会自�
 ## 配置要点
 
 - **自动高亮**：开启后，编辑器、阅读模式、PDF 视图共用形态学索引。  
+- **形态学引擎模式**：`Hybrid`（推荐）与 `Legacy` 可切换，平衡准确率与兼容行为。  
+- **形态学兜底策略**：`Conservative`（推荐）仅在必要时生成活用，`Aggressive` 始终生成。  
 - **Mastered 功能**：支持“移动到 Mastered 分组”或“以颜色区分”两种模式。  
 - **自动布局**：控制 Canvas 词卡尺寸、列数、间距，保持画布整洁。  
 - **调试模式**：在控制台查看形态学分析与索引详情，便于排查错漏。  

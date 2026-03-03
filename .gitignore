@@ -23,6 +23,3 @@ data.json
 
 # Claude Code configuration
 .claude
-
-# GitHub workflows (if any)
-.github

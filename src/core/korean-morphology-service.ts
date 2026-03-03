@@ -253,7 +253,7 @@ export class KoreanMorphologyService {
         baseForm: string;
         partOfSpeech: string;
         confidence: number;
-        analysisSource: 'tokenizer' | 'reverse-rule';
+        analysisSource: 'tokenizer' | 'reverse-rule' | 'fallback';
     } | null {
         if (!tokens || tokens.length === 0) {
             return null;

@@ -6,7 +6,7 @@
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production && npm run copy-wasm",
-		"copy-wasm": "copy node_modules\\lindera-wasm-ko-dic\\lindera_wasm_bg.wasm . && copy node_modules\\lindera-wasm-ko-dic\\lindera_wasm.js . && copy node_modules\\lindera-wasm-ipadic\\lindera_wasm_bg.wasm lindera_wasm_ja_bg.wasm && copy node_modules\\lindera-wasm-ipadic\\lindera_wasm.js lindera_wasm_ja.js",
+		"copy-wasm": "node scripts/copy-wasm.mjs",
 		"version": "node version-bump.mjs && git add manifest.json versions.json"
 	},
 	"keywords": [],
