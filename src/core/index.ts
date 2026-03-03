@@ -14,3 +14,11 @@ export { VocabularyCacheManager } from './vocabulary-cache-manager';
 export { MorphologyLoader } from './morphology-loader';
 export { UnifiedMorphologyService } from './unified-morphology-service';
 export type { MorphologyResult, DocumentMorphologyResult } from './unified-morphology-service';
+export type {
+    MorphologyAnalyzeOptions,
+    MorphologyCandidate,
+    MorphologyCandidateSource,
+    MorphologyAnalysisTrace,
+    MorphologyDecision,
+    MorphologyDetectionLanguage
+} from './morphology-types';

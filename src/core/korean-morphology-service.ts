@@ -229,7 +229,8 @@ export class KoreanMorphologyService {
                     surface,
                     baseForm: normalizedBaseForm,
                     partOfSpeech,
-                    confidence: analysisResult.confidence || 0.8
+                    confidence: analysisResult.confidence || 0.8,
+                    analysisSource: analysisResult.analysisSource ?? 'tokenizer'
                 };
 
                 this.debugLog('最终分析结果:', result);
@@ -247,7 +248,13 @@ export class KoreanMorphologyService {
     /**
      * 分析多个tokens，寻找最佳的基础形式
      */
-    private analyzeTokens(tokens: NormalizedToken[], originalWord: string): { surface: string, baseForm: string, partOfSpeech: string, confidence: number } | null {
+    private analyzeTokens(tokens: NormalizedToken[], originalWord: string): {
+        surface: string;
+        baseForm: string;
+        partOfSpeech: string;
+        confidence: number;
+        analysisSource: 'tokenizer' | 'reverse-rule';
+    } | null {
         if (!tokens || tokens.length === 0) {
             return null;
         }
@@ -266,7 +273,10 @@ export class KoreanMorphologyService {
 
         const ruleResult = this.applyRulePipeline(this.wordRulePipeline!, context);
         if (ruleResult) {
-            return ruleResult.result;
+            return {
+                ...ruleResult.result,
+                analysisSource: ruleResult.result.analysisSource ?? 'reverse-rule'
+            };
         }
 
         const firstToken = tokens[0];
@@ -276,7 +286,8 @@ export class KoreanMorphologyService {
                 surface: originalWord,
                 baseForm: firstToken.baseForm,
                 partOfSpeech: firstToken.partOfSpeech,
-                confidence: 0.7
+                confidence: 0.7,
+                analysisSource: 'tokenizer'
             };
         }
 
@@ -330,7 +341,8 @@ export class KoreanMorphologyService {
                     surface: word,
                     baseForm: baseForm,
                     partOfSpeech: 'VV', // 假设为动词
-                    confidence: 0.6  // 后备方案置信度较低
+                    confidence: 0.6,  // 后备方案置信度较低
+                    analysisSource: 'fallback' as const
                 };
 
                 this.debugLog('后备分析结果:', result);
@@ -343,7 +355,8 @@ export class KoreanMorphologyService {
             surface: word,
             baseForm: word,
             partOfSpeech: 'UNKNOWN',
-            confidence: 0.3
+            confidence: 0.3,
+            analysisSource: 'fallback'
         };
     }
 
@@ -420,7 +433,10 @@ export class KoreanMorphologyService {
             const ruleResult = this.applyRulePipeline(this.documentRulePipeline!, context);
             if (ruleResult) {
                 this.debugLog(`[analyzeDocumentTokens] 规则命中: ${ruleResult.result.surface} → ${ruleResult.result.baseForm}`);
-                results.push(ruleResult.result);
+                results.push({
+                    ...ruleResult.result,
+                    analysisSource: ruleResult.result.analysisSource ?? 'reverse-rule'
+                });
                 for (const consumedIndex of ruleResult.consumedTokenIndices) {
                     processedTokens.add(consumedIndex);
                 }
@@ -436,7 +452,8 @@ export class KoreanMorphologyService {
                     surface: token.surface,
                     baseForm: token.baseForm,
                     partOfSpeech: token.partOfSpeech,
-                    confidence: calculateConfidence(token.rawToken)
+                    confidence: calculateConfidence(token.rawToken),
+                    analysisSource: 'tokenizer'
                 };
                 results.push(result);
                 processedTokens.add(i);

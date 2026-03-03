@@ -33,6 +33,12 @@ export interface WordDefinition {
 // 形态学语言类型
 export type MorphologyLanguage = 'none' | 'korean' | 'japanese' | 'auto';
 
+// 形态学引擎模式
+export type MorphologyEngineMode = 'hybrid' | 'legacy';
+
+// 形态学兜底策略
+export type MorphologyFallbackMode = 'conservative' | 'aggressive';
+
 // 生词本配置
 export interface VocabularyBook {
     path: string; // Canvas 文件路径
@@ -100,6 +106,10 @@ export interface HiWordsSettings {
     highlightPaths?: string;
     // 文件节点解析模式
     fileNodeParseMode?: FileNodeParseMode;
+    // 形态学引擎模式（hybrid: 混合逆向引擎，legacy: 旧版兼容模式）
+    morphologyEngineMode?: MorphologyEngineMode;
+    // 形态学兜底策略（conservative: 仅必要时启用活用生成，aggressive: 始终启用）
+    morphologyFallbackMode?: MorphologyFallbackMode;
 }
 
 // 词汇匹配信息

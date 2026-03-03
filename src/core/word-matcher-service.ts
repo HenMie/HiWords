@@ -1,4 +1,5 @@
-import { Trie, generateCommonInflections, generateJapaneseInflections, isKoreanText, isJapaneseText, MorphologyLanguage } from '../utils';
+import { Trie, generateCommonInflections, generateJapaneseInflections, isKoreanText, isJapaneseText } from '../utils';
+import type { MorphologyLanguage } from '../utils';
 import type { UnifiedMorphologyService } from './unified-morphology-service';
 import type { VocabularyManager } from './vocabulary-manager';
 
@@ -11,13 +12,15 @@ export class WordMatcherService {
     private trie: Trie;
     private unifiedMorphologyService: UnifiedMorphologyService;
     private vocabularyManager: VocabularyManager;
+    private snapshotVersion = -1;
+    private snapshotIncludeAllWords = false;
 
     constructor(vocabularyManager: VocabularyManager) {
         this.vocabularyManager = vocabularyManager;
         this.trie = new Trie();
         // 复用 VocabularyManager 中的统一形态学服务
         this.unifiedMorphologyService = vocabularyManager.getUnifiedMorphologyService();
-        this.buildTrie();
+        this.ensureSnapshot();
     }
 
     /**
@@ -25,7 +28,28 @@ export class WordMatcherService {
      * @param includeAllWords 是否包含所有单词（包括已掌握的），默认 false（只包含未掌握的）
      */
     public buildTrie(includeAllWords: boolean = false): void {
+        const currentVersion = this.vocabularyManager.getMatcherSnapshotVersion();
+        this.buildTrieInternal(includeAllWords, currentVersion);
+    }
+
+    /**
+     * 确保前缀树快照与当前版本一致
+     */
+    public ensureSnapshot(includeAllWords?: boolean): void {
+        const targetIncludeAllWords = includeAllWords ?? this.snapshotIncludeAllWords;
+        const currentVersion = this.vocabularyManager.getMatcherSnapshotVersion();
+        if (
+            this.snapshotVersion !== currentVersion ||
+            this.snapshotIncludeAllWords !== targetIncludeAllWords
+        ) {
+            this.buildTrieInternal(targetIncludeAllWords, currentVersion);
+        }
+    }
+
+    private buildTrieInternal(includeAllWords: boolean, version: number): void {
         this.trie.clear();
+        this.snapshotIncludeAllWords = includeAllWords;
+        this.snapshotVersion = version;
         
         // 根据参数决定获取所有单词还是只获取未掌握的单词
         const baseWords = includeAllWords 
@@ -49,7 +73,9 @@ export class WordMatcherService {
                 const morphologyLang = bookConfig?.morphology || 'none';
                 
                 // 生成活用形
-                const generatedInflectionForms = this.generateInflectionsForWord(baseWord, morphologyLang);
+                const generatedInflectionForms = this.shouldUseGeneratedInflections(baseWord, morphologyLang)
+                    ? this.generateInflectionsForWord(baseWord, morphologyLang)
+                    : [];
 
                 // 合并已索引的和生成的活用形
                 const allInflectionForms = new Set([...indexedInflectionForms, ...generatedInflectionForms]);
@@ -97,6 +123,7 @@ export class WordMatcherService {
      * 获取Trie实例
      */
     public getTrie(): Trie {
+        this.ensureSnapshot();
         return this.trie;
     }
 
@@ -194,7 +221,41 @@ export class WordMatcherService {
      * @returns 匹配结果数组
      */
     public findMatches(text: string) {
+        this.ensureSnapshot();
         return this.trie.findAllMatches(text, this.canSkipSpace);
+    }
+
+    private shouldUseGeneratedInflections(baseWord: string, morphologyLang: MorphologyLanguage): boolean {
+        const settings = this.vocabularyManager.getSettings();
+        const engineMode = settings.morphologyEngineMode || 'hybrid';
+        const fallbackMode = settings.morphologyFallbackMode || 'conservative';
+
+        if (engineMode === 'legacy') {
+            return true;
+        }
+
+        if (fallbackMode === 'aggressive') {
+            return true;
+        }
+
+        if (morphologyLang === 'korean') {
+            return !this.unifiedMorphologyService.isKoreanLoaded();
+        }
+
+        if (morphologyLang === 'japanese') {
+            return !this.unifiedMorphologyService.isJapaneseLoaded();
+        }
+
+        if (morphologyLang === 'auto') {
+            if (isKoreanText(baseWord)) {
+                return !this.unifiedMorphologyService.isKoreanLoaded();
+            }
+            if (isJapaneseText(baseWord)) {
+                return !this.unifiedMorphologyService.isJapaneseLoaded();
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -206,5 +267,3 @@ export class WordMatcherService {
         // morphologyService 由 VocabularyManager 管理，不在此处销毁
     }
 }
-
-

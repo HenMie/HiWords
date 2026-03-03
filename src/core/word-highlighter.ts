@@ -96,6 +96,7 @@ export class WordHighlighter implements PluginValue {
     private cachedMatches: Map<string, WordMatch[]> = new Map();
     private lastDocVersion = 0;
     private lastDocHash = '';
+    private lastSnapshotVersion = -1;
     protected shouldHighlightFile?: (filePath: string) => boolean;
 
     constructor(view: EditorView, vocabularyManager: VocabularyManager, shouldHighlightFile?: (filePath: string) => boolean) {
@@ -118,8 +119,7 @@ export class WordHighlighter implements PluginValue {
      * 构建单词前缀树（包含形态学索引）
      */
     private buildWordTrie() {
-        const startTime = performance.now();
-        this.wordMatcherService.buildTrie();
+        this.wordMatcherService.ensureSnapshot();
     }
 
     update(update: ViewUpdate) {
@@ -166,6 +166,13 @@ export class WordHighlighter implements PluginValue {
         const startTime = performance.now();
         const builder = new RangeSetBuilder<Decoration>();
         const matches: WordMatch[] = [];
+
+        const currentSnapshotVersion = this.vocabularyManager.getMatcherSnapshotVersion();
+        if (currentSnapshotVersion !== this.lastSnapshotVersion) {
+            this.cachedMatches.clear();
+            this.lastRanges = [];
+            this.lastSnapshotVersion = currentSnapshotVersion;
+        }
         
         // 检查文档版本和内容是否变化
         const currentDocVersion = view.state.doc.length;

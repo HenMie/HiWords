@@ -35,6 +35,47 @@ export const CJK_REGEX = /[\u4E00-\u9FFF]/;
  */
 export const JAPANESE_REGEX = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF\u31F0-\u31FF\uFF65-\uFF9F]/;
 
+export interface ScriptStatistics {
+    total: number;
+    korean: number;
+    kana: number;
+    cjk: number;
+}
+
+/**
+ * 统计文本脚本分布（韩文 / 日文假名 / CJK）
+ */
+export function getScriptStatistics(text: string): ScriptStatistics {
+    if (!text) {
+        return { total: 0, korean: 0, kana: 0, cjk: 0 };
+    }
+
+    let korean = 0;
+    let kana = 0;
+    let cjk = 0;
+
+    for (const char of text) {
+        if (/[\uAC00-\uD7AF\u1100-\u11FF\uA960-\uA97F\uD7B0-\uD7FF]/.test(char)) {
+            korean++;
+            continue;
+        }
+        if (KANA_REGEX.test(char)) {
+            kana++;
+            continue;
+        }
+        if (CJK_REGEX.test(char)) {
+            cjk++;
+        }
+    }
+
+    return {
+        total: text.length,
+        korean,
+        kana,
+        cjk
+    };
+}
+
 /**
  * 检查文本是否包含日语字符（假名）
  * 通过检测假名来确定是否为日语文本
@@ -197,4 +238,3 @@ export function mightBeJapanese(text: string): boolean {
     // 这种情况下返回 false，让调用者使用其他方式判断
     return false;
 }
-

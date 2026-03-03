@@ -164,7 +164,7 @@ export function registerReadingModeHighlighter(plugin: {
       
       // 重建Trie以获取最新的词汇列表
       debugLog('start highlighting');
-      wordMatcherService.buildTrie();
+      wordMatcherService.ensureSnapshot();
       processElement(el);
       debugLog('highlighting finished');
     } catch (e) {

@@ -1,6 +1,7 @@
 import { App, PluginSettingTab, Setting, TFile, Notice, Modal } from 'obsidian';
 import HiWordsPlugin from '../../main';
-import { VocabularyBook, HighlightStyle, MasteredDetectionMode, HighlightMode, FileNodeParseMode, MorphologyLanguage } from '../utils';
+import { VocabularyBook, HighlightStyle, MasteredDetectionMode, FileNodeParseMode, MorphologyLanguage } from '../utils';
+import type { MorphologyEngineMode, MorphologyFallbackMode } from '../utils';
 import { CanvasParser } from '../canvas';
 import { t } from '../i18n';
 
@@ -241,6 +242,32 @@ export class HiWordsSettingTab extends PluginSettingTab {
                 }));
 
         this.addHighlightScopeSettings();
+
+        new Setting(containerEl)
+            .setName('Morphology Engine')
+            .setDesc('Hybrid uses inverse analysis as primary path; Legacy keeps aggressive generated inflections.')
+            .addDropdown(dropdown => dropdown
+                .addOption('hybrid', 'Hybrid (Recommended)')
+                .addOption('legacy', 'Legacy')
+                .setValue(this.plugin.settings.morphologyEngineMode || 'hybrid')
+                .onChange(async (value) => {
+                    this.plugin.settings.morphologyEngineMode = value as MorphologyEngineMode;
+                    await this.plugin.saveSettings();
+                    this.plugin.refreshHighlighter();
+                }));
+
+        new Setting(containerEl)
+            .setName('Morphology Fallback')
+            .setDesc('Conservative only generates inflections when analyzer is unavailable; Aggressive always generates.')
+            .addDropdown(dropdown => dropdown
+                .addOption('conservative', 'Conservative (Recommended)')
+                .addOption('aggressive', 'Aggressive')
+                .setValue(this.plugin.settings.morphologyFallbackMode || 'conservative')
+                .onChange(async (value) => {
+                    this.plugin.settings.morphologyFallbackMode = value as MorphologyFallbackMode;
+                    await this.plugin.saveSettings();
+                    this.plugin.refreshHighlighter();
+                }));
 
         // 是否显示词书来源
         new Setting(containerEl)

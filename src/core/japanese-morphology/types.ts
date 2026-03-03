@@ -111,6 +111,7 @@ export interface MorphologyAnalysisResult {
     baseForm: string;         // 基本形/原型
     partOfSpeech: string;     // 词性
     confidence: number;       // 置信度
+    analysisSource?: 'tokenizer' | 'reverse-rule' | 'fallback';
 }
 
 /**
@@ -160,4 +161,3 @@ export const IPADIC_FEATURE_INDEX = {
     READING: 7,          // 读音
     PRONUNCIATION: 8     // 发音
 } as const;
-

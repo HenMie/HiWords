@@ -1,5 +1,6 @@
-import { KoreanMorphologyService, DocumentAnalysisResult } from './korean-morphology-service';
 import { TFile } from 'obsidian';
+import type { UnifiedMorphologyService } from './unified-morphology-service';
+import type { MorphologyLanguage } from '../utils/types';
 
 /**
  * 笔记的形态学索引数据
@@ -12,15 +13,15 @@ interface NoteIndexData {
 
 /**
  * 形态学索引管理器
- * 负责管理整个工作区的韩语形态学索引，建立从原型到活用形的映射
+ * 负责管理整个工作区的形态学索引，建立从原型到活用形的映射
  */
 export class MorphologyIndexManager {
-    private morphologyService: KoreanMorphologyService;
+    private morphologyService: UnifiedMorphologyService;
     private noteIndexes: Map<string, NoteIndexData> = new Map(); // 文件路径 -> 索引数据
-    private globalIndex: Map<string, Set<string>> = new Map(); // 全局索引：原型 -> 活用形集合
+    private globalIndex: Map<string, Map<string, number>> = new Map(); // 全局索引：原型 -> 活用形 -> 引用计数
     private isEnabled = true;
 
-    constructor(morphologyService: KoreanMorphologyService) {
+    constructor(morphologyService: UnifiedMorphologyService) {
         this.morphologyService = morphologyService;
     }
 
@@ -43,32 +44,33 @@ export class MorphologyIndexManager {
 
     /**
      * 分析并索引单个笔记
+     * @returns 是否发生索引变更
      */
-    public async indexNote(file: TFile, content: string): Promise<void> {
+    public async indexNote(file: TFile, content: string): Promise<boolean> {
         if (!this.isEnabled) {
-            return;
+            return false;
         }
 
         try {
             const filePath = file.path;
             const lastModified = file.stat.mtime;
 
-            // 检查是否需要重新索引
             const existingIndex = this.noteIndexes.get(filePath);
             if (existingIndex && existingIndex.lastModified === lastModified) {
-                // 文件未修改，跳过
-                return;
+                return false;
             }
 
-            // 分析文档
-            const analysisResult = await this.morphologyService.analyzeDocument(content);
+            const preferredLanguage = this.getPreferredLanguageForIndexing();
+            const analysisResult = await this.morphologyService.analyzeDocument(
+                content,
+                'auto',
+                { bookLanguagePreference: preferredLanguage }
+            );
 
-            // 如果之前有索引，先从全局索引中移除
             if (existingIndex) {
                 this.removeNoteFromGlobalIndex(existingIndex);
             }
 
-            // 保存笔记索引
             const noteIndex: NoteIndexData = {
                 filePath,
                 lastModified,
@@ -76,26 +78,27 @@ export class MorphologyIndexManager {
             };
             this.noteIndexes.set(filePath, noteIndex);
 
-            // 更新全局索引
             this.addNoteToGlobalIndex(noteIndex);
-
-
+            return true;
         } catch (error) {
             console.error(`索引笔记失败 ${file.path}:`, error);
+            return false;
         }
     }
 
     /**
      * 移除笔记索引
+     * @returns 是否发生索引变更
      */
-    public removeNoteIndex(filePath: string): void {
+    public removeNoteIndex(filePath: string): boolean {
         const existingIndex = this.noteIndexes.get(filePath);
-        if (existingIndex) {
-            // 从全局索引中移除
-            this.removeNoteFromGlobalIndex(existingIndex);
-            // 从笔记索引中移除
-            this.noteIndexes.delete(filePath);
+        if (!existingIndex) {
+            return false;
         }
+
+        this.removeNoteFromGlobalIndex(existingIndex);
+        this.noteIndexes.delete(filePath);
+        return true;
     }
 
     /**
@@ -111,14 +114,35 @@ export class MorphologyIndexManager {
     }
 
     /**
+     * 获取指定原型在所有笔记中的活用形及引用计数
+     */
+    public getAllInflectionFormsWithCount(baseForm: string): Map<string, number> {
+        if (!this.isEnabled) {
+            return new Map([[baseForm, 1]]);
+        }
+
+        const countMap = this.globalIndex.get(baseForm);
+        return countMap ? new Map(countMap) : new Map();
+    }
+
+    /**
      * 获取指定原型在所有笔记中的活用形
      */
     public getAllInflectionForms(baseForm: string): Set<string> {
         if (!this.isEnabled) {
-            return new Set([baseForm]); // 如果未启用，只返回原型本身
+            return new Set([baseForm]);
         }
 
-        return this.globalIndex.get(baseForm) || new Set();
+        const countMap = this.globalIndex.get(baseForm);
+        if (!countMap) {
+            return new Set();
+        }
+
+        return new Set(
+            Array.from(countMap.entries())
+                .filter(([, count]) => count > 0)
+                .map(([surface]) => surface)
+        );
     }
 
     /**
@@ -150,16 +174,23 @@ export class MorphologyIndexManager {
         totalNotes: number;
         totalBaseForms: number;
         totalInflections: number;
+        totalInflectionOccurrences: number;
     } {
         let totalInflections = 0;
+        let totalInflectionOccurrences = 0;
+
         for (const forms of this.globalIndex.values()) {
             totalInflections += forms.size;
+            for (const count of forms.values()) {
+                totalInflectionOccurrences += count;
+            }
         }
 
         return {
             totalNotes: this.noteIndexes.size,
             totalBaseForms: this.globalIndex.size,
-            totalInflections
+            totalInflections,
+            totalInflectionOccurrences
         };
     }
 
@@ -176,11 +207,10 @@ export class MorphologyIndexManager {
      */
     public rebuildGlobalIndex(): void {
         this.globalIndex.clear();
-        
+
         for (const noteIndex of this.noteIndexes.values()) {
             this.addNoteToGlobalIndex(noteIndex);
         }
-
     }
 
     /**
@@ -189,12 +219,13 @@ export class MorphologyIndexManager {
     private addNoteToGlobalIndex(noteIndex: NoteIndexData): void {
         for (const [baseForm, inflections] of noteIndex.morphologyIndex.entries()) {
             if (!this.globalIndex.has(baseForm)) {
-                this.globalIndex.set(baseForm, new Set());
+                this.globalIndex.set(baseForm, new Map());
             }
-            
+
             const globalInflections = this.globalIndex.get(baseForm)!;
             for (const inflection of inflections) {
-                globalInflections.add(inflection);
+                const currentCount = globalInflections.get(inflection) || 0;
+                globalInflections.set(inflection, currentCount + 1);
             }
         }
     }
@@ -205,15 +236,22 @@ export class MorphologyIndexManager {
     private removeNoteFromGlobalIndex(noteIndex: NoteIndexData): void {
         for (const [baseForm, inflections] of noteIndex.morphologyIndex.entries()) {
             const globalInflections = this.globalIndex.get(baseForm);
-            if (globalInflections) {
-                for (const inflection of inflections) {
+            if (!globalInflections) {
+                continue;
+            }
+
+            for (const inflection of inflections) {
+                const currentCount = globalInflections.get(inflection) || 0;
+                const nextCount = currentCount - 1;
+                if (nextCount <= 0) {
                     globalInflections.delete(inflection);
+                } else {
+                    globalInflections.set(inflection, nextCount);
                 }
-                
-                // 如果该原型没有任何活用形了，从全局索引中移除
-                if (globalInflections.size === 0) {
-                    this.globalIndex.delete(baseForm);
-                }
+            }
+
+            if (globalInflections.size === 0) {
+                this.globalIndex.delete(baseForm);
             }
         }
     }
@@ -227,7 +265,7 @@ export class MorphologyIndexManager {
         }
 
         const toReindex: TFile[] = [];
-        
+
         for (const file of files) {
             const existingIndex = this.noteIndexes.get(file.path);
             if (!existingIndex || existingIndex.lastModified !== file.stat.mtime) {
@@ -243,5 +281,20 @@ export class MorphologyIndexManager {
      */
     public destroy(): void {
         this.clearAllIndexes();
+    }
+
+    private getPreferredLanguageForIndexing(): MorphologyLanguage {
+        const koreanLoaded = this.morphologyService.isKoreanLoaded();
+        const japaneseLoaded = this.morphologyService.isJapaneseLoaded();
+
+        if (koreanLoaded && !japaneseLoaded) {
+            return 'korean';
+        }
+
+        if (japaneseLoaded && !koreanLoaded) {
+            return 'japanese';
+        }
+
+        return 'auto';
     }
 }

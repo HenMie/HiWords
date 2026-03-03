@@ -38,6 +38,7 @@ export interface MorphologyAnalysisResult {
     baseForm: string;
     partOfSpeech: string;
     confidence: number;
+    analysisSource?: 'tokenizer' | 'reverse-rule' | 'fallback';
 }
 
 export interface DocumentAnalysisResult {
@@ -54,4 +55,3 @@ export interface TokenAnalysisRule {
     name: string;
     apply(context: TokenRuleContext): RuleResult | null;
 }
-

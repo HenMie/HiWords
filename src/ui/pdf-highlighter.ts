@@ -18,7 +18,8 @@ export function registerPDFHighlighter(plugin: {
   const wordMatcherService = new WordMatcherService(plugin.vocabularyManager);
 
   // 已处理的文本层集合，避免重复处理
-  const processedTextLayers = new WeakSet<HTMLElement>();
+  let processedTextLayers = new WeakSet<HTMLElement>();
+  let processedSnapshotVersion = plugin.vocabularyManager.getMatcherSnapshotVersion();
 
   /**
    * 处理 PDF 文本层高亮
@@ -116,8 +117,14 @@ export function registerPDFHighlighter(plugin: {
       return;
     }
     
-    // 重建Trie以获取最新的词汇列表
-    wordMatcherService.buildTrie();
+    const currentSnapshotVersion = plugin.vocabularyManager.getMatcherSnapshotVersion();
+    if (currentSnapshotVersion !== processedSnapshotVersion) {
+      processedTextLayers = new WeakSet<HTMLElement>();
+      processedSnapshotVersion = currentSnapshotVersion;
+    }
+
+    // 仅在快照变化时重建Trie
+    wordMatcherService.ensureSnapshot();
     
     // 查找所有 PDF 文本层
     const textLayers = document.querySelectorAll('.textLayer');

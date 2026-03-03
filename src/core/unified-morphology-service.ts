@@ -6,10 +6,17 @@
 
 import type { MorphologyLanguage, VocabularyBook } from '../utils/types';
 import { isKoreanText } from '../utils/korean-text-utils';
-import { isJapaneseText } from '../utils/japanese-text-utils';
+import { getScriptStatistics, isJapaneseText } from '../utils/japanese-text-utils';
 import { MorphologyLoader } from './morphology-loader';
 import type { KoreanMorphologyService } from './korean-morphology-service';
 import type { JapaneseMorphologyService } from './japanese-morphology-service';
+import type {
+    MorphologyAnalyzeOptions,
+    MorphologyCandidate,
+    MorphologyCandidateSource,
+    MorphologyDecision,
+    MorphologyDetectionLanguage
+} from './morphology-types';
 
 /**
  * 形态学分析结果（通用）
@@ -19,7 +26,7 @@ export interface MorphologyResult {
     baseForm: string;
     partOfSpeech: string;
     confidence: number;
-    language: 'korean' | 'japanese' | 'unknown';
+    language: MorphologyDetectionLanguage;
 }
 
 /**
@@ -29,6 +36,21 @@ export interface DocumentMorphologyResult {
     morphologyIndex: Map<string, Set<string>>;
     analysisResults: MorphologyResult[];
 }
+
+interface MorphologyServiceResult {
+    surface: string;
+    baseForm: string;
+    partOfSpeech: string;
+    confidence: number;
+    analysisSource?: MorphologyCandidateSource;
+}
+
+const SCORE_THRESHOLD = 0.65;
+const SOURCE_WEIGHTS: Record<MorphologyCandidateSource, number> = {
+    tokenizer: 0.6,
+    'reverse-rule': 0.25,
+    fallback: 0.1
+};
 
 /**
  * 统一形态学服务
@@ -61,19 +83,41 @@ export class UnifiedMorphologyService {
     /**
      * 检测文本语言
      */
-    public detectLanguage(text: string): 'korean' | 'japanese' | 'unknown' {
+    public detectLanguage(text: string, options?: MorphologyAnalyzeOptions): MorphologyDetectionLanguage {
         if (!text) return 'unknown';
-        
-        // 韩语优先检测（因为韩语字符范围独立）
+
         if (isKoreanText(text)) {
             return 'korean';
         }
-        
-        // 日语检测（通过假名判断）
+
         if (isJapaneseText(text)) {
             return 'japanese';
         }
-        
+
+        const preferred = this.normalizePreferredLanguage(options?.bookLanguagePreference);
+        const scriptStats = getScriptStatistics(`${options?.contextText || ''}${text}`);
+
+        if (scriptStats.korean > 0 && scriptStats.korean >= scriptStats.kana) {
+            return 'korean';
+        }
+
+        if (scriptStats.kana > 0) {
+            return 'japanese';
+        }
+
+        if (scriptStats.cjk > 0 && preferred === 'japanese') {
+            return 'japanese';
+        }
+
+        if (
+            scriptStats.cjk > 0 &&
+            preferred === 'unknown' &&
+            this.loader.isJapaneseLoaded() &&
+            !this.loader.isKoreanLoaded()
+        ) {
+            return 'japanese';
+        }
+
         return 'unknown';
     }
 
@@ -99,6 +143,117 @@ export class UnifiedMorphologyService {
     }
 
     /**
+     * 分析单词（详细结果）
+     * @param word 要分析的单词
+     * @param language 指定语言，或 'auto' 自动检测
+     */
+    public async analyzeWordDetailed(
+        word: string,
+        language: MorphologyLanguage = 'auto',
+        options?: MorphologyAnalyzeOptions
+    ): Promise<MorphologyDecision | null> {
+        const normalizedWord = word?.trim();
+        if (!normalizedWord) {
+            return null;
+        }
+
+        const targetLanguage = this.resolveTargetLanguage(normalizedWord, language, options);
+        if (targetLanguage === 'unknown') {
+            return {
+                surface: normalizedWord,
+                language: 'unknown',
+                accepted: false,
+                baseForm: null,
+                partOfSpeech: null,
+                confidence: 0,
+                finalScore: 0,
+                candidates: [],
+                trace: {
+                    threshold: SCORE_THRESHOLD,
+                    candidates: [],
+                    selectedCandidate: null,
+                    rejected: true,
+                    reason: 'language-undetermined'
+                }
+            };
+        }
+
+        const preferredLanguage = this.normalizePreferredLanguage(options?.bookLanguagePreference);
+        const contextText = options?.contextText || '';
+
+        let serviceResult: MorphologyServiceResult | null = null;
+
+        try {
+            serviceResult = await this.analyzeWordByLanguage(normalizedWord, targetLanguage);
+        } catch (error) {
+            console.error(`[UnifiedMorphology] 分析单词失败 (${targetLanguage}):`, error);
+        }
+
+        const candidates: MorphologyCandidate[] = [];
+
+        if (serviceResult) {
+            candidates.push(
+                this.buildCandidate(
+                    normalizedWord,
+                    serviceResult,
+                    targetLanguage,
+                    preferredLanguage,
+                    contextText
+                )
+            );
+        }
+
+        candidates.push(
+            this.buildCandidate(
+                normalizedWord,
+                {
+                    surface: normalizedWord,
+                    baseForm: normalizedWord,
+                    partOfSpeech: serviceResult?.partOfSpeech || 'UNKNOWN',
+                    confidence: 0.3,
+                    analysisSource: 'fallback'
+                },
+                targetLanguage,
+                preferredLanguage,
+                contextText
+            )
+        );
+
+        candidates.sort((a, b) => b.finalScore - a.finalScore);
+        const selectedCandidate = candidates.length > 0 ? candidates[0] : null;
+        const accepted = !!selectedCandidate && selectedCandidate.finalScore >= SCORE_THRESHOLD;
+
+        if (this.debugMode) {
+            this.debugLog('analyzeWordDetailed', {
+                word: normalizedWord,
+                language: targetLanguage,
+                threshold: SCORE_THRESHOLD,
+                selected: selectedCandidate,
+                accepted,
+                candidates
+            });
+        }
+
+        return {
+            surface: normalizedWord,
+            language: targetLanguage,
+            accepted,
+            baseForm: accepted && selectedCandidate ? selectedCandidate.baseForm : null,
+            partOfSpeech: accepted && selectedCandidate ? selectedCandidate.partOfSpeech : null,
+            confidence: accepted && selectedCandidate ? selectedCandidate.confidence : 0,
+            finalScore: selectedCandidate?.finalScore || 0,
+            candidates,
+            trace: {
+                threshold: SCORE_THRESHOLD,
+                candidates,
+                selectedCandidate,
+                rejected: !accepted,
+                reason: accepted ? undefined : 'score-below-threshold'
+            }
+        };
+    }
+
+    /**
      * 分析单词
      * @param word 要分析的单词
      * @param language 指定语言，或 'auto' 自动检测
@@ -107,49 +262,18 @@ export class UnifiedMorphologyService {
         word: string,
         language: MorphologyLanguage = 'auto'
     ): Promise<MorphologyResult | null> {
-        if (!word || word.trim().length === 0) {
+        const decision = await this.analyzeWordDetailed(word, language);
+        if (!decision || !decision.accepted || !decision.baseForm || !decision.partOfSpeech) {
             return null;
         }
 
-        let targetLanguage: 'korean' | 'japanese' | 'unknown';
-
-        if (language === 'auto') {
-            targetLanguage = this.detectLanguage(word);
-        } else if (language === 'none') {
-            return null;
-        } else {
-            targetLanguage = language;
-        }
-
-        this.debugLog(`分析单词: ${word}, 语言: ${targetLanguage}`);
-
-        try {
-            if (targetLanguage === 'korean') {
-                const service = await this.loader.getKoreanService();
-                const result = await service.analyzeWord(word);
-                if (result) {
-                    return {
-                        ...result,
-                        language: 'korean'
-                    };
-                }
-            } else if (targetLanguage === 'japanese') {
-                const service = await this.loader.getJapaneseService();
-                if (service) {
-                    const result = await service.analyzeWord(word);
-                    if (result) {
-                        return {
-                            ...result,
-                            language: 'japanese'
-                        };
-                    }
-                }
-            }
-        } catch (error) {
-            console.error(`[UnifiedMorphology] 分析单词失败 (${targetLanguage}):`, error);
-        }
-
-        return null;
+        return {
+            surface: decision.surface,
+            baseForm: decision.baseForm,
+            partOfSpeech: decision.partOfSpeech,
+            confidence: decision.confidence,
+            language: decision.language
+        };
     }
 
     /**
@@ -159,7 +283,8 @@ export class UnifiedMorphologyService {
      */
     public async analyzeDocument(
         text: string,
-        language: MorphologyLanguage = 'auto'
+        language: MorphologyLanguage = 'auto',
+        options?: MorphologyAnalyzeOptions
     ): Promise<DocumentMorphologyResult> {
         const morphologyIndex = new Map<string, Set<string>>();
         const analysisResults: MorphologyResult[] = [];
@@ -168,14 +293,9 @@ export class UnifiedMorphologyService {
             return { morphologyIndex, analysisResults };
         }
 
-        let targetLanguage: 'korean' | 'japanese' | 'unknown';
-
-        if (language === 'auto') {
-            targetLanguage = this.detectLanguage(text);
-        } else if (language === 'none') {
+        const targetLanguage = this.resolveTargetLanguage(text, language, options);
+        if (targetLanguage === 'unknown') {
             return { morphologyIndex, analysisResults };
-        } else {
-            targetLanguage = language;
         }
 
         this.debugLog(`分析文档, 语言: ${targetLanguage}`);
@@ -184,12 +304,11 @@ export class UnifiedMorphologyService {
             if (targetLanguage === 'korean') {
                 const service = await this.loader.getKoreanService();
                 const result = await service.analyzeDocument(text);
-                
-                // 转换结果
+
                 for (const [baseForm, inflections] of result.morphologyIndex) {
                     morphologyIndex.set(baseForm, inflections);
                 }
-                
+
                 for (const item of result.analysisResults) {
                     analysisResults.push({
                         ...item,
@@ -200,12 +319,11 @@ export class UnifiedMorphologyService {
                 const service = await this.loader.getJapaneseService();
                 if (service) {
                     const result = await service.analyzeDocument(text);
-                    
-                    // 转换结果
+
                     for (const [baseForm, inflections] of result.morphologyIndex) {
                         morphologyIndex.set(baseForm, inflections);
                     }
-                    
+
                     for (const item of result.analysisResults) {
                         analysisResults.push({
                             ...item,
@@ -228,20 +346,20 @@ export class UnifiedMorphologyService {
         if (language === 'none') {
             return false;
         }
-        
+
         if (language === 'auto') {
             const detected = this.detectLanguage(text);
             return detected !== 'unknown';
         }
-        
+
         if (language === 'korean') {
             return isKoreanText(text);
         }
-        
+
         if (language === 'japanese') {
-            return isJapaneseText(text);
+            return isJapaneseText(text) || getScriptStatistics(text).cjk > 0;
         }
-        
+
         return false;
     }
 
@@ -300,5 +418,142 @@ export class UnifiedMorphologyService {
     public destroy(): void {
         this.loader.destroy();
     }
-}
 
+    private resolveTargetLanguage(
+        text: string,
+        language: MorphologyLanguage,
+        options?: MorphologyAnalyzeOptions
+    ): MorphologyDetectionLanguage {
+        if (language === 'none') {
+            return 'unknown';
+        }
+
+        if (language === 'korean' || language === 'japanese') {
+            return language;
+        }
+
+        return this.detectLanguage(text, options);
+    }
+
+    private normalizePreferredLanguage(
+        language?: MorphologyLanguage
+    ): MorphologyDetectionLanguage | 'none' {
+        if (!language || language === 'auto') {
+            return 'unknown';
+        }
+        if (language === 'none') {
+            return 'none';
+        }
+        return language;
+    }
+
+    private async analyzeWordByLanguage(
+        word: string,
+        targetLanguage: MorphologyDetectionLanguage
+    ): Promise<MorphologyServiceResult | null> {
+        if (targetLanguage === 'korean') {
+            const service = await this.loader.getKoreanService();
+            return await service.analyzeWord(word);
+        }
+
+        if (targetLanguage === 'japanese') {
+            const service = await this.loader.getJapaneseService();
+            if (!service) {
+                return null;
+            }
+            return await service.analyzeWord(word);
+        }
+
+        return null;
+    }
+
+    private buildCandidate(
+        surface: string,
+        serviceResult: MorphologyServiceResult,
+        language: MorphologyDetectionLanguage,
+        preferredLanguage: MorphologyDetectionLanguage | 'none',
+        contextText: string
+    ): MorphologyCandidate {
+        const source = serviceResult.analysisSource ?? 'tokenizer';
+        const sourceWeight = SOURCE_WEIGHTS[source];
+        const posWeight = this.calculatePosWeight(serviceResult.partOfSpeech);
+        const contextWeight = this.calculateContextWeight(surface, language, contextText);
+        const bookLanguageWeight = this.calculateBookLanguageWeight(language, preferredLanguage);
+        const finalScore = Math.min(
+            1,
+            sourceWeight + posWeight + contextWeight + bookLanguageWeight
+        );
+
+        return {
+            surface: serviceResult.surface || surface,
+            baseForm: serviceResult.baseForm,
+            partOfSpeech: serviceResult.partOfSpeech,
+            language,
+            confidence: serviceResult.confidence,
+            source,
+            sourceWeight,
+            posWeight,
+            contextWeight,
+            bookLanguageWeight,
+            finalScore
+        };
+    }
+
+    private calculatePosWeight(partOfSpeech?: string): number {
+        if (!partOfSpeech || partOfSpeech === 'UNKNOWN') {
+            return 0;
+        }
+
+        if (
+            partOfSpeech.startsWith('VV') ||
+            partOfSpeech.startsWith('VA') ||
+            partOfSpeech.startsWith('動詞') ||
+            partOfSpeech.startsWith('形容詞')
+        ) {
+            return 0.15;
+        }
+
+        return 0.1;
+    }
+
+    private calculateContextWeight(
+        surface: string,
+        language: MorphologyDetectionLanguage,
+        contextText: string
+    ): number {
+        if (language === 'unknown') {
+            return 0;
+        }
+
+        const scriptStats = getScriptStatistics(`${contextText}${surface}`);
+
+        if (language === 'korean' && scriptStats.korean > 0) {
+            return 0.15;
+        }
+
+        if (language === 'japanese' && (scriptStats.kana > 0 || scriptStats.cjk > 0)) {
+            return 0.15;
+        }
+
+        return 0;
+    }
+
+    private calculateBookLanguageWeight(
+        language: MorphologyDetectionLanguage,
+        preferredLanguage: MorphologyDetectionLanguage | 'none'
+    ): number {
+        if (language === 'unknown') {
+            return 0;
+        }
+
+        if (preferredLanguage === language) {
+            return 0.1;
+        }
+
+        if (preferredLanguage === 'unknown') {
+            return 0.1;
+        }
+
+        return 0;
+    }
+}

@@ -223,7 +223,8 @@ export class JapaneseMorphologyService {
                     surface,
                     baseForm,
                     partOfSpeech,
-                    confidence: analysisResult.confidence || 0.8
+                    confidence: analysisResult.confidence || 0.8,
+                    analysisSource: analysisResult.analysisSource ?? 'tokenizer'
                 };
 
                 this.debugLog('最终分析结果:', result);
@@ -263,7 +264,10 @@ export class JapaneseMorphologyService {
 
         const ruleResult = this.applyRulePipeline(this.wordRulePipeline!, context);
         if (ruleResult) {
-            return ruleResult.result;
+            return {
+                ...ruleResult.result,
+                analysisSource: ruleResult.result.analysisSource ?? 'reverse-rule'
+            };
         }
 
         // 回退：使用第一个有意义的 token
@@ -274,7 +278,8 @@ export class JapaneseMorphologyService {
                 surface: originalWord,
                 baseForm: firstToken.baseForm || firstToken.surface,
                 partOfSpeech: firstToken.partOfSpeech,
-                confidence: 0.7
+                confidence: 0.7,
+                analysisSource: 'tokenizer'
             };
         }
 
@@ -319,7 +324,8 @@ export class JapaneseMorphologyService {
                     surface: word,
                     baseForm,
                     partOfSpeech: pos,
-                    confidence: 0.5
+                    confidence: 0.5,
+                    analysisSource: 'fallback' as const
                 };
 
                 this.debugLog('后备分析结果:', result);
@@ -344,7 +350,8 @@ export class JapaneseMorphologyService {
                     surface: word,
                     baseForm,
                     partOfSpeech: pos,
-                    confidence: 0.5
+                    confidence: 0.5,
+                    analysisSource: 'fallback' as const
                 };
 
                 this.debugLog('后备分析结果:', result);
@@ -357,7 +364,8 @@ export class JapaneseMorphologyService {
             surface: word,
             baseForm: word,
             partOfSpeech: 'UNKNOWN',
-            confidence: 0.3
+            confidence: 0.3,
+            analysisSource: 'fallback'
         };
     }
 
@@ -434,7 +442,10 @@ export class JapaneseMorphologyService {
             const ruleResult = this.applyRulePipeline(this.documentRulePipeline!, context);
             if (ruleResult) {
                 this.debugLog(`[analyzeDocumentTokens] 规则命中: ${ruleResult.result.surface} → ${ruleResult.result.baseForm}`);
-                results.push(ruleResult.result);
+                results.push({
+                    ...ruleResult.result,
+                    analysisSource: ruleResult.result.analysisSource ?? 'reverse-rule'
+                });
                 for (const consumedIndex of ruleResult.consumedTokenIndices) {
                     processedTokens.add(consumedIndex);
                 }
@@ -447,7 +458,8 @@ export class JapaneseMorphologyService {
                     surface: token.surface,
                     baseForm: token.baseForm || token.surface,
                     partOfSpeech: token.partOfSpeech,
-                    confidence: calculateConfidence(token.rawToken)
+                    confidence: calculateConfidence(token.rawToken),
+                    analysisSource: 'tokenizer'
                 };
                 results.push(result);
                 processedTokens.add(i);
@@ -502,4 +514,3 @@ export class JapaneseMorphologyService {
         this.initPromise = null;
     }
 }
-

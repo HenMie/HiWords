@@ -1,6 +1,6 @@
-import { App, TFile, Notice, EventRef } from 'obsidian';
+import { App, TFile, EventRef } from 'obsidian';
 import { WordDefinition, VocabularyBook, HiWordsSettings, logAndFormatError, CANVAS_SYNC, MorphologyLanguage } from '../utils';
-import { KoreanMorphologyService } from './korean-morphology-service';
+import type { KoreanMorphologyService } from './korean-morphology-service';
 import { MorphologyIndexManager } from './morphology-index-manager';
 import { CanvasService } from './canvas-service';
 import { VocabularyCacheManager } from './vocabulary-cache-manager';
@@ -23,16 +23,24 @@ export class VocabularyManager {
     private syncTimeouts: Map<string, number> = new Map(); // 同步定时器
     private tempNodeIdCounter: number = 0; // 临时节点ID计数器
 
-    // 异步操作队列管理
-    private analysisQueue: Array<{ word: string; definition: WordDefinition }> = [];
-    private isProcessingQueue = false;
-
     // 文件监听器引用（用于清理）
     private fileWatcherRefs: EventRef[] = [];
+    private matcherSnapshotVersion = 1;
+
+    // 形态学结果缓存（用于悬浮/添加时的重复查询去重）
+    private readonly morphologyDecisionCacheLimit = 5000;
+    private morphologyDecisionCache: Map<string, string | null> = new Map();
+    private morphologyDecisionInFlight: Map<string, Promise<string | null>> = new Map();
 
     constructor(app: App, settings: HiWordsSettings) {
         this.app = app;
         this.settings = settings;
+        if (!this.settings.morphologyEngineMode) {
+            this.settings.morphologyEngineMode = 'hybrid';
+        }
+        if (!this.settings.morphologyFallbackMode) {
+            this.settings.morphologyFallbackMode = 'conservative';
+        }
         
         // 初始化服务
         this.canvasService = new CanvasService(app, settings);
@@ -42,11 +50,8 @@ export class VocabularyManager {
         this.unifiedMorphologyService = new UnifiedMorphologyService(this.app);
         this.unifiedMorphologyService.setDebugMode(settings.debugMode ?? false);
         
-        // 形态学索引管理器使用韩语服务（兼容现有逻辑）
-        // 后续可以扩展为支持多语言
-        const koreanService = new KoreanMorphologyService(this.app);
-        koreanService.setDebugMode(settings.debugMode ?? false);
-        this.morphologyIndexManager = new MorphologyIndexManager(koreanService);
+        // 形态学索引管理器使用统一形态学服务（支持多语言）
+        this.morphologyIndexManager = new MorphologyIndexManager(this.unifiedMorphologyService);
 
         // 监听文件变化，自动更新形态学索引
         this.registerFileWatchers();
@@ -70,12 +75,14 @@ export class VocabularyManager {
 
             const loadPromises = this.settings.vocabularyBooks
                 .filter(book => book.enabled)
-                .map(book => this.loadVocabularyBook(book));
+                .map(book => this.loadVocabularyBook(book, false));
 
             await Promise.all(loadPromises);
 
             // 重建缓存
             this.cacheManager.rebuild(this.definitions);
+            this.clearMorphologyDecisionCache();
+            this.invalidateMatcherSnapshot('load-all-vocabulary-books');
 
             const elapsed = Date.now() - startTime;
             console.log(`[HiWords] 生词本加载完成，耗时 ${elapsed}ms`);
@@ -134,7 +141,7 @@ export class VocabularyManager {
     /**
      * 加载单个生词本
      */
-    async loadVocabularyBook(book: VocabularyBook): Promise<void> {
+    async loadVocabularyBook(book: VocabularyBook, invalidateSnapshot: boolean = true): Promise<void> {
         const file = this.app.vault.getAbstractFileByPath(book.path);
 
         if (!file || !(file instanceof TFile)) {
@@ -153,6 +160,10 @@ export class VocabularyManager {
 
             // 使缓存失效
             this.cacheManager.invalidate();
+            if (invalidateSnapshot) {
+                this.clearMorphologyDecisionCache();
+                this.invalidateMatcherSnapshot(`load-book:${book.path}`);
+            }
         } catch (error) {
             const errorMessage = this.formatErrorMessage(error, `加载生词本 ${book.name} 失败`);
             console.error(`[HiWords] ${errorMessage}`, error);
@@ -210,7 +221,10 @@ export class VocabularyManager {
         }
 
         // 检查是否需要形态学分析（韩语或日语）
-        const detectedLang = this.unifiedMorphologyService.detectLanguage(normalizedWord);
+        const preferredLanguage = this.getPreferredMorphologyLanguage();
+        const detectedLang = this.unifiedMorphologyService.detectLanguage(normalizedWord, {
+            bookLanguagePreference: preferredLanguage
+        });
         if (detectedLang !== 'unknown') {
             // 异步分析单词，获取原型（使用安全的异步处理）
             this.queueMorphologyAnalysis(normalizedWord, visited, detectedLang).catch(error => {
@@ -285,9 +299,11 @@ export class VocabularyManager {
     async reloadVocabularyBook(bookPath: string): Promise<void> {
         const book = this.settings.vocabularyBooks.find(b => b.path === bookPath);
         if (book && book.enabled) {
-            await this.loadVocabularyBook(book);
+            await this.loadVocabularyBook(book, false);
             // 使缓存失效
             this.cacheManager.invalidate();
+            this.clearMorphologyDecisionCache();
+            this.invalidateMatcherSnapshot(`reload-book:${bookPath}`);
         }
     }
 
@@ -296,8 +312,16 @@ export class VocabularyManager {
      */
     updateSettings(settings: HiWordsSettings): void {
         this.settings = settings;
+        if (!this.settings.morphologyEngineMode) {
+            this.settings.morphologyEngineMode = 'hybrid';
+        }
+        if (!this.settings.morphologyFallbackMode) {
+            this.settings.morphologyFallbackMode = 'conservative';
+        }
         // 设置变更可能影响词汇，使缓存失效
         this.cacheManager.invalidate();
+        this.clearMorphologyDecisionCache();
+        this.invalidateMatcherSnapshot('settings-updated');
         // 同步给 CanvasService
         this.canvasService.updateSettings(settings);
         // 同步调试模式到统一形态学服务
@@ -315,6 +339,26 @@ export class VocabularyManager {
      */
     getSettings(): HiWordsSettings {
         return this.settings;
+    }
+
+    /**
+     * 获取匹配快照版本号
+     */
+    getMatcherSnapshotVersion(): number {
+        return this.matcherSnapshotVersion;
+    }
+
+    /**
+     * 使匹配快照失效并递增版本号
+     */
+    invalidateMatcherSnapshot(reason: string = 'unknown'): void {
+        this.matcherSnapshotVersion++;
+        if (this.settings.debugMode) {
+            console.debug('[HiWords] matcher snapshot invalidated', {
+                reason,
+                version: this.matcherSnapshotVersion
+            });
+        }
     }
 
     /**
@@ -353,6 +397,8 @@ export class VocabularyManager {
     clear(): void {
         this.definitions.clear();
         this.cacheManager.clear();
+        this.clearMorphologyDecisionCache();
+        this.invalidateMatcherSnapshot('clear-all');
     }
     
     /**
@@ -383,6 +429,8 @@ export class VocabularyManager {
             
             // 3. 重建缓存以立即生效
             this.cacheManager.rebuild(this.definitions);
+            this.clearMorphologyDecisionCache();
+            this.invalidateMatcherSnapshot(`add-word:${trimmedWord}`);
             
             // 4. 异步写入文件并更新真实nodeId
             this.scheduleCanvasSync(bookPath, { ...wordDef });
@@ -413,6 +461,7 @@ export class VocabularyManager {
                     this.cacheManager.setDefinition(def.word, def);
                     // 标记缓存需要重建（颜色变化可能影响过滤）
                     this.cacheManager.invalidate();
+                    this.invalidateMatcherSnapshot(`set-color:${nodeId}`);
                 }
             }
             return true;
@@ -466,6 +515,8 @@ export class VocabularyManager {
 
                 // 4. 重建缓存以立即生效
                 this.cacheManager.rebuild(this.definitions);
+                this.clearMorphologyDecisionCache();
+                this.invalidateMatcherSnapshot(`update-word:${nodeId}`);
 
                 return true;
             }
@@ -647,6 +698,8 @@ export class VocabularyManager {
                 
                 // 3. 重建缓存以立即生效
                 this.cacheManager.rebuild(this.definitions);
+                this.clearMorphologyDecisionCache();
+                this.invalidateMatcherSnapshot(`delete-word:${nodeId}`);
                 
                 return true;
             }
@@ -706,10 +759,7 @@ export class VocabularyManager {
         // 清理所有定时器
         this.syncTimeouts.forEach(timeout => window.clearTimeout(timeout));
         this.syncTimeouts.clear();
-        
-        // 清理异步队列
-        this.analysisQueue = [];
-        this.isProcessingQueue = false;
+        this.clearMorphologyDecisionCache();
         
         // 清理缓存
         this.definitions.clear();
@@ -773,6 +823,8 @@ export class VocabularyManager {
 
         // 标记缓存需要重建
         this.cacheManager.invalidate();
+        this.clearMorphologyDecisionCache();
+        this.invalidateMatcherSnapshot(`update-word-definition:${nodeId}`);
 
         // 保存到 Canvas 文件
         try {
@@ -846,16 +898,9 @@ export class VocabularyManager {
      * 获取韩语形态学分析服务（兼容旧接口）
      * @deprecated 请使用 getUnifiedMorphologyService()
      */
-    getMorphologyService(): KoreanMorphologyService {
-        // 返回已加载的韩语服务或创建新实例
-        const koreanService = this.unifiedMorphologyService.getKoreanService();
-        if (koreanService) {
-            return koreanService;
-        }
-        // 如果未加载，创建临时实例（不推荐）
-        const tempService = new KoreanMorphologyService(this.app);
-        tempService.setDebugMode(this.settings.debugMode ?? false);
-        return tempService;
+    getMorphologyService(): KoreanMorphologyService | null {
+        // legacy 接口仅返回已加载实例，不再创建临时实例
+        return this.unifiedMorphologyService.getKoreanService();
     }
 
     /**
@@ -893,15 +938,62 @@ export class VocabularyManager {
     }
 
     /**
+     * 获取指定原型的活用形及引用计数（全局）
+     */
+    getAllInflectionFormsWithCount(baseForm: string): Map<string, number> {
+        return this.morphologyIndexManager.getAllInflectionFormsWithCount(baseForm);
+    }
+
+    /**
      * 通过形态素分析获取词汇的原型（用于悬浮卡片等场景）
      * 支持韩语和日语
      */
     async analyzeWordToBaseForm(word: string, language: MorphologyLanguage = 'auto'): Promise<string | null> {
+        const normalizedWord = this.normalizeWordValue(word);
+        if (!normalizedWord) {
+            return null;
+        }
+
+        const cacheKey = this.getMorphologyCacheKey(normalizedWord, language);
+        const cached = this.getCachedMorphologyDecision(cacheKey);
+        if (cached !== undefined) {
+            return cached;
+        }
+
+        const inflight = this.morphologyDecisionInFlight.get(cacheKey);
+        if (inflight) {
+            return inflight;
+        }
+
+        const preferredLanguage = this.getPreferredMorphologyLanguage();
+        const analyzePromise = (async () => {
+            try {
+                const decision = await this.unifiedMorphologyService.analyzeWordDetailed(
+                    normalizedWord,
+                    language,
+                    {
+                        bookLanguagePreference: preferredLanguage,
+                        contextText: normalizedWord
+                    }
+                );
+
+                const baseForm = decision?.accepted ? decision.baseForm : null;
+                this.cacheMorphologyDecision(cacheKey, baseForm);
+                return baseForm;
+            } catch (error) {
+                console.error('形态素分析失败:', error);
+                this.cacheMorphologyDecision(cacheKey, null);
+                return null;
+            } finally {
+                this.morphologyDecisionInFlight.delete(cacheKey);
+            }
+        })();
+
+        this.morphologyDecisionInFlight.set(cacheKey, analyzePromise);
+
         try {
-            const result = await this.unifiedMorphologyService.analyzeWord(word, language);
-            return result ? result.baseForm : null;
-        } catch (error) {
-            console.error('形态素分析失败:', error);
+            return await analyzePromise;
+        } catch {
             return null;
         }
     }
@@ -914,7 +1006,10 @@ export class VocabularyManager {
         const modifyRef = this.app.vault.on('modify', async (file) => {
             if (file instanceof TFile && file.extension === 'md') {
                 const content = await this.app.vault.read(file);
-                await this.morphologyIndexManager.indexNote(file, content);
+                const changed = await this.morphologyIndexManager.indexNote(file, content);
+                if (changed) {
+                    this.invalidateMatcherSnapshot(`index-modify:${file.path}`);
+                }
             }
         });
         this.fileWatcherRefs.push(modifyRef);
@@ -922,7 +1017,10 @@ export class VocabularyManager {
         // 监听文件删除
         const deleteRef = this.app.vault.on('delete', (file) => {
             if (file instanceof TFile && file.extension === 'md') {
-                this.morphologyIndexManager.removeNoteIndex(file.path);
+                const changed = this.morphologyIndexManager.removeNoteIndex(file.path);
+                if (changed) {
+                    this.invalidateMatcherSnapshot(`index-delete:${file.path}`);
+                }
             }
         });
         this.fileWatcherRefs.push(deleteRef);
@@ -931,10 +1029,16 @@ export class VocabularyManager {
         const renameRef = this.app.vault.on('rename', (file, oldPath) => {
             if (file instanceof TFile && file.extension === 'md') {
                 // 先删除旧索引
-                this.morphologyIndexManager.removeNoteIndex(oldPath);
+                const removed = this.morphologyIndexManager.removeNoteIndex(oldPath);
                 // 再重新索引新文件
                 this.app.vault.read(file).then(content => {
-                    this.morphologyIndexManager.indexNote(file, content);
+                    this.morphologyIndexManager.indexNote(file, content).then(changed => {
+                        if (removed || changed) {
+                            this.invalidateMatcherSnapshot(`index-rename:${oldPath}->${file.path}`);
+                        }
+                    });
+                }).catch(error => {
+                    console.error(`重命名后重新索引失败 ${file.path}:`, error);
                 });
             }
         });
@@ -947,14 +1051,22 @@ export class VocabularyManager {
      */
     async reindexAllFiles(): Promise<void> {
         const markdownFiles = this.app.vault.getMarkdownFiles();
+        let hasChanges = false;
 
         for (const file of markdownFiles) {
             try {
                 const content = await this.app.vault.read(file);
-                await this.morphologyIndexManager.indexNote(file, content);
+                const changed = await this.morphologyIndexManager.indexNote(file, content);
+                if (changed) {
+                    hasChanges = true;
+                }
             } catch (error) {
                 console.error(`索引文件失败 ${file.path}:`, error);
             }
+        }
+
+        if (hasChanges) {
+            this.invalidateMatcherSnapshot('reindex-all-files');
         }
     }
 
@@ -966,6 +1078,59 @@ export class VocabularyManager {
     isWordMastered(word: string): boolean {
         const wordDef = this.cacheManager.getDefinition(word.toLowerCase());
         return wordDef?.mastered === true;
+    }
+
+    private getPreferredMorphologyLanguage(): MorphologyLanguage {
+        const enabledBooks = this.settings.vocabularyBooks.filter(book => book.enabled);
+        if (enabledBooks.length === 0) {
+            return 'auto';
+        }
+
+        const explicitLanguages = new Set(
+            enabledBooks
+                .map(book => book.morphology || 'none')
+                .filter(language => language !== 'none' && language !== 'auto')
+        );
+
+        if (explicitLanguages.size === 1) {
+            return Array.from(explicitLanguages)[0] as MorphologyLanguage;
+        }
+
+        return 'auto';
+    }
+
+    private getMorphologyCacheKey(word: string, language: MorphologyLanguage): string {
+        return `${language}:${word}`;
+    }
+
+    private getCachedMorphologyDecision(cacheKey: string): string | null | undefined {
+        if (!this.morphologyDecisionCache.has(cacheKey)) {
+            return undefined;
+        }
+
+        const value = this.morphologyDecisionCache.get(cacheKey) ?? null;
+        this.morphologyDecisionCache.delete(cacheKey);
+        this.morphologyDecisionCache.set(cacheKey, value);
+        return value;
+    }
+
+    private cacheMorphologyDecision(cacheKey: string, baseForm: string | null): void {
+        if (this.morphologyDecisionCache.has(cacheKey)) {
+            this.morphologyDecisionCache.delete(cacheKey);
+        }
+        this.morphologyDecisionCache.set(cacheKey, baseForm);
+
+        if (this.morphologyDecisionCache.size > this.morphologyDecisionCacheLimit) {
+            const firstKey = this.morphologyDecisionCache.keys().next().value;
+            if (firstKey !== undefined) {
+                this.morphologyDecisionCache.delete(firstKey);
+            }
+        }
+    }
+
+    private clearMorphologyDecisionCache(): void {
+        this.morphologyDecisionCache.clear();
+        this.morphologyDecisionInFlight.clear();
     }
 
     /**
@@ -982,10 +1147,10 @@ export class VocabularyManager {
         try {
             // 使用统一形态学服务进行分析
             const morphologyLang = language === 'unknown' ? 'auto' : language;
-            const result = await this.unifiedMorphologyService.analyzeWord(word, morphologyLang);
-            if (result && result.baseForm !== word) {
+            const baseForm = await this.analyzeWordToBaseForm(word, morphologyLang);
+            if (baseForm && baseForm !== word) {
                 // 用原型再次查找
-                const baseDefinition = this.getDefinition(result.baseForm, visited);
+                const baseDefinition = this.getDefinition(baseForm, visited);
                 if (baseDefinition) {
                     // 缓存活用形到原型的映射
                     this.cacheManager.setDefinition(word, baseDefinition);

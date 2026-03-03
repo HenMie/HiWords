@@ -44,7 +44,9 @@ const DEFAULT_SETTINGS: HiWordsSettings = {
     },
     highlightMode: 'all',
     highlightPaths: '',
-    fileNodeParseMode: 'filename-with-content'
+    fileNodeParseMode: 'filename-with-content',
+    morphologyEngineMode: 'hybrid',
+    morphologyFallbackMode: 'conservative'
 };
 
 export default class HiWordsPlugin extends Plugin {
@@ -135,7 +137,10 @@ export default class HiWordsPlugin extends Plugin {
                 }
                 
                 const morphologyIndexManager = this.vocabularyManager.getMorphologyIndexManager();
-                await morphologyIndexManager.indexNote(activeFile, content);
+                const changed = await morphologyIndexManager.indexNote(activeFile, content);
+                if (changed) {
+                    this.vocabularyManager.invalidateMatcherSnapshot(`index-current:${activeFile.path}`);
+                }
                 // console.log(`[HiWords] 索引当前文档: ${activeFile.name}`);
             }
         } catch (error) {
