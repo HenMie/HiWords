@@ -1,5 +1,5 @@
 import { App, TFile } from 'obsidian';
-import { CanvasData, CanvasNode, WordDefinition, HiWordsSettings } from '../utils';
+import { CanvasData, CanvasNode, WordDefinition, HiWordsSettings, parsePhrase } from '../utils';
 
 export class CanvasParser {
     private app: App;
@@ -150,6 +150,7 @@ export class CanvasParser {
             word = this.removeMarkdownFormatting(word);
             
             if (!word) return null;
+            const phraseInfo = parsePhrase(word);
             
             // 解析剩余行，寻找词源和定义
             let definitionStartIndex = 1;
@@ -185,14 +186,16 @@ export class CanvasParser {
                 definition = lines.slice(definitionStartIndex).join('\n').trim();
             }
 
-            const result = {
-                word,
+            const result: WordDefinition = {
+                word: phraseInfo.isPattern ? phraseInfo.original : word,
                 definition,
                 etymology: etymology || undefined,
                 source: sourcePath,
                 nodeId: node.id,
                 color: node.color,
-                mastered: false // 在 parseCanvasFile 中统一设置
+                mastered: false, // 在 parseCanvasFile 中统一设置
+                isPattern: phraseInfo.isPattern,
+                patternParts: phraseInfo.isPattern ? phraseInfo.parts : undefined
             };
             
             return result;
@@ -227,13 +230,16 @@ export class CanvasParser {
             const normalizedFileName = fileName.toLowerCase();
 
             if (mode === 'filename') {
+                const phraseInfo = parsePhrase(normalizedFileName);
                 return {
-                    word: normalizedFileName,
+                    word: phraseInfo.isPattern ? phraseInfo.original : normalizedFileName,
                     definition: '',
                     source: sourcePath,
                     nodeId: node.id,
                     color: node.color,
-                    mastered: false
+                    mastered: false,
+                    isPattern: phraseInfo.isPattern,
+                    patternParts: phraseInfo.isPattern ? phraseInfo.parts : undefined
                 };
             }
 
@@ -249,13 +255,16 @@ export class CanvasParser {
                 return parsed;
             }
 
+            const fallbackPhraseInfo = parsePhrase(normalizedFileName);
             return {
-                word: normalizedFileName,
+                word: fallbackPhraseInfo.isPattern ? fallbackPhraseInfo.original : normalizedFileName,
                 definition: '',
                 source: sourcePath,
                 nodeId: node.id,
                 color: node.color,
-                mastered: false
+                mastered: false,
+                isPattern: fallbackPhraseInfo.isPattern,
+                patternParts: fallbackPhraseInfo.isPattern ? fallbackPhraseInfo.parts : undefined
             };
         } catch (error) {
             console.error('解析文件节点失败:', error);

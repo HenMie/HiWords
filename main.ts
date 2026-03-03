@@ -213,6 +213,14 @@ export default class HiWordsPlugin extends Plugin {
         const modifiedCanvasFiles = new Set<string>();
         // 记录当前活动的 Canvas 文件
         let activeCanvasFile: string | null = null;
+        const replaceTrackedCanvasPath = (oldPath: string, newPath: string) => {
+            if (activeCanvasFile === oldPath) {
+                activeCanvasFile = newPath;
+            }
+            if (modifiedCanvasFiles.delete(oldPath)) {
+                modifiedCanvasFiles.add(newPath);
+            }
+        };
         
         // 监听文件变化
         this.registerEvent(
@@ -225,6 +233,31 @@ export default class HiWordsPlugin extends Plugin {
                         modifiedCanvasFiles.add(file.path);
                     }
                 }
+            })
+        );
+
+        // 监听 Canvas 词书重命名，保持路径与内存数据一致
+        this.registerEvent(
+            this.app.vault.on('rename', async (file, oldPath) => {
+                if (!(file instanceof TFile) || file.extension !== 'canvas') {
+                    return;
+                }
+
+                const bookIndex = this.settings.vocabularyBooks.findIndex(book => book.path === oldPath);
+                if (bookIndex === -1) {
+                    replaceTrackedCanvasPath(oldPath, file.path);
+                    return;
+                }
+
+                this.settings.vocabularyBooks[bookIndex].path = file.path;
+                this.settings.vocabularyBooks[bookIndex].name = file.basename;
+                replaceTrackedCanvasPath(oldPath, file.path);
+
+                await this.saveSettings();
+                this.vocabularyManager.removeBookData(oldPath);
+                await this.vocabularyManager.reloadVocabularyBook(file.path);
+                modifiedCanvasFiles.delete(file.path);
+                this.refreshHighlighter();
             })
         );
 

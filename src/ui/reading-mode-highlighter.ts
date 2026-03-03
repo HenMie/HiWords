@@ -4,6 +4,16 @@ import type { VocabularyManager } from '../core';
 import { WordMatcherService } from '../core/word-matcher-service';
 import { HighlightSpanBuilder } from './highlight-span-builder';
 
+type ReadingMatch = {
+  from: number;
+  to: number;
+  word: string;
+  payload: any;
+  matchedText?: string;
+  segments?: Array<{from: number; to: number}>;
+  baseForm?: string;
+};
+
 /**
  * 在阅读模式注册 Markdown 后处理器，高亮匹配的词汇。
  * 通过从 VocabularyManager 构建 Trie，遍历渲染后的 DOM 文本节点并包裹 span.hi-words-highlight。
@@ -70,28 +80,48 @@ export function registerReadingModeHighlighter(plugin: {
       const text = textNode.nodeValue || '';
       if (!text) continue;
 
-      const matches = wordMatcherService.findMatches(text) as Array<{
-        from: number;
-        to: number;
-        word: string;
-        payload: any;
-      }>;
+      const matches = wordMatcherService.findMatches(text) as ReadingMatch[];
       if (!matches || matches.length === 0) continue;
       debugLog('matches found in text node', { textSnippet: text.slice(0, 60), matchCount: matches.length });
 
       // 使用优化的重叠处理函数，优先保留更长的匹配
-      const filtered = removeOverlappingMatches(matches);
+      const filtered = removeOverlappingMatches(matches as any) as ReadingMatch[];
       if (filtered.length === 0) continue;
 
       const frag = document.createDocumentFragment();
       let last = 0;
       for (const m of filtered) {
-        if (m.from > last) frag.appendChild(document.createTextNode(text.slice(last, m.from)));
-        
-        // 使用统一的 HighlightSpanBuilder 创建高亮元素
+        if (m.segments && m.segments.length > 0) {
+          const sortedSegments = [...m.segments].sort((a, b) => a.from - b.from);
+          if (sortedSegments[0].from > last) {
+            frag.appendChild(document.createTextNode(text.slice(last, sortedSegments[0].from)));
+          }
+
+          let segmentCursor = sortedSegments[0].from;
+          sortedSegments.forEach((segment) => {
+            if (segment.from > segmentCursor) {
+              frag.appendChild(document.createTextNode(text.slice(segmentCursor, segment.from)));
+            }
+
+            const segmentText = text.slice(segment.from, segment.to);
+            const segmentSpan = HighlightSpanBuilder.buildFromMatch(segmentText, m, highlightStyle);
+            frag.appendChild(segmentSpan);
+            segmentCursor = segment.to;
+          });
+
+          if (segmentCursor < m.to) {
+            frag.appendChild(document.createTextNode(text.slice(segmentCursor, m.to)));
+          }
+          last = m.to;
+          continue;
+        }
+
+        if (m.from > last) {
+          frag.appendChild(document.createTextNode(text.slice(last, m.from)));
+        }
+
         const matchedText = text.slice(m.from, m.to);
         const span = HighlightSpanBuilder.buildFromMatch(matchedText, m, highlightStyle);
-        
         frag.appendChild(span);
         last = m.to;
       }

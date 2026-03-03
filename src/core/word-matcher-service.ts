@@ -1,5 +1,12 @@
-import { Trie, generateCommonInflections, generateJapaneseInflections, isKoreanText, isJapaneseText } from '../utils';
-import type { MorphologyLanguage } from '../utils';
+import {
+    Trie,
+    generateCommonInflections,
+    generateJapaneseInflections,
+    isKoreanText,
+    isJapaneseText,
+    findPatternMatches
+} from '../utils';
+import type { MorphologyLanguage, WordDefinition } from '../utils';
 import type { UnifiedMorphologyService } from './unified-morphology-service';
 import type { VocabularyManager } from './vocabulary-manager';
 
@@ -12,6 +19,7 @@ export class WordMatcherService {
     private trie: Trie;
     private unifiedMorphologyService: UnifiedMorphologyService;
     private vocabularyManager: VocabularyManager;
+    private patternDefinitions: WordDefinition[] = [];
     private snapshotVersion = -1;
     private snapshotIncludeAllWords = false;
 
@@ -48,6 +56,7 @@ export class WordMatcherService {
 
     private buildTrieInternal(includeAllWords: boolean, version: number): void {
         this.trie.clear();
+        this.patternDefinitions = [];
         this.snapshotIncludeAllWords = includeAllWords;
         this.snapshotVersion = version;
         
@@ -61,30 +70,37 @@ export class WordMatcherService {
 
         for (const baseWord of baseWords) {
             const definition = this.vocabularyManager.getDefinition(baseWord);
-            if (definition) {
-                // 添加原型本身
-                this.trie.addWord(baseWord, definition);
+            if (!definition) {
+                continue;
+            }
 
-                // 获取已索引的活用形
-                const indexedInflectionForms = this.vocabularyManager.getAllInflectionForms(baseWord);
+            if (definition.isPattern && definition.patternParts && definition.patternParts.length > 0) {
+                this.patternDefinitions.push(definition);
+                continue;
+            }
 
-                // 根据词书配置或自动检测语言来生成活用形
-                const bookConfig = settings.vocabularyBooks.find(b => b.path === definition.source);
-                const morphologyLang = bookConfig?.morphology || 'none';
-                
-                // 生成活用形
-                const generatedInflectionForms = this.shouldUseGeneratedInflections(baseWord, morphologyLang)
-                    ? this.generateInflectionsForWord(baseWord, morphologyLang)
-                    : [];
+            // 添加原型本身
+            this.trie.addWord(baseWord, definition);
 
-                // 合并已索引的和生成的活用形
-                const allInflectionForms = new Set([...indexedInflectionForms, ...generatedInflectionForms]);
+            // 获取已索引的活用形
+            const indexedInflectionForms = this.vocabularyManager.getAllInflectionForms(baseWord);
 
-                for (const inflectionForm of allInflectionForms) {
-                    if (inflectionForm !== baseWord) {
-                        // 活用形指向同一个定义
-                        this.trie.addWord(inflectionForm, definition);
-                    }
+            // 根据词书配置或自动检测语言来生成活用形
+            const bookConfig = settings.vocabularyBooks.find(b => b.path === definition.source);
+            const morphologyLang = bookConfig?.morphology || 'none';
+            
+            // 生成活用形
+            const generatedInflectionForms = this.shouldUseGeneratedInflections(baseWord, morphologyLang)
+                ? this.generateInflectionsForWord(baseWord, morphologyLang)
+                : [];
+
+            // 合并已索引的和生成的活用形
+            const allInflectionForms = new Set([...indexedInflectionForms, ...generatedInflectionForms]);
+
+            for (const inflectionForm of allInflectionForms) {
+                if (inflectionForm !== baseWord) {
+                    // 活用形指向同一个定义
+                    this.trie.addWord(inflectionForm, definition);
                 }
             }
         }
@@ -222,7 +238,53 @@ export class WordMatcherService {
      */
     public findMatches(text: string) {
         this.ensureSnapshot();
-        return this.trie.findAllMatches(text, this.canSkipSpace);
+        const trieMatches = this.trie.findAllMatches(text, this.canSkipSpace).map(match => {
+            const definition = match.payload as WordDefinition | undefined;
+            return {
+                ...match,
+                matchedText: text.slice(match.from, match.to),
+                baseForm: definition?.word || match.word
+            };
+        });
+
+        const patternMatches = this.findPatternDefinitionMatches(text);
+        const allMatches = [...trieMatches, ...patternMatches];
+        allMatches.sort((a, b) => a.from - b.from || (b.to - b.from) - (a.to - a.from));
+
+        return allMatches;
+    }
+
+    private findPatternDefinitionMatches(text: string) {
+        const results: Array<{
+            word: string;
+            from: number;
+            to: number;
+            payload: WordDefinition;
+            matchedText: string;
+            segments: Array<{from: number; to: number}>;
+            baseForm: string;
+        }> = [];
+
+        for (const definition of this.patternDefinitions) {
+            if (!definition.patternParts || definition.patternParts.length === 0) {
+                continue;
+            }
+
+            const matches = findPatternMatches(text, definition.patternParts, 0);
+            for (const match of matches) {
+                results.push({
+                    word: definition.word,
+                    from: match.from,
+                    to: match.to,
+                    payload: definition,
+                    matchedText: match.matchedText,
+                    segments: match.segments,
+                    baseForm: definition.word
+                });
+            }
+        }
+
+        return results;
     }
 
     private shouldUseGeneratedInflections(baseWord: string, morphologyLang: MorphologyLanguage): boolean {
@@ -264,6 +326,7 @@ export class WordMatcherService {
      */
     public destroy(): void {
         this.trie.clear();
+        this.patternDefinitions = [];
         // morphologyService 由 VocabularyManager 管理，不在此处销毁
     }
 }

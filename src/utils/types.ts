@@ -28,6 +28,8 @@ export interface WordDefinition {
     nodeId: string; // Canvas 节点 ID
     color?: string;
     mastered?: boolean; // 是否已掌握
+    isPattern?: boolean; // 是否为模式短语（包含 ... 占位符）
+    patternParts?: string[]; // 模式短语固定片段
 }
 
 // 形态学语言类型
@@ -120,6 +122,8 @@ export interface WordMatch {
     to: number;
     color: string;
     baseForm?: string; // 词汇的原型形式，用于悬浮卡片查找
+    matchedText?: string; // 实际匹配到的文本（用于模式短语）
+    segments?: Array<{from: number; to: number}>; // 分段高亮位置（用于模式短语）
 }
 
 // 导出工具类

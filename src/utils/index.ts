@@ -17,3 +17,4 @@ export * from './sentence-extractor';
 export * from './constants';
 export * from './error-utils';
 export * from './japanese-inflection-generator';
+export * from './pattern-matcher';

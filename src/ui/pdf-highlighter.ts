@@ -4,6 +4,16 @@ import type { VocabularyManager } from '../core';
 import { WordMatcherService } from '../core/word-matcher-service';
 import { HighlightSpanBuilder } from './highlight-span-builder';
 
+type PDFMatch = {
+  from: number;
+  to: number;
+  word: string;
+  payload: any;
+  matchedText?: string;
+  segments?: Array<{from: number; to: number}>;
+  baseForm?: string;
+};
+
 /**
  * 在 PDF 视图中注册单词高亮功能
  * 通过监听 PDF 文本层的渲染，实现对 PDF 内容的单词高亮
@@ -46,12 +56,7 @@ export function registerPDFHighlighter(plugin: {
         const text = span.textContent || '';
         if (!text.trim()) return;
 
-        const matches = wordMatcherService.findMatches(text) as Array<{
-          from: number;
-          to: number;
-          word: string;
-          payload: any;
-        }>;
+        const matches = wordMatcherService.findMatches(text) as PDFMatch[];
 
         if (!matches || matches.length === 0) return;
 
@@ -73,6 +78,39 @@ export function registerPDFHighlighter(plugin: {
         let last = 0;
         
         for (const match of filtered) {
+          if (match.segments && match.segments.length > 0) {
+            const sortedSegments = [...match.segments].sort((a, b) => a.from - b.from);
+            if (sortedSegments[0].from > last) {
+              frag.appendChild(document.createTextNode(text.slice(last, sortedSegments[0].from)));
+            }
+
+            let segmentCursor = sortedSegments[0].from;
+            for (const segment of sortedSegments) {
+              if (segment.from > segmentCursor) {
+                frag.appendChild(document.createTextNode(text.slice(segmentCursor, segment.from)));
+              }
+
+              const segmentText = text.slice(segment.from, segment.to);
+              const segmentSpan = HighlightSpanBuilder.buildFromMatch(
+                segmentText,
+                match,
+                highlightStyle,
+                ['hi-words-pdf-highlight']
+              );
+              const segmentColor = segmentSpan.getAttribute('data-color');
+              const inlineStyle = `${segmentColor ? `--word-highlight-color: ${segmentColor};` : ''} padding:0; margin:0; border:none;`;
+              segmentSpan.setAttribute('style', inlineStyle);
+              frag.appendChild(segmentSpan);
+              segmentCursor = segment.to;
+            }
+
+            if (segmentCursor < match.to) {
+              frag.appendChild(document.createTextNode(text.slice(segmentCursor, match.to)));
+            }
+            last = match.to;
+            continue;
+          }
+
           // 添加匹配前的文本
           if (match.from > last) {
             frag.appendChild(document.createTextNode(text.slice(last, match.from)));
@@ -86,6 +124,9 @@ export function registerPDFHighlighter(plugin: {
             highlightStyle,
             ['hi-words-pdf-highlight'] // PDF 专用额外类名
           );
+          const color = highlightSpan.getAttribute('data-color');
+          const inlineStyle = `${color ? `--word-highlight-color: ${color};` : ''} padding:0; margin:0; border:none;`;
+          highlightSpan.setAttribute('style', inlineStyle);
           
           frag.appendChild(highlightSpan);
           last = match.to;

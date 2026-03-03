@@ -252,19 +252,34 @@ export class WordHighlighter implements PluginValue {
         matches.forEach(match => {
             // 使用与侧边栏视图一致的默认灰色
             const highlightColor = mapCanvasColorToCSSVar(match.definition.color, 'var(--color-base-60)');
-            
+            const attributes = {
+                'data-word': match.baseForm || match.word, // 优先使用原型，回退到匹配的词汇
+                'data-definition': match.definition.definition,
+                'data-color': highlightColor,
+                'data-style': highlightStyle,
+                'style': `--word-highlight-color: ${highlightColor};`
+            };
+
+            if (match.segments && match.segments.length > 0) {
+                match.segments.forEach(segment => {
+                    builder.add(
+                        segment.from,
+                        segment.to,
+                        Decoration.mark({
+                            class: 'hi-words-highlight',
+                            attributes
+                        })
+                    );
+                });
+                return;
+            }
+
             builder.add(
                 match.from,
                 match.to,
                 Decoration.mark({
-                    class: `hi-words-highlight`,
-                    attributes: {
-                        'data-word': match.baseForm || match.word, // 优先使用原型，回退到匹配的词汇
-                        'data-definition': match.definition.definition,
-                        'data-color': highlightColor,
-                        'data-style': highlightStyle,
-                        'style': `--word-highlight-color: ${highlightColor};`
-                    }
+                    class: 'hi-words-highlight',
+                    attributes
                 })
             );
         });
@@ -298,19 +313,36 @@ export class WordHighlighter implements PluginValue {
         
         try {
             // 使用统一的 WordMatcherService 查找所有匹配
-            const trieMatches = this.wordMatcherService.findMatches(text);
+            const trieMatches = this.wordMatcherService.findMatches(text) as Array<{
+                word: string;
+                from: number;
+                to: number;
+                payload: WordDefinition;
+                matchedText?: string;
+                segments?: Array<{from: number; to: number}>;
+                baseForm?: string;
+            }>;
             
             // 转换为 WordMatch 对象
             for (const match of trieMatches) {
                 const definition = match.payload as WordDefinition;
                 if (definition) {
+                    let absoluteSegments: Array<{from: number; to: number}> | undefined;
+                    if (match.segments) {
+                        absoluteSegments = match.segments.map(segment => ({
+                            from: offset + segment.from,
+                            to: offset + segment.to
+                        }));
+                    }
                     matches.push({
                         word: match.word, // 这里是实际匹配到的词汇（可能是原型或活用形）
                         definition, // 定义始终指向原型的定义
                         from: offset + match.from,
                         to: offset + match.to,
                         color: mapCanvasColorToCSSVar(definition.color, 'var(--color-accent)'),
-                        baseForm: definition.word // 存储原型，用于悬浮卡片查找
+                        baseForm: match.baseForm || definition.word, // 存储原型，用于悬浮卡片查找
+                        matchedText: match.matchedText,
+                        segments: absoluteSegments
                     });
                 }
             }
@@ -339,21 +371,13 @@ export class WordHighlighter implements PluginValue {
             word: match.word,
             from: match.from,
             to: match.to,
-            payload: match.definition
+            payload: match
         }));
         
         // 使用优化的重叠处理函数
         const filteredTrieMatches = removeOverlappingMatches(trieMatches);
         
-        // 转换回 WordMatch 格式
-        return filteredTrieMatches.map(trieMatch => ({
-            word: trieMatch.word,
-            definition: trieMatch.payload as WordDefinition,
-            from: trieMatch.from,
-            to: trieMatch.to,
-            color: mapCanvasColorToCSSVar((trieMatch.payload as WordDefinition).color, 'var(--color-accent)'),
-            baseForm: (trieMatch.payload as WordDefinition).word // 存储原型，用于悬浮卡片查找
-        }));
+        return filteredTrieMatches.map(trieMatch => trieMatch.payload as WordMatch);
     }
 
     /**

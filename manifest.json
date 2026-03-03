@@ -1,8 +1,8 @@
 {
 	"id": "hi-words-chouann",
 	"name": "HiWords (Fork)",
-	"version": "0.5.2",
-	"minAppVersion": "0.15.0",
+	"version": "0.5.4",
+	"minAppVersion": "1.8.0",
 	"description": "Effortlessly grow your vocabulary as you read, with automatic highlighting and translation of unfamiliar words. (Personal fork)",
 	"author": "Chouann (fork based on Kai)",
 	"authorUrl": "https://github.com/CatMuse",

@@ -1,5 +1,5 @@
 import { App, TFile, EventRef } from 'obsidian';
-import { WordDefinition, VocabularyBook, HiWordsSettings, logAndFormatError, CANVAS_SYNC, MorphologyLanguage } from '../utils';
+import { WordDefinition, VocabularyBook, HiWordsSettings, logAndFormatError, CANVAS_SYNC, MorphologyLanguage, parsePhrase } from '../utils';
 import type { KoreanMorphologyService } from './korean-morphology-service';
 import { MorphologyIndexManager } from './morphology-index-manager';
 import { CanvasService } from './canvas-service';
@@ -308,6 +308,24 @@ export class VocabularyManager {
     }
 
     /**
+     * 删除指定生词本的数据
+     */
+    removeBookData(bookPath: string): void {
+        const timeout = this.syncTimeouts.get(bookPath);
+        if (timeout !== undefined) {
+            window.clearTimeout(timeout);
+            this.syncTimeouts.delete(bookPath);
+        }
+
+        this.pendingSyncWords.delete(bookPath);
+        this.memoryOnlyWords.delete(bookPath);
+        this.definitions.delete(bookPath);
+        this.cacheManager.invalidate();
+        this.clearMorphologyDecisionCache();
+        this.invalidateMatcherSnapshot(`remove-book-data:${bookPath}`);
+    }
+
+    /**
      * 更新设置
      */
     updateSettings(settings: HiWordsSettings): void {
@@ -413,15 +431,18 @@ export class VocabularyManager {
     ): Promise<boolean> {
         try {
             const trimmedWord = word.trim();
+            const patternMeta = this.parsePatternMetadata(trimmedWord);
 
             // 1. 创建词汇定义（使用临时节点ID）
             const wordDef: WordDefinition = {
-                word: trimmedWord,
+                word: patternMeta.word,
                 definition,
                 etymology,
                 source: bookPath,
                 nodeId: this.generateTempNodeId(),
-                color: color ? this.getColorString(color) : undefined
+                color: color ? this.getColorString(color) : undefined,
+                isPattern: patternMeta.isPattern,
+                patternParts: patternMeta.patternParts
             };
             
             // 2. 立即更新内存缓存（用户立即看到效果）
@@ -430,7 +451,7 @@ export class VocabularyManager {
             // 3. 重建缓存以立即生效
             this.cacheManager.rebuild(this.definitions);
             this.clearMorphologyDecisionCache();
-            this.invalidateMatcherSnapshot(`add-word:${trimmedWord}`);
+            this.invalidateMatcherSnapshot(`add-word:${patternMeta.word}`);
             
             // 4. 异步写入文件并更新真实nodeId
             this.scheduleCanvasSync(bookPath, { ...wordDef });
@@ -487,12 +508,13 @@ export class VocabularyManager {
             // 0. 获取原有的词汇定义，保留其他属性（如 mastered）
             const oldWordDef = await this.getWordDefinitionByNodeId(bookPath, nodeId);
             const trimmedWord = word.trim();
+            const patternMeta = this.parsePatternMetadata(trimmedWord);
 
             // 1. 先更新Canvas文件
             const success = await this.canvasService.updateWordInCanvas(
                 bookPath,
                 nodeId,
-                trimmedWord,
+                patternMeta.word,
                 definition,
                 color,
                 etymology
@@ -501,13 +523,15 @@ export class VocabularyManager {
             if (success) {
                 // 2. 创建更新后的词汇定义，保留原有的 mastered 等属性
                 const updatedWordDef: WordDefinition = {
-                    word: trimmedWord,
+                    word: patternMeta.word,
                     definition,
                     etymology,
                     source: bookPath,
                     nodeId, // 使用原有的nodeId
                     color: color ? this.getColorString(color) : undefined,
-                    mastered: oldWordDef?.mastered // 保留原有的 mastered 状态
+                    mastered: oldWordDef?.mastered, // 保留原有的 mastered 状态
+                    isPattern: patternMeta.isPattern,
+                    patternParts: patternMeta.patternParts
                 };
 
                 // 3. 立即更新内存缓存
@@ -680,6 +704,26 @@ export class VocabularyManager {
     private normalizeWordValue(word: string): string {
         return word.trim().toLowerCase();
     }
+
+    private parsePatternMetadata(rawWord: string): Pick<WordDefinition, 'word' | 'isPattern' | 'patternParts'> {
+        const phraseInfo = parsePhrase(rawWord);
+        const normalizedWord = phraseInfo.isPattern ? phraseInfo.original : rawWord.trim();
+        return {
+            word: normalizedWord,
+            isPattern: phraseInfo.isPattern,
+            patternParts: phraseInfo.isPattern ? phraseInfo.parts : undefined
+        };
+    }
+
+    private applyPatternMetadata(definition: WordDefinition): WordDefinition {
+        const patternMeta = this.parsePatternMetadata(definition.word);
+        return {
+            ...definition,
+            word: patternMeta.word,
+            isPattern: patternMeta.isPattern,
+            patternParts: patternMeta.patternParts
+        };
+    }
     
     /**
      * 从Canvas文件中删除词汇
@@ -813,13 +857,14 @@ export class VocabularyManager {
         if (index === -1) return false;
 
         const oldDef = bookWords[index];
+        const normalizedDefinition = this.applyPatternMetadata(updatedDef);
         
         // 更新定义
-        bookWords[index] = updatedDef;
+        bookWords[index] = normalizedDefinition;
 
         // 更新缓存
         this.cacheManager.deleteDefinition(oldDef.word);
-        this.cacheManager.setDefinition(updatedDef.word, updatedDef);
+        this.cacheManager.setDefinition(normalizedDefinition.word, normalizedDefinition);
 
         // 标记缓存需要重建
         this.cacheManager.invalidate();
@@ -828,7 +873,7 @@ export class VocabularyManager {
 
         // 保存到 Canvas 文件
         try {
-            await this.canvasService.saveWordDefinitionToCanvas(bookPath, nodeId, updatedDef);
+            await this.canvasService.saveWordDefinitionToCanvas(bookPath, nodeId, normalizedDefinition);
         } catch (error) {
             console.error('保存单词定义到 Canvas 失败:', error);
             // 不返回 false，因为内存更新已经成功
