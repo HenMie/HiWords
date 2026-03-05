@@ -13,10 +13,16 @@ export class Trie {
      * 向前缀树中添加单词
      * @param word 要添加的单词
      * @param payload 与单词关联的数据
+     * @param options 添加选项（可选）
      */
-    addWord(word: string, payload: any): void {
+    addWord(word: string, payload: any, options: TrieAddWordOptions = {}): void {
+        if (!word) {
+            return;
+        }
+
         let node = this.root;
         const lowerWord = word.toLowerCase();
+        const priority = options.priority ?? DEFAULT_WORD_PRIORITY;
         
         for (const char of lowerWord) {
             if (!node.children.has(char)) {
@@ -24,10 +30,15 @@ export class Trie {
             }
             node = node.children.get(char)!;
         }
-        
+
+        if (node.isEndOfWord && priority < node.priority) {
+            return;
+        }
+
         node.isEndOfWord = true;
         node.payload = payload;
         node.word = word; // 保存原始单词形式
+        node.priority = priority;
     }
 
     /**
@@ -116,13 +127,21 @@ class TrieNode {
     isEndOfWord: boolean;
     payload: any;
     word: string | null;
+    priority: number;
     
     constructor() {
         this.children = new Map();
         this.isEndOfWord = false;
         this.payload = null;
         this.word = null;
+        this.priority = DEFAULT_WORD_PRIORITY;
     }
+}
+
+const DEFAULT_WORD_PRIORITY = 0;
+
+export interface TrieAddWordOptions {
+    priority?: number;
 }
 
 /**

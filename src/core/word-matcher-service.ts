@@ -4,11 +4,17 @@ import {
     generateJapaneseInflections,
     isKoreanText,
     isJapaneseText,
+    containsKana,
+    katakanaToHiragana,
+    hiraganaToKatakana,
     findPatternMatches
 } from '../utils';
 import type { MorphologyLanguage, WordDefinition } from '../utils';
 import type { UnifiedMorphologyService } from './unified-morphology-service';
 import type { VocabularyManager } from './vocabulary-manager';
+
+const PRIMARY_WORD_MATCH_PRIORITY = 2;
+const PRONUNCIATION_WORD_MATCH_PRIORITY = 1;
 
 /**
  * 词汇匹配服务
@@ -79,31 +85,74 @@ export class WordMatcherService {
                 continue;
             }
 
-            // 添加原型本身
-            this.trie.addWord(baseWord, definition);
-
             // 获取已索引的活用形
             const indexedInflectionForms = this.vocabularyManager.getAllInflectionForms(baseWord);
 
             // 根据词书配置或自动检测语言来生成活用形
             const bookConfig = settings.vocabularyBooks.find(b => b.path === definition.source);
             const morphologyLang = bookConfig?.morphology || 'none';
-            
-            // 生成活用形
-            const generatedInflectionForms = this.shouldUseGeneratedInflections(baseWord, morphologyLang)
-                ? this.generateInflectionsForWord(baseWord, morphologyLang)
-                : [];
 
-            // 合并已索引的和生成的活用形
-            const allInflectionForms = new Set([...indexedInflectionForms, ...generatedInflectionForms]);
+            const primaryForms = this.collectPrimaryForms(baseWord, indexedInflectionForms, morphologyLang);
+            this.addFormsToTrie(primaryForms, definition, PRIMARY_WORD_MATCH_PRIORITY);
 
-            for (const inflectionForm of allInflectionForms) {
-                if (inflectionForm !== baseWord) {
-                    // 活用形指向同一个定义
-                    this.trie.addWord(inflectionForm, definition);
-                }
+            const pronunciationForms = this.collectPronunciationForms(definition);
+            this.addFormsToTrie(pronunciationForms, definition, PRONUNCIATION_WORD_MATCH_PRIORITY);
+        }
+    }
+
+    private addFormsToTrie(forms: Set<string>, definition: WordDefinition, priority: number): void {
+        for (const form of forms) {
+            const trimmedForm = form.trim();
+            if (!trimmedForm) {
+                continue;
+            }
+            this.trie.addWord(trimmedForm, definition, { priority });
+        }
+    }
+
+    private collectPrimaryForms(
+        baseWord: string,
+        indexedInflectionForms: Set<string>,
+        morphologyLang: MorphologyLanguage
+    ): Set<string> {
+        const forms = new Set<string>([baseWord]);
+        for (const inflectionForm of indexedInflectionForms) {
+            forms.add(inflectionForm);
+        }
+
+        if (this.shouldUseGeneratedInflections(baseWord, morphologyLang)) {
+            for (const generatedForm of this.generateInflectionsForWord(baseWord, morphologyLang)) {
+                forms.add(generatedForm);
             }
         }
+
+        return forms;
+    }
+
+    private collectPronunciationForms(definition: WordDefinition): Set<string> {
+        const forms = new Set<string>();
+        const pronunciation = definition.pronunciation?.trim();
+        if (!pronunciation || !containsKana(pronunciation)) {
+            return forms;
+        }
+
+        const kanaVariants = this.getKanaVariants(pronunciation);
+        for (const kanaVariant of kanaVariants) {
+            forms.add(kanaVariant);
+            for (const inflection of generateJapaneseInflections(kanaVariant)) {
+                forms.add(inflection);
+            }
+        }
+
+        return forms;
+    }
+
+    private getKanaVariants(text: string): Set<string> {
+        return new Set<string>([
+            text,
+            katakanaToHiragana(text),
+            hiraganaToKatakana(text)
+        ]);
     }
 
     /**
