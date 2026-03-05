@@ -108,12 +108,8 @@ export class AddWordModal extends Modal {
             }
         });
 
-        if (this.isEditMode && this.definition) {
-            bookSelect.disabled = true;
-        }
-
         const resolveSelectedBook = (): VocabularyBook | undefined => {
-            const bookPath = this.isEditMode && this.definition ? this.definition.source : bookSelect.value;
+            const bookPath = bookSelect.value;
             return this.plugin.settings.vocabularyBooks.find((book) => book.path === bookPath);
         };
 
@@ -308,15 +304,28 @@ export class AddWordModal extends Modal {
                 const definition = definitionInput.value;
 
                 if (this.isEditMode && this.definition) {
-                    success = await this.plugin.vocabularyManager.updateWordInCanvas(
-                        this.definition.source,
-                        this.definition.nodeId,
-                        finalWord,
-                        definition,
-                        colorValue,
-                        etymology,
-                        pronunciation
-                    );
+                    if (selectedBook && selectedBook !== this.definition.source) {
+                        success = await this.plugin.vocabularyManager.moveWordToBook(
+                            this.definition.source,
+                            selectedBook,
+                            this.definition.nodeId,
+                            finalWord,
+                            definition,
+                            colorValue,
+                            etymology,
+                            pronunciation
+                        );
+                    } else {
+                        success = await this.plugin.vocabularyManager.updateWordInCanvas(
+                            this.definition.source,
+                            this.definition.nodeId,
+                            finalWord,
+                            definition,
+                            colorValue,
+                            etymology,
+                            pronunciation
+                        );
+                    }
                 } else {
                     success = await this.plugin.vocabularyManager.addWordToCanvas(
                         selectedBook,

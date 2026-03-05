@@ -51,22 +51,6 @@ export interface LanguagePack {
         tts_template_desc?: string;
         debug_mode?: string;
         debug_mode_desc?: string;
-        // Auto layout section
-        auto_layout: string;
-        enable_auto_layout: string;
-        enable_auto_layout_desc: string;
-        card_size: string;
-        card_size_desc: string;
-        grid_gaps: string;
-        grid_gaps_desc: string;
-        left_padding: string;
-        left_padding_desc: string;
-        columns_auto: string;
-        columns_auto_desc: string;
-        columns: string;
-        columns_desc: string;
-        group_inner_layout: string;
-        group_inner_layout_desc: string;
         // Highlighting scope
         highlight_mode?: string;
         highlight_mode_desc?: string;

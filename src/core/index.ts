@@ -9,7 +9,6 @@ export { KoreanMorphologyService } from './korean-morphology-service';
 export { JapaneseMorphologyService } from './japanese-morphology-service';
 export { MorphologyIndexManager } from './morphology-index-manager';
 export { WordMatcherService } from './word-matcher-service';
-export { CanvasService } from './canvas-service';
 export { JsonlVocabularyService } from './jsonl-vocabulary-service';
 export { CanvasJsonlImporter } from './canvas-jsonl-importer';
 export { VocabularyCacheManager } from './vocabulary-cache-manager';

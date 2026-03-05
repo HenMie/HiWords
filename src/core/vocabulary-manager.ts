@@ -530,6 +530,75 @@ export class VocabularyManager {
     }
 
     /**
+     * 在不同词书之间移动词汇，并应用编辑内容
+     */
+    async moveWordToBook(
+        sourceBookPath: string,
+        targetBookPath: string,
+        nodeId: string,
+        word: string,
+        definition: string,
+        color?: number,
+        etymology?: string,
+        pronunciation?: string
+    ): Promise<boolean> {
+        if (sourceBookPath === targetBookPath) {
+            return this.updateWordInCanvas(sourceBookPath, nodeId, word, definition, color, etymology, pronunciation);
+        }
+
+        let addedNodeId: string | null = null;
+        let sourceDeleted = false;
+        try {
+            const oldWordDef = await this.getWordDefinitionByNodeId(sourceBookPath, nodeId);
+            if (!oldWordDef) {
+                console.warn(`未找到要移动的词汇: ${sourceBookPath}#${nodeId}`);
+                return false;
+            }
+
+            const patternMeta = this.parsePatternMetadata(word.trim());
+            const addedWordDef = await this.jsonlService.addWord(targetBookPath, {
+                word: patternMeta.word,
+                definition,
+                pronunciation,
+                etymology,
+                color: color ? this.getColorString(color) : undefined,
+                mastered: oldWordDef.mastered ?? false,
+                isPattern: patternMeta.isPattern,
+                patternParts: patternMeta.patternParts
+            });
+            addedNodeId = addedWordDef.nodeId;
+
+            const deleted = await this.jsonlService.deleteWord(sourceBookPath, nodeId);
+            if (!deleted) {
+                await this.rollbackMovedWord(targetBookPath, addedWordDef.nodeId);
+                return false;
+            }
+            sourceDeleted = true;
+
+            this.deleteWordFromMemoryCache(sourceBookPath, nodeId);
+            this.addWordToMemoryCache(targetBookPath, addedWordDef);
+            this.cacheManager.rebuild(this.definitions);
+            this.clearMorphologyDecisionCache();
+            this.invalidateMatcherSnapshot(`move-word:${nodeId}`);
+            return true;
+        } catch (error) {
+            if (addedNodeId && !sourceDeleted) {
+                await this.rollbackMovedWord(targetBookPath, addedNodeId);
+            }
+            console.error('Failed to move word between JSONL books:', error);
+            return false;
+        }
+    }
+
+    private async rollbackMovedWord(bookPath: string, nodeId: string): Promise<void> {
+        try {
+            await this.jsonlService.deleteWord(bookPath, nodeId);
+        } catch (rollbackError) {
+            console.error('回滚移动词汇失败:', rollbackError);
+        }
+    }
+
+    /**
      * 获取颜色字符串
      * 词书颜色使用数字字符串（1-6）
      */

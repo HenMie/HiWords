@@ -30,20 +30,6 @@ const DEFAULT_SETTINGS: HiWordsSettings = {
     ttsTemplate: 'https://dict.youdao.com/dictvoice?audio={{word}}&type=2',
     // 调试模式（默认关闭）
     debugMode: false,
-    // 自动布局默认值
-    autoLayoutEnabled: true,
-    cardWidth: 260,
-    cardHeight: 120,
-    horizontalGap: 24,
-    verticalGap: 16,
-    leftPadding: 24,
-    columnsAuto: true,
-    columns: 3,
-    minLeftX: 0,
-    maxColumns: 6,
-    groupInnerPadding: 24,
-    groupInnerColumns: 2,
-    groupInnerGap: 12,
     aiDictionary: {
         apiUrl: 'https://api.openai.com/v1/chat/completions',
         apiKey: '',
@@ -56,6 +42,22 @@ const DEFAULT_SETTINGS: HiWordsSettings = {
     morphologyEngineMode: 'hybrid',
     morphologyFallbackMode: 'conservative'
 };
+
+const LEGACY_CANVAS_LAYOUT_SETTING_KEYS = [
+    'autoLayoutEnabled',
+    'cardWidth',
+    'cardHeight',
+    'horizontalGap',
+    'verticalGap',
+    'leftPadding',
+    'columnsAuto',
+    'columns',
+    'minLeftX',
+    'maxColumns',
+    'groupInnerPadding',
+    'groupInnerColumns',
+    'groupInnerGap'
+] as const;
 
 export default class HiWordsPlugin extends Plugin {
     settings: HiWordsSettings;
@@ -478,8 +480,33 @@ export default class HiWordsPlugin extends Plugin {
      * 加载设置
      */
     async loadSettings() {
-        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+        const rawSettings = await this.loadData();
+        const { sanitized, removed } = this.stripLegacyCanvasLayoutSettings(rawSettings);
+        this.settings = Object.assign({}, DEFAULT_SETTINGS, sanitized);
+        if (removed) {
+            await this.saveData(this.settings);
+        }
         this.updateMigrationRequirement();
+    }
+
+    private stripLegacyCanvasLayoutSettings(data: unknown): {
+        sanitized: Record<string, unknown>;
+        removed: boolean;
+    } {
+        if (!data || typeof data !== 'object') {
+            return { sanitized: {}, removed: false };
+        }
+
+        const sanitized = { ...(data as Record<string, unknown>) };
+        let removed = false;
+        for (const key of LEGACY_CANVAS_LAYOUT_SETTING_KEYS) {
+            if (Object.prototype.hasOwnProperty.call(sanitized, key)) {
+                delete sanitized[key];
+                removed = true;
+            }
+        }
+
+        return { sanitized, removed };
     }
 
     /**
