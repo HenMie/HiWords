@@ -2,7 +2,7 @@ import { App, PluginSettingTab, Setting, TFile, Notice, Modal, ButtonComponent }
 import HiWordsPlugin from '../../main';
 import { VocabularyBook, HighlightStyle, MasteredDetectionMode, FileNodeParseMode, MorphologyLanguage } from '../utils';
 import type { MorphologyEngineMode, MorphologyFallbackMode } from '../utils';
-import { CanvasParser } from '../canvas';
+import { JsonlVocabularyService } from '../core';
 import { t } from '../i18n';
 import type { MorphologyAssetLanguage } from '../core';
 
@@ -488,6 +488,9 @@ export class HiWordsSettingTab extends PluginSettingTab {
                 if (this.plugin.vocabularyManager?.updateSettings) {
                     this.plugin.vocabularyManager.updateSettings(this.plugin.settings);
                 }
+                if (this.plugin.isMigrationRequired()) {
+                    return;
+                }
                 await this.plugin.vocabularyManager.loadAllVocabularyBooks();
                 this.plugin.refreshHighlighter();
                 this.plugin.app.workspace.trigger('hi-words:settings-changed');
@@ -609,9 +612,28 @@ export class HiWordsSettingTab extends PluginSettingTab {
             .setDesc('')
             .addButton(button => button
                 .setIcon('plus-circle')
-                .setTooltip(t('settings.add_vocabulary_book'))
-                .onClick(() => this.showCanvasFilePicker())
+                .setTooltip('添加 JSONL 词书')
+                .onClick(() => this.showJsonlFilePicker())
             );
+
+        new Setting(containerEl)
+            .setName('导入旧 Canvas 词书')
+            .setDesc('将已配置的 .canvas 词书转换为同目录 .jsonl 并自动替换配置')
+            .addButton(button => button
+                .setIcon('import')
+                .setTooltip('导入 Canvas 词书')
+                .onClick(async () => {
+                    await this.plugin.importLegacyCanvasBooks();
+                    this.display();
+                })
+            );
+
+        if (this.plugin.isMigrationRequired()) {
+            containerEl.createEl('p', {
+                text: '检测到旧版 Canvas 词书，词书功能已暂停，请先执行导入。',
+                cls: 'setting-item-description'
+            });
+        }
 
         // 显示现有生词本
         this.displayVocabularyBooks();
@@ -621,21 +643,21 @@ export class HiWordsSettingTab extends PluginSettingTab {
     }
 
     /**
-     * 显示 Canvas 文件选择器
+     * 显示 JSONL 文件选择器
      */
-    private async showCanvasFilePicker() {
-        const canvasFiles = this.app.vault.getFiles()
-            .filter(file => file.extension === 'canvas');
+    private async showJsonlFilePicker() {
+        const jsonlFiles = this.app.vault.getFiles()
+            .filter(file => file.extension.toLowerCase() === 'jsonl');
 
-        if (canvasFiles.length === 0) {
-            new Notice(t('notices.no_canvas_files'));
+        if (jsonlFiles.length === 0) {
+            new Notice('未找到 JSONL 文件');
             return;
         }
 
         // 创建选择模态框
-        const modal = new CanvasPickerModal(this.app, canvasFiles, async (file) => {
+        const modal = new BookFilePickerModal(this.app, jsonlFiles, async (file) => {
             await this.addVocabularyBook(file);
-        });
+        }, '选择 JSONL 词书');
         modal.open();
     }
 
@@ -643,6 +665,11 @@ export class HiWordsSettingTab extends PluginSettingTab {
      * 添加生词本
      */
     private async addVocabularyBook(file: TFile) {
+        if (file.extension.toLowerCase() !== 'jsonl') {
+            new Notice('仅支持添加 .jsonl 词书');
+            return;
+        }
+
         // 检查是否已存在
         const exists = this.plugin.settings.vocabularyBooks.some(book => book.path === file.path);
         if (exists) {
@@ -650,11 +677,10 @@ export class HiWordsSettingTab extends PluginSettingTab {
             return;
         }
 
-        // 验证 Canvas 文件
-        const parser = new CanvasParser(this.app, this.plugin.settings);
-        const isValid = await parser.validateCanvasFile(file);
+        const jsonlService = new JsonlVocabularyService(this.app);
+        const isValid = await jsonlService.validateJsonlFile(file);
         if (!isValid) {
-            new Notice(t('notices.invalid_canvas_file'));
+            new Notice('JSONL 文件格式无效');
             return;
         }
 
@@ -667,8 +693,10 @@ export class HiWordsSettingTab extends PluginSettingTab {
 
         this.plugin.settings.vocabularyBooks.push(newBook);
         await this.plugin.saveSettings();
-        await this.plugin.vocabularyManager.loadVocabularyBook(newBook);
-        this.plugin.refreshHighlighter();
+        if (!this.plugin.isMigrationRequired()) {
+            await this.plugin.vocabularyManager.loadVocabularyBook(newBook);
+            this.plugin.refreshHighlighter();
+        }
 
         new Notice(t('notices.book_added').replace('{0}', newBook.name));
         this.display(); // 刷新设置页面
@@ -682,7 +710,7 @@ export class HiWordsSettingTab extends PluginSettingTab {
 
         if (this.plugin.settings.vocabularyBooks.length === 0) {
             containerEl.createEl('p', { 
-                text: t('settings.no_vocabulary_books'),
+                text: '暂无词书，请添加 JSONL 文件作为词书',
                 cls: 'setting-item-description'
             });
             return;
@@ -703,7 +731,9 @@ export class HiWordsSettingTab extends PluginSettingTab {
                 .onChange(async (value) => {
                     book.morphology = value as MorphologyLanguage;
                     await this.plugin.saveSettings();
-                    // 重新加载词书以应用形态学设置
+                    if (this.plugin.isMigrationRequired()) {
+                        return;
+                    }
                     await this.plugin.vocabularyManager.loadAllVocabularyBooks();
                     this.plugin.refreshHighlighter();
                 }));
@@ -713,6 +743,10 @@ export class HiWordsSettingTab extends PluginSettingTab {
                 .setIcon('refresh-cw')
                 .setTooltip(t('settings.reload_book'))
                 .onClick(async () => {
+                    if (this.plugin.isMigrationRequired()) {
+                        new Notice('检测到 Canvas 词书，请先导入 JSONL。');
+                        return;
+                    }
                     await this.plugin.vocabularyManager.reloadVocabularyBook(book.path);
                     this.plugin.refreshHighlighter();
                     new Notice(t('notices.book_reloaded').replace('{0}', book.name));
@@ -726,8 +760,10 @@ export class HiWordsSettingTab extends PluginSettingTab {
                 .onClick(async () => {
                     this.plugin.settings.vocabularyBooks.splice(index, 1);
                     await this.plugin.saveSettings();
-                    await this.plugin.vocabularyManager.loadAllVocabularyBooks();
-                    this.plugin.refreshHighlighter();
+                    if (!this.plugin.isMigrationRequired()) {
+                        await this.plugin.vocabularyManager.loadAllVocabularyBooks();
+                        this.plugin.refreshHighlighter();
+                    }
                     new Notice(t('notices.book_removed').replace('{0}', book.name));
                     this.display(); // 刷新设置页面
                 }));
@@ -738,6 +774,9 @@ export class HiWordsSettingTab extends PluginSettingTab {
                 .onChange(async (value) => {
                     book.enabled = value;
                     await this.plugin.saveSettings();
+                    if (this.plugin.isMigrationRequired()) {
+                        return;
+                    }
                     if (value) {
                         await this.plugin.vocabularyManager.loadVocabularyBook(book);
                     } else {
@@ -778,22 +817,24 @@ export class HiWordsSettingTab extends PluginSettingTab {
     }
 }
 
-// Canvas 文件选择模态框
-class CanvasPickerModal extends Modal {
+// 词书文件选择模态框
+class BookFilePickerModal extends Modal {
     private files: TFile[];
     private onSelect: (file: TFile) => void;
+    private title: string;
 
-    constructor(app: App, files: TFile[], onSelect: (file: TFile) => void) {
+    constructor(app: App, files: TFile[], onSelect: (file: TFile) => void, title: string) {
         super(app);
         this.files = files;
         this.onSelect = onSelect;
+        this.title = title;
     }
 
     onOpen() {
         const { contentEl } = this;
         contentEl.empty();
 
-        contentEl.createEl('h2', { text: t('modals.select_canvas_file') });
+        contentEl.createEl('h2', { text: this.title });
 
         this.files.forEach(file => {
             const itemEl = contentEl.createEl('div', { cls: 'canvas-picker-item' });

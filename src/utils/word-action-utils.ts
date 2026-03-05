@@ -44,12 +44,17 @@ export class WordActionUtils {
         try {
             const file = this.app.vault.getAbstractFileByPath(wordDef.source);
             if (file instanceof TFile) {
-                // 如果是 Canvas 文件，直接打开
-                if (file.extension === 'canvas') {
-                    await this.app.workspace.openLinkText(file.path, '');
+                const leaf = this.app.workspace.getMostRecentLeaf();
+                if (leaf) {
+                    await leaf.openFile(file);
                 } else {
-                    // 如果是 Markdown 文件，打开并尝试定位到单词
                     await this.app.workspace.openLinkText(file.path, '');
+                }
+
+                // 非 Markdown 词书（如 jsonl/canvas）直接打开文件
+                if (file.extension !== 'md') {
+                    return;
+                } else {
                     // 等待一个短暂时间让文件加载
                     setTimeout(() => {
                         const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);

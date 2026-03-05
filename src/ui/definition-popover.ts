@@ -395,7 +395,7 @@ export class DefinitionPopover extends Component {
                     const sourceEl = document.createElement('div');
                     sourceEl.className = 'hi-words-tooltip-source';
                     const fileName = detailDef.source.split('/').pop() || '';
-                    const displayName = fileName.endsWith('.canvas') ? fileName.slice(0, -7) : fileName;
+                    const displayName = fileName.replace(/\.(canvas|jsonl)$/i, '');
                     sourceEl.textContent = `${t('sidebar.source_prefix')}${displayName}`;
                     
                     // 使用工具类添加点击事件

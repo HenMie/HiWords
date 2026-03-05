@@ -135,8 +135,11 @@ export class HiWordsSidebarView extends ItemView {
         // 监听文件修改（包括 Canvas 文件的修改）
         this.registerEvent(
             this.app.vault.on('modify', (file) => {
-                // 如果修改的是 Canvas 文件，则刷新侧边栏
-                if (file instanceof TFile && file.extension === 'canvas') {
+                // 如果修改的是已配置词书文件，则刷新侧边栏
+                if (
+                    file instanceof TFile &&
+                    this.plugin.settings.vocabularyBooks.some(book => book.path === file.path)
+                ) {
                     this.scheduleUpdate(SIDEBAR_UPDATE_DELAY.CANVAS_MODIFY);
                 }
             })
@@ -821,7 +824,7 @@ export class HiWordsSidebarView extends ItemView {
      */
     private getBookNameFromPath(path: string): string {
         const book = this.plugin.settings.vocabularyBooks.find(b => b.path === path);
-        return book ? book.name : path.split('/').pop()?.replace('.canvas', '') || '未知';
+        return book ? book.name : path.split('/').pop()?.replace(/\.(canvas|jsonl)$/i, '') || '未知';
     }
 
     /**

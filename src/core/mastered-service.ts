@@ -5,24 +5,20 @@
 
 import { Notice } from 'obsidian';
 import { VocabularyManager } from './vocabulary-manager';
-import { MasteredGroupManager } from '../canvas';
 import { t } from '../i18n';
 import HiWordsPlugin from '../../main';
 
 export class MasteredService {
     private plugin: HiWordsPlugin;
     private vocabularyManager: VocabularyManager;
-    private masteredGroupManager: MasteredGroupManager;
 
     constructor(plugin: HiWordsPlugin, vocabularyManager: VocabularyManager) {
         this.plugin = plugin;
         this.vocabularyManager = vocabularyManager;
-        this.masteredGroupManager = new MasteredGroupManager(plugin.app, plugin.settings);
     }
 
     updateSettings() {
-        // 使用插件当前设置更新分组管理器
-        this.masteredGroupManager.updateSettings(this.plugin.settings);
+        // 预留：当前无需额外同步
     }
 
     /**
@@ -55,16 +51,8 @@ export class MasteredService {
                 return false;
             }
 
-            // 2. 根据模式更新 Canvas
-            if (mode === 'group') {
-                const moveSuccess = await this.masteredGroupManager.moveToMasteredGroup(bookPath, nodeId);
-                if (!moveSuccess) {
-                    // 如果移动失败，回滚内存状态
-                    await this.updateWordMasteredStatus(bookPath, nodeId, false);
-                    new Notice(t('notices.move_to_mastered_group_failed'));
-                    return false;
-                }
-            } else {
+            // 2. 根据模式更新颜色（group 模式仅使用 mastered 字段）
+            if (mode === 'color') {
                 // 颜色模式：设置为绿色(4)
                 const colorSuccess = await this.vocabularyManager.setNodeColor(bookPath, nodeId, 4);
                 if (!colorSuccess) {
@@ -115,16 +103,8 @@ export class MasteredService {
                 return false;
             }
 
-            // 2. 根据模式更新 Canvas
-            if (mode === 'group') {
-                const removeSuccess = await this.masteredGroupManager.removeFromMasteredGroup(bookPath, nodeId);
-                if (!removeSuccess) {
-                    // 如果移除失败，回滚内存状态
-                    await this.updateWordMasteredStatus(bookPath, nodeId, true);
-                    new Notice(t('notices.remove_from_mastered_group_failed'));
-                    return false;
-                }
-            } else {
+            // 2. 根据模式更新颜色（group 模式仅使用 mastered 字段）
+            if (mode === 'color') {
                 // 颜色模式：清除颜色
                 const colorSuccess = await this.vocabularyManager.setNodeColor(bookPath, nodeId, undefined);
                 if (!colorSuccess) {
@@ -295,7 +275,7 @@ export class MasteredService {
     }
 
     /**
-     * 同步 Canvas 分组状态与内存状态
+     * 同步持久化状态与内存状态
      * 用于修复可能的不一致状态
      * @param bookPath 生词本路径
      */
@@ -307,14 +287,7 @@ export class MasteredService {
             const mode = this.plugin.settings.masteredDetection ?? 'group';
 
             for (const wordDef of allWords) {
-                if (mode === 'group') {
-                    const inMasteredGroup = await this.masteredGroupManager.isNodeInMasteredGroup(bookPath, wordDef.nodeId);
-                    if (wordDef.mastered && !inMasteredGroup) {
-                        await this.masteredGroupManager.moveToMasteredGroup(bookPath, wordDef.nodeId);
-                    } else if (!wordDef.mastered && inMasteredGroup) {
-                        await this.masteredGroupManager.removeFromMasteredGroup(bookPath, wordDef.nodeId);
-                    }
-                } else {
+                if (mode === 'color') {
                     // 颜色模式：以内存状态为准写回颜色
                     if (wordDef.mastered) {
                         await this.vocabularyManager.setNodeColor(bookPath, wordDef.nodeId, 4);

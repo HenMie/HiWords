@@ -1,13 +1,14 @@
 import { App, Plugin, TFile, Notice, WorkspaceLeaf, Editor, MarkdownView } from 'obsidian';
 import { Extension } from '@codemirror/state';
 // 使用新的模块化导入
-import { HiWordsSettings, extractSentenceFromEditorMultiline, HIGHLIGHTER_REFRESH, PLUGIN_UNLOAD_TIMEOUT } from './src/utils';
+import { HiWordsSettings, VocabularyBook, extractSentenceFromEditorMultiline, HIGHLIGHTER_REFRESH, PLUGIN_UNLOAD_TIMEOUT } from './src/utils';
 import { registerReadingModeHighlighter } from './src/ui/reading-mode-highlighter';
 import { registerPDFHighlighter, cleanupPDFHighlighter } from './src/ui/pdf-highlighter';
 import {
     VocabularyManager,
     MasteredService,
     MorphologyAssetManager,
+    CanvasJsonlImporter,
     createWordHighlighterExtension,
     highlighterManager
 } from './src/core';
@@ -67,10 +68,13 @@ export default class HiWordsPlugin extends Plugin {
     private isLoadingVocabulary = false;
     private vocabularyLoadPromise: Promise<void> | null = null;
     private timeoutIds: number[] = [];
+    private migrationRequired = false;
+    private migrationNoticeShown = false;
 
     async onload() {
         // 加载设置
         await this.loadSettings();
+        this.updateMigrationRequirement();
 
         // 初始化国际化模块
         i18n.setApp(this.app);
@@ -180,6 +184,10 @@ export default class HiWordsPlugin extends Plugin {
             id: 'refresh-vocabulary',
             name: t('commands.refresh_vocabulary'),
             callback: async () => {
+                if (this.migrationRequired) {
+                    this.showMigrationRequiredNotice();
+                    return;
+                }
                 await this.vocabularyManager.loadAllVocabularyBooks();
                 this.refreshHighlighter();
                 new Notice(t('notices.vocabulary_refreshed'));
@@ -206,10 +214,22 @@ export default class HiWordsPlugin extends Plugin {
                     new Notice(t('notices.no_selection'));
                     return;
                 }
+                if (this.migrationRequired) {
+                    this.showMigrationRequiredNotice();
+                    return;
+                }
 
                 const sentence = extractSentenceFromEditorMultiline(editor);
                 // 使用 addOrEditWord 方法，自动判断是添加还是编辑
                 this.addOrEditWord(selectedText, sentence);
+            }
+        });
+
+        this.addCommand({
+            id: 'import-canvas-books-to-jsonl',
+            name: '导入 Canvas 词书到 JSONL',
+            callback: async () => {
+                await this.importLegacyCanvasBooks();
             }
         });
     }
@@ -218,54 +238,56 @@ export default class HiWordsPlugin extends Plugin {
      * 注册事件
      */
     private registerEvents() {
-        // 记录当前正在编辑的Canvas文件
-        const modifiedCanvasFiles = new Set<string>();
-        // 记录当前活动的 Canvas 文件
-        let activeCanvasFile: string | null = null;
-        const replaceTrackedCanvasPath = (oldPath: string, newPath: string) => {
-            if (activeCanvasFile === oldPath) {
-                activeCanvasFile = newPath;
+        const modifiedBookFiles = new Set<string>();
+        let activeBookFile: string | null = null;
+        const replaceTrackedBookPath = (oldPath: string, newPath: string) => {
+            if (activeBookFile === oldPath) {
+                activeBookFile = newPath;
             }
-            if (modifiedCanvasFiles.delete(oldPath)) {
-                modifiedCanvasFiles.add(newPath);
+            if (modifiedBookFiles.delete(oldPath)) {
+                modifiedBookFiles.add(newPath);
             }
         };
         
         // 监听文件变化
         this.registerEvent(
             this.app.vault.on('modify', (file) => {
-                if (file instanceof TFile && file.extension === 'canvas') {
-                    // 检查是否是生词本文件
-                    const isVocabBook = this.settings.vocabularyBooks.some(book => book.path === file.path);
-                    if (isVocabBook) {
-                        // 只记录文件路径，不立即解析
-                        modifiedCanvasFiles.add(file.path);
-                    }
+                if (!(file instanceof TFile)) {
+                    return;
+                }
+                const isVocabBook = this.settings.vocabularyBooks.some(book => book.path === file.path);
+                if (isVocabBook) {
+                    modifiedBookFiles.add(file.path);
                 }
             })
         );
 
-        // 监听 Canvas 词书重命名，保持路径与内存数据一致
+        // 监听词书重命名，保持路径与内存数据一致
         this.registerEvent(
             this.app.vault.on('rename', async (file, oldPath) => {
-                if (!(file instanceof TFile) || file.extension !== 'canvas') {
+                if (!(file instanceof TFile)) {
                     return;
                 }
 
                 const bookIndex = this.settings.vocabularyBooks.findIndex(book => book.path === oldPath);
                 if (bookIndex === -1) {
-                    replaceTrackedCanvasPath(oldPath, file.path);
+                    replaceTrackedBookPath(oldPath, file.path);
                     return;
                 }
 
                 this.settings.vocabularyBooks[bookIndex].path = file.path;
                 this.settings.vocabularyBooks[bookIndex].name = file.basename;
-                replaceTrackedCanvasPath(oldPath, file.path);
+                replaceTrackedBookPath(oldPath, file.path);
 
                 await this.saveSettings();
                 this.vocabularyManager.removeBookData(oldPath);
+                if (this.migrationRequired) {
+                    modifiedBookFiles.delete(file.path);
+                    this.refreshHighlighter();
+                    return;
+                }
                 await this.vocabularyManager.reloadVocabularyBook(file.path);
-                modifiedCanvasFiles.delete(file.path);
+                modifiedBookFiles.delete(file.path);
                 this.refreshHighlighter();
             })
         );
@@ -276,38 +298,43 @@ export default class HiWordsPlugin extends Plugin {
                 // 获取当前活动文件
                 const activeFile = this.app.workspace.getActiveFile();
                 
-                // 如果之前有活动的Canvas文件，且已经变化，并且现在切换到了其他文件
+                // 如果之前有活动词书文件，且已经变化，并且现在切换到了其他文件
                 // 说明用户已经编辑完成并切换了焦点，此时解析该文件
-                if (activeCanvasFile && 
-                    modifiedCanvasFiles.has(activeCanvasFile) && 
-                    (!activeFile || activeFile.path !== activeCanvasFile)) {
-                    
-                    await this.vocabularyManager.reloadVocabularyBook(activeCanvasFile);
-                    this.refreshHighlighter();
+                if (activeBookFile &&
+                    modifiedBookFiles.has(activeBookFile) &&
+                    (!activeFile || activeFile.path !== activeBookFile)) {
+                    if (!this.migrationRequired) {
+                        await this.vocabularyManager.reloadVocabularyBook(activeBookFile);
+                        this.refreshHighlighter();
+                    }
                     
                     // 从待解析列表中移除
-                    modifiedCanvasFiles.delete(activeCanvasFile);
+                    modifiedBookFiles.delete(activeBookFile);
                 }
                 
-                // 更新当前活动的Canvas文件
-                if (activeFile && activeFile.extension === 'canvas') {
-                    activeCanvasFile = activeFile.path;
+                // 更新当前活动的词书文件
+                const isActiveBook = activeFile
+                    ? this.settings.vocabularyBooks.some(book => book.path === activeFile.path)
+                    : false;
+                if (activeFile && isActiveBook) {
+                    activeBookFile = activeFile.path;
                 } else {
-                    activeCanvasFile = null;
+                    activeBookFile = null;
                     
-                    // 如果切换到非Canvas文件，处理所有待解析的文件
-                    if (modifiedCanvasFiles.size > 0) {
+                    // 如果切换到非词书文件，处理所有待解析的词书
+                    if (modifiedBookFiles.size > 0) {
                         // 创建一个副本并清空原集合
-                        const filesToProcess = Array.from(modifiedCanvasFiles);
-                        modifiedCanvasFiles.clear();
+                        const filesToProcess = Array.from(modifiedBookFiles);
+                        modifiedBookFiles.clear();
                         
                         // 处理所有待解析的文件
-                        for (const filePath of filesToProcess) {
-                            await this.vocabularyManager.reloadVocabularyBook(filePath);
+                        if (!this.migrationRequired) {
+                            for (const filePath of filesToProcess) {
+                                await this.vocabularyManager.reloadVocabularyBook(filePath);
+                            }
+                            // 刷新高亮
+                            this.refreshHighlighter();
                         }
-                        
-                        // 刷新高亮
-                        this.refreshHighlighter();
                     } else {
                         // 当切换文件时，可能需要更新高亮
                         this.registerTimeout(() => this.refreshHighlighter(), HIGHLIGHTER_REFRESH.FILE_SWITCH);
@@ -327,6 +354,9 @@ export default class HiWordsPlugin extends Plugin {
             this.app.workspace.on('editor-menu', (menu, editor) => {
                 const selection = editor.getSelection();
                 if (selection && selection.trim()) {
+                    if (this.migrationRequired) {
+                        return;
+                    }
                     const word = selection.trim();
                     // 检查单词是否已存在
                     const exists = this.vocabularyManager.hasWord(word);
@@ -353,6 +383,10 @@ export default class HiWordsPlugin extends Plugin {
      * 使用箭头函数确保在作为回调传递时绑定当前实例
      */
     private shouldHighlightFile = (filePath: string): boolean => {
+        if (this.migrationRequired) {
+            return false;
+        }
+
         const mode = this.settings.highlightMode || 'all';
         if (mode === 'all') {
             return true;
@@ -445,6 +479,7 @@ export default class HiWordsPlugin extends Plugin {
      */
     async loadSettings() {
         this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+        this.updateMigrationRequirement();
     }
 
     /**
@@ -452,6 +487,7 @@ export default class HiWordsPlugin extends Plugin {
      */
     async saveSettings() {
         await this.saveData(this.settings);
+        this.updateMigrationRequirement();
         this.vocabularyManager.updateSettings(this.settings);
         // MasteredService 有明确的 updateSettings 方法
         if (this.masteredService) {
@@ -477,6 +513,11 @@ export default class HiWordsPlugin extends Plugin {
      * @param word 要添加或编辑的单词
      */
     addOrEditWord(word: string, sentence: string = '') {
+        if (this.migrationRequired) {
+            this.showMigrationRequiredNotice();
+            return;
+        }
+
         // 检查单词是否已存在
         const normalizedWord = word.trim();
         const exists = this.vocabularyManager.hasWord(normalizedWord);
@@ -558,6 +599,13 @@ export default class HiWordsPlugin extends Plugin {
      * 执行实际的生词本加载
      */
     private async performVocabularyLoad(): Promise<void> {
+        if (this.migrationRequired) {
+            this.vocabularyManager.clear();
+            this.refreshHighlighter();
+            this.showMigrationRequiredNotice();
+            return;
+        }
+
         try {
             await this.vocabularyManager.loadAllVocabularyBooks();
             this.refreshHighlighter();
@@ -565,6 +613,86 @@ export default class HiWordsPlugin extends Plugin {
             new Notice('加载生词本失败，请检查文件权限');
             console.error('[HiWords] 生词本加载失败:', error);
         }
+    }
+
+    public isMigrationRequired(): boolean {
+        return this.migrationRequired;
+    }
+
+    public getLegacyCanvasBooks(): VocabularyBook[] {
+        return this.settings.vocabularyBooks.filter((book) => this.isCanvasBook(book.path));
+    }
+
+    public async importLegacyCanvasBooks(): Promise<void> {
+        const legacyBooks = this.getLegacyCanvasBooks();
+        if (legacyBooks.length === 0) {
+            new Notice('没有可导入的 Canvas 词书。');
+            return;
+        }
+
+        const importer = new CanvasJsonlImporter(this.app, this.settings);
+        let successCount = 0;
+        let importedWords = 0;
+        const errors: string[] = [];
+
+        for (const book of legacyBooks) {
+            try {
+                const result = await importer.importCanvasBook(book.path);
+                const index = this.settings.vocabularyBooks.findIndex((item) => item.path === book.path);
+                if (index >= 0) {
+                    this.settings.vocabularyBooks[index] = {
+                        ...this.settings.vocabularyBooks[index],
+                        path: result.outputPath,
+                        name: result.outputPath.split('/').pop()?.replace(/\.jsonl$/i, '') || book.name
+                    };
+                }
+                successCount++;
+                importedWords += result.importedCount;
+            } catch (error) {
+                const reason = error instanceof Error ? error.message : String(error);
+                errors.push(`${book.name}: ${reason}`);
+            }
+        }
+
+        await this.saveSettings();
+
+        if (this.migrationRequired) {
+            const detail = errors.length ? ` 失败 ${errors.length} 个。` : '';
+            new Notice(`导入完成：成功 ${successCount}/${legacyBooks.length} 个词书。${detail}`);
+            if (errors.length) {
+                console.error('[HiWords] 部分词书导入失败:', errors);
+            }
+            return;
+        }
+
+        this.migrationNoticeShown = false;
+        await this.loadVocabularySafely();
+        this.refreshHighlighter();
+        new Notice(`导入完成：${successCount} 个词书，${importedWords} 个词条。`);
+
+        if (errors.length) {
+            console.error('[HiWords] 部分词书导入失败:', errors);
+        }
+    }
+
+    private updateMigrationRequirement(): void {
+        const nextRequired = this.settings.vocabularyBooks.some((book) => this.isCanvasBook(book.path));
+        if (this.migrationRequired !== nextRequired) {
+            this.migrationNoticeShown = false;
+        }
+        this.migrationRequired = nextRequired;
+    }
+
+    private showMigrationRequiredNotice(): void {
+        if (this.migrationNoticeShown) {
+            return;
+        }
+        this.migrationNoticeShown = true;
+        new Notice('检测到旧版 Canvas 词书，请先执行“导入 Canvas 词书到 JSONL”。', 6000);
+    }
+
+    private isCanvasBook(path: string): boolean {
+        return path.toLowerCase().endsWith('.canvas');
     }
 
     /**
