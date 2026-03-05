@@ -428,7 +428,8 @@ export class VocabularyManager {
         word: string,
         definition: string,
         color?: number,
-        etymology?: string
+        etymology?: string,
+        pronunciation?: string
     ): Promise<boolean> {
         try {
             const trimmedWord = word.trim();
@@ -438,6 +439,7 @@ export class VocabularyManager {
             const wordDef: WordDefinition = {
                 word: patternMeta.word,
                 definition,
+                pronunciation,
                 etymology,
                 source: bookPath,
                 nodeId: this.generateTempNodeId(),
@@ -503,7 +505,8 @@ export class VocabularyManager {
         word: string,
         definition: string,
         color?: number,
-        etymology?: string
+        etymology?: string,
+        pronunciation?: string
     ): Promise<boolean> {
         try {
             // 0. 获取原有的词汇定义，保留其他属性（如 mastered）
@@ -518,7 +521,8 @@ export class VocabularyManager {
                 patternMeta.word,
                 definition,
                 color,
-                etymology
+                etymology,
+                pronunciation
             );
 
             if (success) {
@@ -526,6 +530,7 @@ export class VocabularyManager {
                 const updatedWordDef: WordDefinition = {
                     word: patternMeta.word,
                     definition,
+                    pronunciation,
                     etymology,
                     source: bookPath,
                     nodeId, // 使用原有的nodeId
@@ -669,7 +674,8 @@ export class VocabularyManager {
                     wordDef.word,
                     wordDef.definition,
                     wordDef.color ? this.getColorNumber(wordDef.color) : undefined,
-                    wordDef.etymology
+                    wordDef.etymology,
+                    wordDef.pronunciation
                 );
                 
                 if (success) {

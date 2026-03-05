@@ -653,10 +653,17 @@ export class HiWordsSidebarView extends ItemView {
             
             // 事件处理已经通过 bindDelegatedHandlers 的事件委托统一处理，无需重复绑定
         }
+
+        if (wordDef.pronunciation && wordDef.pronunciation.trim()) {
+            card.createEl('div', {
+                cls: 'hi-words-word-pronunciation',
+                text: wordDef.pronunciation
+            });
+        }
         
         // 词源显示（如果存在）
         if (wordDef.etymology && wordDef.etymology.trim()) {
-            const etymologyEl = card.createEl('div', { 
+            card.createEl('div', { 
                 cls: 'hi-words-word-etymology',
                 text: wordDef.etymology
             });

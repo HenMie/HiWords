@@ -23,6 +23,7 @@ export interface CanvasData {
 export interface WordDefinition {
     word: string;
     definition: string;
+    pronunciation?: string; // 发音（可选）
     etymology?: string; // 词源（可选）
     source: string; // Canvas 文件路径
     nodeId: string; // Canvas 节点 ID

@@ -90,6 +90,14 @@ export interface LanguagePack {
         morphology_asset_status_downloading?: string;
         morphology_asset_download?: string;
         morphology_asset_delete?: string;
+        morphology_engine?: string;
+        morphology_engine_desc?: string;
+        morphology_engine_hybrid?: string;
+        morphology_engine_legacy?: string;
+        morphology_fallback?: string;
+        morphology_fallback_desc?: string;
+        morphology_fallback_conservative?: string;
+        morphology_fallback_aggressive?: string;
     };
     sidebar: {
         title: string;
@@ -130,6 +138,10 @@ export interface LanguagePack {
         select_book: string;
         color_label: string;
         color_gray: string;
+        pronunciation_label: string;
+        pronunciation_placeholder: string;
+        pronunciation_placeholder_japanese: string;
+        pronunciation_placeholder_english: string;
         definition_placeholder: string;
         add_button: string;
         cancel_button: string;

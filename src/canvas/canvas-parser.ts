@@ -135,6 +135,7 @@ export class CanvasParser {
         // 先移除 Frontmatter，再整体修剪
         text = this.removeFrontmatter(text).trim();
         let word = '';
+        let pronunciation = '';
         let etymology = '';
         let definition = '';
 
@@ -152,20 +153,8 @@ export class CanvasParser {
             if (!word) return null;
             const phraseInfo = parsePhrase(word);
             
-            // 解析剩余行，寻找词源和定义
+            // 解析剩余行，寻找可选元数据（发音/词源）和定义
             let definitionStartIndex = 1;
-
-            // 检查第二行是否为词源格式 [词源]
-            if (lines.length > definitionStartIndex) {
-                const maybeEtymology = lines[definitionStartIndex].trim();
-                const etymologyMatch = maybeEtymology.match(/^\[(.+)\]$/);
-                if (etymologyMatch) {
-                    etymology = etymologyMatch[1];
-                    definitionStartIndex++;
-                }
-            }
-
-            // 跳过旧格式中的斜体别名行
             while (lines.length > definitionStartIndex) {
                 const line = lines[definitionStartIndex].trim();
                 if (!line) {
@@ -173,7 +162,22 @@ export class CanvasParser {
                     continue;
                 }
 
+                // 跳过旧格式中的斜体别名行
                 if (line.startsWith('*') && line.endsWith('*') && line.length > 2) {
+                    definitionStartIndex++;
+                    continue;
+                }
+
+                const pronunciationMatch = line.match(/^【(.+)】$/);
+                if (pronunciationMatch) {
+                    pronunciation = pronunciationMatch[1];
+                    definitionStartIndex++;
+                    continue;
+                }
+
+                const etymologyMatch = line.match(/^\[(.+)\]$/);
+                if (etymologyMatch) {
+                    etymology = etymologyMatch[1];
                     definitionStartIndex++;
                     continue;
                 }
@@ -189,6 +193,7 @@ export class CanvasParser {
             const result: WordDefinition = {
                 word: phraseInfo.isPattern ? phraseInfo.original : word,
                 definition,
+                pronunciation: pronunciation || undefined,
                 etymology: etymology || undefined,
                 source: sourcePath,
                 nodeId: node.id,

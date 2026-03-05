@@ -362,11 +362,14 @@ export class HiWordsSettingTab extends PluginSettingTab {
         this.addHighlightScopeSettings();
 
         new Setting(containerEl)
-            .setName('Morphology Engine')
-            .setDesc('Hybrid uses inverse analysis as primary path; Legacy keeps aggressive generated inflections.')
+            .setName(t('settings.morphology_engine') || 'Morphology Engine')
+            .setDesc(
+                t('settings.morphology_engine_desc')
+                || 'Hybrid uses inverse analysis as primary path; Legacy keeps aggressive generated inflections.'
+            )
             .addDropdown(dropdown => dropdown
-                .addOption('hybrid', 'Hybrid (Recommended)')
-                .addOption('legacy', 'Legacy')
+                .addOption('hybrid', t('settings.morphology_engine_hybrid') || 'Hybrid (Recommended)')
+                .addOption('legacy', t('settings.morphology_engine_legacy') || 'Legacy')
                 .setValue(this.plugin.settings.morphologyEngineMode || 'hybrid')
                 .onChange(async (value) => {
                     this.plugin.settings.morphologyEngineMode = value as MorphologyEngineMode;
@@ -375,11 +378,14 @@ export class HiWordsSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('Morphology Fallback')
-            .setDesc('Conservative only generates inflections when analyzer is unavailable; Aggressive always generates.')
+            .setName(t('settings.morphology_fallback') || 'Morphology Fallback')
+            .setDesc(
+                t('settings.morphology_fallback_desc')
+                || 'Conservative only generates inflections when analyzer is unavailable; Aggressive always generates.'
+            )
             .addDropdown(dropdown => dropdown
-                .addOption('conservative', 'Conservative (Recommended)')
-                .addOption('aggressive', 'Aggressive')
+                .addOption('conservative', t('settings.morphology_fallback_conservative') || 'Conservative (Recommended)')
+                .addOption('aggressive', t('settings.morphology_fallback_aggressive') || 'Aggressive')
                 .setValue(this.plugin.settings.morphologyFallbackMode || 'conservative')
                 .onChange(async (value) => {
                     this.plugin.settings.morphologyFallbackMode = value as MorphologyFallbackMode;

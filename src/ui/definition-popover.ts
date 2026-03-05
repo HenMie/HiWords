@@ -297,6 +297,13 @@ export class DefinitionPopover extends Component {
         
         // 先添加标题容器
         tooltip.appendChild(titleContainer);
+
+        if (wordDef.pronunciation && wordDef.pronunciation.trim()) {
+            const pronunciationEl = document.createElement('div');
+            pronunciationEl.className = 'hi-words-tooltip-pronunciation';
+            pronunciationEl.textContent = wordDef.pronunciation;
+            tooltip.appendChild(pronunciationEl);
+        }
         
         // 词源显示（如果存在）
         if (wordDef.etymology && wordDef.etymology.trim()) {

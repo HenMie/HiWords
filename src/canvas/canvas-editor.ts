@@ -27,6 +27,7 @@ export class CanvasEditor {
      * @param definition 词汇定义
      * @param color 可选的节点颜色
      * @param etymology 可选的词源
+     * @param pronunciation 可选的发音
      * @returns 操作是否成功
      */
     async addWordToCanvas(
@@ -34,7 +35,8 @@ export class CanvasEditor {
         word: string,
         definition: string,
         color?: number,
-        etymology?: string
+        etymology?: string,
+        pronunciation?: string
     ): Promise<boolean> {
         try {
             const file = this.app.vault.getAbstractFileByPath(bookPath);
@@ -94,14 +96,7 @@ export class CanvasEditor {
                 }
 
                 // 构建文本
-                let nodeText = word;
-                if (etymology) {
-                    nodeText += `\n[${etymology}]`;
-                }
-                if (definition) {
-                    const needsBlankLine = !!etymology;
-                    nodeText += `${needsBlankLine ? '\n\n' : '\n'}${definition}`;
-                }
+                const nodeText = this.buildNodeText(word, definition, etymology, pronunciation);
 
                 const newNode: CanvasNode = {
                     id: nodeId,
@@ -136,6 +131,7 @@ export class CanvasEditor {
      * @param definition 词汇定义
      * @param color 可选的节点颜色
      * @param etymology 可选的词源
+     * @param pronunciation 可选的发音
      * @returns 操作是否成功
      */
     async updateWordInCanvas(
@@ -144,7 +140,8 @@ export class CanvasEditor {
         word: string,
         definition: string,
         color?: number,
-        etymology?: string
+        etymology?: string,
+        pronunciation?: string
     ): Promise<boolean> {
         try {
             const file = this.app.vault.getAbstractFileByPath(bookPath);
@@ -166,16 +163,7 @@ export class CanvasEditor {
                     return JSON.stringify(canvasData);
                 }
 
-                let nodeText = word;
-                if (etymology) {
-                    nodeText += `\n[${etymology}]`;
-                }
-                if (definition) {
-                    const needsBlankLine = !!etymology;
-                    nodeText += `${needsBlankLine ? '\n\n' : '\n'}${definition}`;
-                }
-
-                canvasData.nodes[index].text = nodeText;
+                canvasData.nodes[index].text = this.buildNodeText(word, definition, etymology, pronunciation);
                 if (color !== undefined) {
                     canvasData.nodes[index].color = color.toString();
                 } else {
@@ -281,5 +269,25 @@ export class CanvasEditor {
             console.error(`设置节点颜色失败: ${error}`);
             return false;
         }
+    }
+
+    private buildNodeText(
+        word: string,
+        definition: string,
+        etymology?: string,
+        pronunciation?: string
+    ): string {
+        let nodeText = word;
+        if (pronunciation) {
+            nodeText += `\n【${pronunciation}】`;
+        }
+        if (etymology) {
+            nodeText += `\n[${etymology}]`;
+        }
+        if (definition) {
+            const hasMeta = Boolean(pronunciation || etymology);
+            nodeText += `${hasMeta ? '\n\n' : '\n'}${definition}`;
+        }
+        return nodeText;
     }
 }

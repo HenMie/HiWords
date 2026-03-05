@@ -1,6 +1,6 @@
 import { App, Modal, Notice, setIcon } from 'obsidian';
 import type { VocabularyBook, WordDefinition } from '../utils';
-import { isKoreanText, INPUT_FOCUS_DELAY } from '../utils';
+import { isKoreanText, isJapaneseText, INPUT_FOCUS_DELAY } from '../utils';
 import HiWordsPlugin from '../../main';
 import { t } from '../i18n';
 import { DictionaryService } from '../services/dictionary-service';
@@ -112,6 +112,26 @@ export class AddWordModal extends Modal {
             bookSelect.disabled = true;
         }
 
+        const resolveSelectedBook = (): VocabularyBook | undefined => {
+            const bookPath = this.isEditMode && this.definition ? this.definition.source : bookSelect.value;
+            return this.plugin.settings.vocabularyBooks.find((book) => book.path === bookPath);
+        };
+
+        const getPronunciationPlaceholder = (value: string): string => {
+            const text = value.trim();
+            const selectedBook = resolveSelectedBook();
+            if (selectedBook?.morphology === 'japanese' || isJapaneseText(text)) {
+                return t('modals.pronunciation_placeholder_japanese') || '例如：かな / カナ';
+            }
+
+            const isEnglishLike = /^[A-Za-z][A-Za-z' -]*$/.test(text);
+            if (isEnglishLike) {
+                return t('modals.pronunciation_placeholder_english') || 'e.g.: /həˈloʊ/';
+            }
+
+            return t('modals.pronunciation_placeholder') || '例如：/həˈloʊ/ 或 かな';
+        };
+
         const colorSelectContainer = contentEl.createDiv({ cls: 'hiwords-form-item' });
         colorSelectContainer.createEl('label', { text: t('modals.color_label'), cls: 'hiwords-form-item-label' });
         const colorSelect = colorSelectContainer.createEl('select', { cls: 'dropdown setting-item-select' });
@@ -140,6 +160,30 @@ export class AddWordModal extends Modal {
         if (this.isEditMode && this.definition?.etymology) {
             etymologyInput.value = this.definition.etymology;
         }
+
+        const pronunciationContainer = contentEl.createDiv({ cls: 'hiwords-form-item' });
+        pronunciationContainer.createEl('label', {
+            text: t('modals.pronunciation_label') || '发音（可选）',
+            cls: 'hiwords-form-item-label'
+        });
+        const pronunciationInput = pronunciationContainer.createEl('input', {
+            type: 'text',
+            placeholder: '',
+            cls: 'setting-item-input pronunciation-input'
+        });
+        if (this.isEditMode && this.definition?.pronunciation) {
+            pronunciationInput.value = this.definition.pronunciation;
+        }
+
+        const updatePronunciationPlaceholder = () => {
+            const sourceWord = this.isEditMode
+                ? this.word
+                : wordInput?.value ?? this.word;
+            pronunciationInput.placeholder = getPronunciationPlaceholder(sourceWord);
+        };
+        updatePronunciationPlaceholder();
+        bookSelect.addEventListener('change', updatePronunciationPlaceholder);
+        wordInput?.addEventListener('input', updatePronunciationPlaceholder);
 
         const definitionContainer = contentEl.createDiv({ cls: 'hiwords-form-item' });
         const definitionLabelContainer = definitionContainer.createDiv({ cls: 'hiwords-definition-label-container' });
@@ -235,6 +279,7 @@ export class AddWordModal extends Modal {
             const selectedBook = bookSelect.value;
             const colorValue = colorSelect.value ? parseInt(colorSelect.value, 10) : undefined;
             const etymology = etymologyInput.value.trim() || undefined;
+            const pronunciation = pronunciationInput.value.trim() || undefined;
 
             let finalWord = this.word.trim();
             if (!this.isEditMode && wordInput) {
@@ -269,7 +314,8 @@ export class AddWordModal extends Modal {
                         finalWord,
                         definition,
                         colorValue,
-                        etymology
+                        etymology,
+                        pronunciation
                     );
                 } else {
                     success = await this.plugin.vocabularyManager.addWordToCanvas(
@@ -277,7 +323,8 @@ export class AddWordModal extends Modal {
                         finalWord,
                         definition,
                         colorValue,
-                        etymology
+                        etymology,
+                        pronunciation
                     );
                 }
 

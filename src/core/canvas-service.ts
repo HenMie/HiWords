@@ -64,6 +64,7 @@ export class CanvasService {
      * @param definition 定义
      * @param color 颜色（可选）
      * @param etymology 词源（可选）
+     * @param pronunciation 发音（可选）
      * @returns 操作是否成功
      */
     async addWordToCanvas(
@@ -71,7 +72,8 @@ export class CanvasService {
         word: string,
         definition: string,
         color?: number,
-        etymology?: string
+        etymology?: string,
+        pronunciation?: string
     ): Promise<boolean> {
         try {
             return await this.canvasEditor.addWordToCanvas(
@@ -79,7 +81,8 @@ export class CanvasService {
                 word,
                 definition,
                 color,
-                etymology
+                etymology,
+                pronunciation
             );
         } catch (error) {
             console.error('[CanvasService] 添加词汇失败:', error);
@@ -95,6 +98,7 @@ export class CanvasService {
      * @param definition 定义
      * @param color 颜色（可选）
      * @param etymology 词源（可选）
+     * @param pronunciation 发音（可选）
      * @returns 操作是否成功
      */
     async updateWordInCanvas(
@@ -103,7 +107,8 @@ export class CanvasService {
         word: string,
         definition: string,
         color?: number,
-        etymology?: string
+        etymology?: string,
+        pronunciation?: string
     ): Promise<boolean> {
         try {
             return await this.canvasEditor.updateWordInCanvas(
@@ -112,7 +117,8 @@ export class CanvasService {
                 word,
                 definition,
                 color,
-                etymology
+                etymology,
+                pronunciation
             );
         } catch (error) {
             console.error('[CanvasService] 更新词汇失败:', error);
@@ -185,12 +191,16 @@ export class CanvasService {
                 // 构建纯文本内容，不包含 frontmatter
                 let textContent = wordDef.word;
 
+                if (wordDef.pronunciation) {
+                    textContent += `\n【${wordDef.pronunciation}】`;
+                }
+
                 if (wordDef.etymology) {
                     textContent += `\n[${wordDef.etymology}]`;
                 }
 
                 if (wordDef.definition) {
-                    const needsBlankLine = !!wordDef.etymology;
+                    const needsBlankLine = !!wordDef.pronunciation || !!wordDef.etymology;
                     textContent += `${needsBlankLine ? '\n\n' : '\n'}${wordDef.definition}`;
                 }
 
