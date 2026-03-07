@@ -13,6 +13,22 @@
     "parserOptions": {
         "sourceType": "module"
     },
+    "overrides": [
+      {
+        "files": [
+          "src/core/word-highlighter.ts",
+          "src/ui/definition-popover.ts",
+          "src/ui/sidebar-view.ts",
+          "src/ui/pdf-highlighter.ts",
+          "src/ui/reading-mode-highlighter.ts",
+          "src/utils/markdown-link-binder.ts"
+        ],
+        "rules": {
+          "@typescript-eslint/no-explicit-any": "off",
+          "@typescript-eslint/no-non-null-assertion": "off"
+        }
+      }
+    ],
     "rules": {
       "no-unused-vars": "off",
       "@typescript-eslint/no-unused-vars": ["error", { "args": "none" }],

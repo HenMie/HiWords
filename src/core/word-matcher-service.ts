@@ -22,7 +22,7 @@ const PRONUNCIATION_WORD_MATCH_PRIORITY = 1;
  * 支持韩语和日语形态学匹配
  */
 export class WordMatcherService {
-    private trie: Trie;
+    private trie: Trie<WordDefinition>;
     private unifiedMorphologyService: UnifiedMorphologyService;
     private vocabularyManager: VocabularyManager;
     private patternDefinitions: WordDefinition[] = [];
@@ -31,7 +31,7 @@ export class WordMatcherService {
 
     constructor(vocabularyManager: VocabularyManager) {
         this.vocabularyManager = vocabularyManager;
-        this.trie = new Trie();
+        this.trie = new Trie<WordDefinition>();
         // 复用 VocabularyManager 中的统一形态学服务
         this.unifiedMorphologyService = vocabularyManager.getUnifiedMorphologyService();
         this.ensureSnapshot();
@@ -41,7 +41,7 @@ export class WordMatcherService {
      * 构建单词前缀树（包含形态学索引）
      * @param includeAllWords 是否包含所有单词（包括已掌握的），默认 false（只包含未掌握的）
      */
-    public buildTrie(includeAllWords: boolean = false): void {
+    public buildTrie(includeAllWords = false): void {
         const currentVersion = this.vocabularyManager.getMatcherSnapshotVersion();
         this.buildTrieInternal(includeAllWords, currentVersion);
     }
@@ -187,7 +187,7 @@ export class WordMatcherService {
     /**
      * 获取Trie实例
      */
-    public getTrie(): Trie {
+    public getTrie(): Trie<WordDefinition> {
         this.ensureSnapshot();
         return this.trie;
     }
@@ -288,7 +288,7 @@ export class WordMatcherService {
     public findMatches(text: string) {
         this.ensureSnapshot();
         const trieMatches = this.trie.findAllMatches(text, this.canSkipSpace).map(match => {
-            const definition = match.payload as WordDefinition | undefined;
+            const definition = match.payload ?? undefined;
             return {
                 ...match,
                 matchedText: text.slice(match.from, match.to),

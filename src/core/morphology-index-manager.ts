@@ -222,7 +222,10 @@ export class MorphologyIndexManager {
                 this.globalIndex.set(baseForm, new Map());
             }
 
-            const globalInflections = this.globalIndex.get(baseForm)!;
+            const globalInflections = this.globalIndex.get(baseForm);
+            if (!globalInflections) {
+                continue;
+            }
             for (const inflection of inflections) {
                 const currentCount = globalInflections.get(inflection) || 0;
                 globalInflections.set(inflection, currentCount + 1);

@@ -8,6 +8,7 @@ import ja from './ja';
 
 // 支持的语言
 export type SupportedLocale = 'en' | 'zh' | 'es' | 'fr' | 'de' | 'ja';
+type TranslationValue = string | { [key: string]: TranslationValue };
 
 // 语言包接口
 export interface LanguagePack {
@@ -212,10 +213,10 @@ export class I18n {
         const locale = this.getCurrentLocale();
         const pack = languagePacks[locale];
         const keys = key.split('.');
-        let result: any = pack;
+        let result: TranslationValue = pack as unknown as TranslationValue;
         
         for (const k of keys) {
-            if (result && result[k] !== undefined) {
+            if (typeof result !== 'string' && result[k] !== undefined) {
                 result = result[k];
             } else {
                 // 尝试从英语语言包获取后备值
@@ -239,7 +240,7 @@ export class I18n {
             }
         }
         
-        return result;
+        return typeof result === 'string' ? result : fallback ?? key;
     }
     
     /**
@@ -249,10 +250,10 @@ export class I18n {
      * @returns 翻译文本或 null
      */
     private getFromPack(pack: LanguagePack, keys: string[]): string | null {
-        let result: any = pack;
+        let result: TranslationValue = pack as unknown as TranslationValue;
         
         for (const k of keys) {
-            if (result && result[k] !== undefined) {
+            if (typeof result !== 'string' && result[k] !== undefined) {
                 result = result[k];
             } else {
                 return null;

@@ -369,7 +369,10 @@ export class HiWordsSettingTab extends PluginSettingTab {
                 .setPlaceholder('https://api.openai.com/v1/chat/completions')
                 .setValue(aiSettings.apiUrl || '')
                 .onChange(async (val) => {
-                    this.plugin.settings.aiDictionary!.apiUrl = val.trim();
+                    if (!this.plugin.settings.aiDictionary) {
+                        return;
+                    }
+                    this.plugin.settings.aiDictionary.apiUrl = val.trim();
                     await this.plugin.saveSettings();
                 }));
 
@@ -381,7 +384,10 @@ export class HiWordsSettingTab extends PluginSettingTab {
                 text.setPlaceholder('sk-...')
                     .setValue(aiSettings.apiKey || '')
                     .onChange(async (val) => {
-                        this.plugin.settings.aiDictionary!.apiKey = val.trim();
+                        if (!this.plugin.settings.aiDictionary) {
+                            return;
+                        }
+                        this.plugin.settings.aiDictionary.apiKey = val.trim();
                         await this.plugin.saveSettings();
                     });
             });
@@ -393,7 +399,10 @@ export class HiWordsSettingTab extends PluginSettingTab {
                 .setPlaceholder('gpt-4o-mini')
                 .setValue(aiSettings.model || '')
                 .onChange(async (val) => {
-                    this.plugin.settings.aiDictionary!.model = val.trim();
+                    if (!this.plugin.settings.aiDictionary) {
+                        return;
+                    }
+                    this.plugin.settings.aiDictionary.model = val.trim();
                     await this.plugin.saveSettings();
                 }));
 
@@ -407,7 +416,10 @@ export class HiWordsSettingTab extends PluginSettingTab {
         promptTextArea.value = aiSettings.prompt || defaultPrompt;
         promptTextArea.rows = 6;
         promptTextArea.addEventListener('blur', async () => {
-            this.plugin.settings.aiDictionary!.prompt = promptTextArea.value;
+            if (!this.plugin.settings.aiDictionary) {
+                return;
+            }
+            this.plugin.settings.aiDictionary.prompt = promptTextArea.value;
             await this.plugin.saveSettings();
         });
 
@@ -667,12 +679,12 @@ class BookFilePickerModal extends Modal {
         this.files.forEach(file => {
             const itemEl = contentEl.createEl('div', { cls: 'canvas-picker-item' });
             
-            const nameEl = itemEl.createEl('div', { 
+            itemEl.createEl('div', { 
                 text: file.basename,
                 cls: 'canvas-picker-name'
             });
             
-            const pathEl = itemEl.createEl('div', { 
+            itemEl.createEl('div', { 
                 text: file.path,
                 cls: 'canvas-picker-path'
             });

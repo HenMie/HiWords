@@ -1,4 +1,5 @@
-import { ItemView, WorkspaceLeaf, TFile, MarkdownView, MarkdownRenderer, setIcon, Notice } from 'obsidian';
+import type { EventRef } from 'obsidian';
+import { ItemView, WorkspaceLeaf, TFile, MarkdownView, MarkdownRenderer, setIcon } from 'obsidian';
 import HiWordsPlugin from '../../main';
 import { 
     WordDefinition, 
@@ -21,13 +22,18 @@ import { WordMatcherService } from '../core/word-matcher-service';
 
 export const SIDEBAR_VIEW_TYPE = 'hi-words-sidebar';
 
+interface HiWordsWorkspaceEvents {
+    on(name: 'hi-words:mastered-changed', callback: () => void): EventRef;
+    on(name: 'hi-words:settings-changed', callback: () => void): EventRef;
+}
+
 export class HiWordsSidebarView extends ItemView {
     private plugin: HiWordsPlugin;
     private currentWords: WordDefinition[] = [];
     private activeTab: 'learning' | 'mastered' = 'learning';
     private currentFile: TFile | null = null;
     private lastActiveMarkdownView: MarkdownView | null = null; // 缓存最后一个活动的MarkdownView
-    private firstLoadForFile: boolean = false; // 仅在切换到新文件后的首次渲染生效
+    private firstLoadForFile = false; // 仅在切换到新文件后的首次渲染生效
     private updateDebouncer: Debouncer; // 更新防抖器
     private measureQueue: HTMLElement[] = []; // 批量测量的队列
     private measureScheduled = false; // 是否已安排 RAF 测量
@@ -146,15 +152,16 @@ export class HiWordsSidebarView extends ItemView {
         );
 
         // 监听已掌握功能状态变化
+        const workspace = this.app.workspace as typeof this.app.workspace & HiWordsWorkspaceEvents;
         this.registerEvent(
-            this.app.workspace.on('hi-words:mastered-changed' as any, () => {
+            workspace.on('hi-words:mastered-changed', () => {
                 this.scheduleUpdate(SIDEBAR_UPDATE_DELAY.SETTINGS_CHANGE);
             })
         );
 
         // 监听设置变化（如模糊效果开关）
         this.registerEvent(
-            this.app.workspace.on('hi-words:settings-changed' as any, () => {
+            workspace.on('hi-words:settings-changed', () => {
                 this.scheduleUpdate(SIDEBAR_UPDATE_DELAY.SETTINGS_CHANGE);
             })
         );
@@ -247,7 +254,7 @@ export class HiWordsSidebarView extends ItemView {
 
             // 遍历过滤后的匹配，记录每个单词的所有出现位置
             for (const match of filteredMatches) {
-                const definition = match.payload as WordDefinition;
+                const definition = match.payload;
                 if (definition && definition.nodeId) {
                     if (!wordAllPositionsMap.has(definition.nodeId)) {
                         wordAllPositionsMap.set(definition.nodeId, {
@@ -255,7 +262,10 @@ export class HiWordsSidebarView extends ItemView {
                             positions: []
                         });
                     }
-                    wordAllPositionsMap.get(definition.nodeId)!.positions.push(match.from);
+                    const positionGroup = wordAllPositionsMap.get(definition.nodeId);
+                    if (positionGroup) {
+                        positionGroup.positions.push(match.from);
+                    }
                 }
             }
 
@@ -614,7 +624,7 @@ export class HiWordsSidebarView extends ItemView {
      * @param wordDef 单词定义
      * @param isMastered 是否为已掌握单词
      */
-    private createWordCard(container: HTMLElement, wordDef: WordDefinition, isMastered: boolean = false) {
+    private createWordCard(container: HTMLElement, wordDef: WordDefinition, isMastered = false) {
         const card = container.createEl('div', {
             cls: 'hi-words-word-card',
             attr: { 'data-word-id': wordDef.nodeId }
@@ -794,13 +804,14 @@ export class HiWordsSidebarView extends ItemView {
                     const word = wordText?.textContent?.trim();
                     if (word && this.plugin.settings.enableMasteredFeature && this.plugin.masteredService) {
                         const detail = this.currentWords.find((w) => w.word === word);
+                        const masteredService = this.plugin.masteredService;
                         if (detail) {
                             (async () => {
                                 try {
                                     if (isMastered) {
-                                        await this.plugin.masteredService!.unmarkWordAsMastered(detail.source, detail.nodeId, detail.word);
+                                        await masteredService.unmarkWordAsMastered(detail.source, detail.nodeId, detail.word);
                                     } else {
-                                        await this.plugin.masteredService!.markWordAsMastered(detail.source, detail.nodeId, detail.word);
+                                        await masteredService.markWordAsMastered(detail.source, detail.nodeId, detail.word);
                                     }
                                     setTimeout(() => this.updateView(), 100);
                                 } catch (err) {
@@ -814,7 +825,7 @@ export class HiWordsSidebarView extends ItemView {
 
                 // 来源跳转 - 现在由工具类处理，这里可以移除重复逻辑
             },
-            { capture: true } as any
+            { capture: true }
         );
         this.delegatedBound = true;
     }

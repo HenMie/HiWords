@@ -20,7 +20,7 @@ export class VocabularyCacheManager {
     private bookWordsCache: Map<string, string[]> = new Map();
     
     // 缓存有效性标志
-    private cacheValid: boolean = false;
+    private cacheValid = false;
 
     constructor() {
         // 初始化空缓存

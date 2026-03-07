@@ -312,7 +312,7 @@ export function calculateConfidence(token: Token): number {
 export function mergeSubsequentAuxiliaries(
     tokens: NormalizedToken[],
     startIndex: number,
-    maxLookAhead: number = 5,
+    maxLookAhead = 5,
     processedTokens?: Set<number>,
     debugLog?: DebugLog
 ): { mergedSurface: string; processedCount: number } {
@@ -345,7 +345,7 @@ export function buildCompoundWordResult(
     partOfSpeech: string,
     confidence: number,
     processedTokens: Set<number>,
-    shouldMergeAuxiliaries: boolean = true,
+    shouldMergeAuxiliaries = true,
     debugLog?: DebugLog
 ): { result: MorphologyAnalysisResult; processedCount: number } {
     let combinedSurface = tokenInfos.map(t => t.surface).join('');

@@ -29,7 +29,7 @@ export class KoreanMorphologyService {
     private isInitialized = false;
     private initPromise: Promise<void> | null = null;
     private app: unknown;
-    private debugMode: boolean = false;
+    private debugMode = false;
     private wordRulePipeline: TokenAnalysisRule[] | null = null;
     private documentRulePipeline: TokenAnalysisRule[] | null = null;
     private assetProvider: MorphologyAssetProvider | null = null;
@@ -51,7 +51,7 @@ export class KoreanMorphologyService {
     /**
      * 调试日志输出
      */
-    private debugLog(...args: any[]): void {
+    private debugLog(...args: unknown[]): void {
         if (this.debugMode) {
             console.log('[KoreanMorphology]', ...args);
         }
@@ -209,7 +209,7 @@ export class KoreanMorphologyService {
                     return this.fallbackAnalyze(word);
                 }
 
-                let { surface, baseForm, partOfSpeech } = analysisResult;
+                const { surface, baseForm, partOfSpeech } = analysisResult;
 
                 this.debugLog('提取的属性:', { surface, baseForm, partOfSpeech });
 
@@ -265,7 +265,12 @@ export class KoreanMorphologyService {
             calculateConfidence: calculateConfidence
         };
 
-        const ruleResult = this.applyRulePipeline(this.wordRulePipeline!, context);
+        const wordRulePipeline = this.wordRulePipeline;
+        if (!wordRulePipeline) {
+            return null;
+        }
+
+        const ruleResult = this.applyRulePipeline(wordRulePipeline, context);
         if (ruleResult) {
             return {
                 ...ruleResult.result,
@@ -388,7 +393,11 @@ export class KoreanMorphologyService {
      * 分词
      */
     private tokenizeText(text: string): Token[] {
-        return this.tokenizer!.tokenize(text);
+        const tokenizer = this.tokenizer;
+        if (!tokenizer) {
+            throw new Error('Korean tokenizer is not initialized');
+        }
+        return tokenizer.tokenize(text);
     }
 
     /**
@@ -424,7 +433,12 @@ export class KoreanMorphologyService {
                 calculateConfidence: calculateConfidence
             };
 
-            const ruleResult = this.applyRulePipeline(this.documentRulePipeline!, context);
+            const documentRulePipeline = this.documentRulePipeline;
+            if (!documentRulePipeline) {
+                return results;
+            }
+
+            const ruleResult = this.applyRulePipeline(documentRulePipeline, context);
             if (ruleResult) {
                 this.debugLog(`[analyzeDocumentTokens] 规则命中: ${ruleResult.result.surface} → ${ruleResult.result.baseForm}`);
                 results.push({
@@ -470,7 +484,10 @@ export class KoreanMorphologyService {
             if (!morphologyIndex.has(result.baseForm)) {
                 morphologyIndex.set(result.baseForm, new Set());
             }
-            morphologyIndex.get(result.baseForm)!.add(result.surface);
+            const inflections = morphologyIndex.get(result.baseForm);
+            if (inflections) {
+                inflections.add(result.surface);
+            }
 
             // 记录分析结果
             analysisResults.push(result);

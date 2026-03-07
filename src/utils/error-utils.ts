@@ -83,7 +83,7 @@ export function formatUserFriendlyError(error: unknown, context: string): string
 export function logAndFormatError(
     error: unknown,
     context: string,
-    logPrefix: string = '[HiWords]'
+    logPrefix = '[HiWords]'
 ): string {
     const userFriendlyMessage = formatUserFriendlyError(error, context);
     console.error(`${logPrefix} ${context}:`, error);

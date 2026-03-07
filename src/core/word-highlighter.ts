@@ -6,8 +6,7 @@ import {
     ViewUpdate,
     ViewPlugin,
     PluginSpec,
-    PluginValue,
-    WidgetType
+    PluginValue
 } from '@codemirror/view';
 import { editorViewField } from 'obsidian';
 import { VocabularyManager } from './vocabulary-manager';
@@ -73,7 +72,7 @@ const highlightState = StateField.define<DecorationSet>({
     update(decorations, tr) {
         decorations = decorations.map(tr.changes);
         
-        for (let effect of tr.effects) {
+        for (const effect of tr.effects) {
             if (effect.is(forceUpdateEffect)) {
                 // 强制重新构建装饰器
                 return Decoration.none;
@@ -163,7 +162,6 @@ export class WordHighlighter implements PluginValue {
             }
         }
 
-        const startTime = performance.now();
         const builder = new RangeSetBuilder<Decoration>();
         const matches: WordMatch[] = [];
 
@@ -209,7 +207,7 @@ export class WordHighlighter implements PluginValue {
         this.lastDocHash = currentDocHash;
         
         // 扫描可见范围内的文本
-        for (let { from, to } of view.visibleRanges) {
+        for (const { from, to } of view.visibleRanges) {
             const text = view.state.sliceDoc(from, to);
             matches.push(...this.findWordMatches(text, from));
         }

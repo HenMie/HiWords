@@ -1,7 +1,7 @@
 // Canvas 节点类型定义
 export interface CanvasNode {
     id: string;
-    type: 'text' | 'group' | string; // 支持分组类型
+    type: 'text' | 'group' | 'file' | string; // 支持分组和文件类型
     x: number;
     y: number;
     width: number;
@@ -16,7 +16,7 @@ export interface CanvasNode {
 // Canvas 数据结构
 export interface CanvasData {
     nodes: CanvasNode[];
-    edges: any[];
+    edges: unknown[];
 }
 
 // 词汇定义

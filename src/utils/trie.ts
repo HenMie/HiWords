@@ -2,11 +2,11 @@
  * 前缀树(Trie)数据结构实现
  * 用于高效地匹配多个单词
  */
-export class Trie {
-    private root: TrieNode;
+export class Trie<TPayload = unknown> {
+    private root: TrieNode<TPayload>;
 
     constructor() {
-        this.root = new TrieNode();
+        this.root = new TrieNode<TPayload>();
     }
 
     /**
@@ -15,7 +15,7 @@ export class Trie {
      * @param payload 与单词关联的数据
      * @param options 添加选项（可选）
      */
-    addWord(word: string, payload: any, options: TrieAddWordOptions = {}): void {
+    addWord(word: string, payload: TPayload, options: TrieAddWordOptions = {}): void {
         if (!word) {
             return;
         }
@@ -25,10 +25,12 @@ export class Trie {
         const priority = options.priority ?? DEFAULT_WORD_PRIORITY;
         
         for (const char of lowerWord) {
-            if (!node.children.has(char)) {
-                node.children.set(char, new TrieNode());
+            let childNode = node.children.get(char);
+            if (!childNode) {
+                childNode = new TrieNode<TPayload>();
+                node.children.set(char, childNode);
             }
-            node = node.children.get(char)!;
+            node = childNode;
         }
 
         if (node.isEndOfWord && priority < node.priority) {
@@ -48,15 +50,15 @@ export class Trie {
      *                     接收参数：(fullText: string, matchStart: number, spacePosition: number) => boolean
      * @returns 匹配结果数组，每个结果包含单词、位置和关联数据
      */
-    findAllMatches(text: string, canSkipSpace?: (fullText: string, matchStart: number, spacePosition: number) => boolean): TrieMatch[] {
-        const matches: TrieMatch[] = [];
+    findAllMatches(text: string, canSkipSpace?: (fullText: string, matchStart: number, spacePosition: number) => boolean): TrieMatch<TPayload>[] {
+        const matches: TrieMatch<TPayload>[] = [];
         const lowerText = text.toLowerCase();
         
         // 对文本中的每个位置尝试匹配
         for (let i = 0; i < lowerText.length; i++) {
             let node = this.root;
             let j = i;
-            let longestMatch: TrieMatch | null = null;
+            let longestMatch: TrieMatch<TPayload> | null = null;
             let matchedChars = 0;
             
             // 尝试从当前位置匹配单词，保留最长匹配
@@ -115,17 +117,17 @@ export class Trie {
      * 清空前缀树
      */
     clear(): void {
-        this.root = new TrieNode();
+        this.root = new TrieNode<TPayload>();
     }
 }
 
 /**
  * 前缀树节点
  */
-class TrieNode {
-    children: Map<string, TrieNode>;
+class TrieNode<TPayload> {
+    children: Map<string, TrieNode<TPayload>>;
     isEndOfWord: boolean;
-    payload: any;
+    payload: TPayload | null;
     word: string | null;
     priority: number;
     
@@ -147,11 +149,11 @@ export interface TrieAddWordOptions {
 /**
  * 前缀树匹配结果
  */
-export interface TrieMatch {
+export interface TrieMatch<TPayload = unknown> {
     word: string;
     from: number;
     to: number;
-    payload: any;
+    payload: TPayload | null;
 }
 
 /**
@@ -166,7 +168,7 @@ function isAlphaNumeric(char: string): boolean {
  * @param matches 原始匹配结果数组
  * @returns 处理后的无重叠匹配数组
  */
-export function removeOverlappingMatches(matches: TrieMatch[]): TrieMatch[] {
+export function removeOverlappingMatches<TPayload>(matches: TrieMatch<TPayload>[]): TrieMatch<TPayload>[] {
     if (matches.length <= 1) return matches;
     
     // 按位置排序，位置相同时按长度降序排序（长的在前）
@@ -177,7 +179,7 @@ export function removeOverlappingMatches(matches: TrieMatch[]): TrieMatch[] {
         return (b.to - b.from) - (a.to - a.from);
     });
     
-    const result: TrieMatch[] = [];
+    const result: TrieMatch<TPayload>[] = [];
     let lastEnd = 0;
     
     for (const match of matches) {

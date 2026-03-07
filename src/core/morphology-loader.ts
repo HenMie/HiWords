@@ -14,7 +14,7 @@ export class MorphologyLoader {
     private koreanLoading: Promise<KoreanMorphologyService> | null = null;
     private japaneseLoading: Promise<JapaneseMorphologyService> | null = null;
     private app: unknown;
-    private debugMode: boolean = false;
+    private debugMode = false;
     private assetProvider: MorphologyAssetProvider | null = null;
 
     constructor(app?: unknown, assetProvider?: MorphologyAssetProvider) {

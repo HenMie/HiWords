@@ -58,7 +58,7 @@ const SOURCE_WEIGHTS: Record<MorphologyCandidateSource, number> = {
  */
 export class UnifiedMorphologyService {
     private loader: MorphologyLoader;
-    private debugMode: boolean = false;
+    private debugMode = false;
 
     constructor(app?: unknown, assetProvider?: MorphologyAssetProvider) {
         this.loader = new MorphologyLoader(app, assetProvider);

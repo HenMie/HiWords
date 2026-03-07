@@ -3,21 +3,15 @@
  * 实现日语动词、形容词、サ变动词等的活用形还原
  */
 
-import type {
-    TokenAnalysisRule,
-    TokenRuleContext,
-    NormalizedToken
-} from './types';
+import type { TokenAnalysisRule } from './types';
 
 import {
     isVerb,
     isIAdjective,
     isNaAdjective,
-    isNoun,
     isAuxiliaryVerb,
     isSuruVerbStem,
     isSuruConjugation,
-    isSuffix,
     buildCompoundWordResult,
     calculateConfidence
 } from './token-normalizer';
@@ -320,4 +314,3 @@ function collectConsumedIndices(startIndex: number, baseLength: number, processe
     }
     return consumed;
 }
-

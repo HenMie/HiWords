@@ -10,7 +10,7 @@
  * @param delay 延迟时间（毫秒）
  * @returns 防抖后的函数和清理函数
  */
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends (...args: unknown[]) => unknown>(
     func: T,
     delay: number
 ): {
@@ -47,7 +47,7 @@ export function debounce<T extends (...args: any[]) => any>(
  * @param delay 时间间隔（毫秒）
  * @returns 节流后的函数和重置函数
  */
-export function throttle<T extends (...args: any[]) => any>(
+export function throttle<T extends (...args: unknown[]) => unknown>(
     func: T,
     delay: number
 ): {
@@ -185,4 +185,3 @@ export class Throttler {
         }
     }
 }
-

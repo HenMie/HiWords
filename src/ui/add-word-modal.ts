@@ -21,7 +21,7 @@ export class AddWordModal extends Modal {
     // 静态变量，记住用户上次选择的生词本（重启后丢失）
     private static lastSelectedBookPath: string | null = null;
 
-    constructor(app: App, plugin: HiWordsPlugin, word: string, sentence: string = '', isEditMode: boolean = false) {
+    constructor(app: App, plugin: HiWordsPlugin, word: string, sentence = '', isEditMode = false) {
         super(app);
         this.plugin = plugin;
         this.originalWord = word;
@@ -245,9 +245,13 @@ export class AddWordModal extends Modal {
                 if (!confirmed) return;
                 const loadingNotice = new Notice(t('notices.deleting_word'), 0);
                 try {
+                    const definition = this.definition;
+                    if (!definition) {
+                        throw new Error('Definition is not available in edit mode');
+                    }
                     const success = await this.plugin.vocabularyManager.deleteWordFromCanvas(
-                        this.definition!.source,
-                        this.definition!.nodeId
+                        definition.source,
+                        definition.nodeId
                     );
                     loadingNotice.hide();
                     if (success) {

@@ -1,4 +1,4 @@
-import { App, MarkdownRenderer, MarkdownView, Notice, setIcon, TFile, Component } from 'obsidian';
+import { App, MarkdownRenderer, MarkdownView, setIcon, Component } from 'obsidian';
 import { VocabularyManager, MasteredService } from '../core';
 import { WordDefinition, MarkdownLinkBinder, WordActionUtils } from '../utils';
 import { playWordTTS } from '../utils';
@@ -41,7 +41,7 @@ export class DefinitionPopover extends Component {
     private simpleMarkdownToHtml(markdown: string): string {
         if (!markdown) return '';
 
-        let html = markdown
+        const html = markdown
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
@@ -52,7 +52,7 @@ export class DefinitionPopover extends Component {
             .replace(/\*(.*?)\*/g, '<em>$1</em>')
             .replace(/__(.*?)__/g, '<strong>$1</strong>')
             .replace(/_(.*?)_/g, '<em>$1</em>')
-            .replace(/\[([^\]]+)\]\(([^\)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
+            .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
             .replace(/^\* (.*?)$/gm, '<li>$1</li>')
             .replace(/^\d+\. (.*?)$/gm, '<li>$1</li>')
             .replace(/^> (.*?)$/gm, '<blockquote>$1</blockquote>')
@@ -70,7 +70,9 @@ export class DefinitionPopover extends Component {
             const headingMatches = text.match(/^(#{1,3}) (.+)$/gm);
             if (headingMatches) {
                 headingMatches.forEach(match => {
-                    const [_, hashes, content] = match.match(/^(#{1,3}) (.+)$/) || [];
+                    const headingParts = match.match(/^(#{1,3}) (.+)$/);
+                    const hashes = headingParts?.[1];
+                    const content = headingParts?.[2];
                     if (hashes && content) {
                         const level = hashes.length;
                         const heading = document.createElement(`h${level}`);
@@ -86,7 +88,7 @@ export class DefinitionPopover extends Component {
             if (!text.trim()) return;
             text = text.replace(/\*\*(.*?)\*\*/g, (_, content) => `[STRONG]${content}[/STRONG]`);
             text = text.replace(/\*(.*?)\*/g, (_, content) => `[EM]${content}[/EM]`);
-            text = text.replace(/\[([^\]]+)\]\(([^\)]+)\)/g, (_, linkText, url) => `[LINK:${url}]${linkText}[/LINK]`);
+            text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, linkText, url) => `[LINK:${url}]${linkText}[/LINK]`);
             text = text.replace(/`(.*?)`/g, (_, content) => `[CODE]${content}[/CODE]`);
             const paragraphs = text.split('\n');
             paragraphs.forEach(para => {
@@ -127,7 +129,7 @@ export class DefinitionPopover extends Component {
                 }
             });
         };
-        let remainingText = processHeadings(markdownText);
+        const remainingText = processHeadings(markdownText);
         processText(remainingText);
     }
 
@@ -252,6 +254,7 @@ export class DefinitionPopover extends Component {
             }
 
             if (!wordDefinition) return;
+            const resolvedDefinition = wordDefinition;
 
             // 悬停意图：延迟展示，避免快速划过时频繁创建
             this.hoverIntentTimer = window.setTimeout(() => {
@@ -261,7 +264,7 @@ export class DefinitionPopover extends Component {
                     return; // 限流：距离上次显示太近
                 }
                 this.lastShowTs = now;
-                this.createTooltip(target, wordDefinition!);
+                this.createTooltip(target, resolvedDefinition);
             }, DefinitionPopover.SHOW_DELAY_MS);
 
         } catch (error) {
@@ -358,7 +361,8 @@ export class DefinitionPopover extends Component {
             const detailDef = wordDef; // 直接使用传入的词汇定义
             if (detailDef && detailDef.source) {
                 // 已掌握按钮（添加到标题容器中）
-                if (this.masteredService && this.masteredService.isEnabled) {
+                const masteredService = this.masteredService;
+                if (masteredService && masteredService.isEnabled) {
                     const buttonContainer = document.createElement('div');
                     buttonContainer.className = 'hi-words-tooltip-title-mastered-button';
                     // 移除 aria-label 以避免与弹出框重叠
@@ -373,9 +377,9 @@ export class DefinitionPopover extends Component {
                         try {
                             // 切换已掌握状态
                             if (detailDef.mastered) {
-                                await this.masteredService!.unmarkWordAsMastered(detailDef.source, detailDef.nodeId, detailDef.word);
+                                await masteredService.unmarkWordAsMastered(detailDef.source, detailDef.nodeId, detailDef.word);
                             } else {
-                                await this.masteredService!.markWordAsMastered(detailDef.source, detailDef.nodeId, detailDef.word);
+                                await masteredService.markWordAsMastered(detailDef.source, detailDef.nodeId, detailDef.word);
                             }
                             
                             // 点击已掌握按钮后清理预览框
@@ -462,7 +466,7 @@ export class DefinitionPopover extends Component {
             const sidebarLeaves = this.app.workspace.getLeavesOfType('hi-words-sidebar');
 
             sidebarLeaves.forEach(leaf => {
-                const sidebarView = leaf.view as any;
+                const sidebarView = leaf.view as { syncToWord?: (nodeId: string) => void };
                 // 检查侧边栏视图是否有滚动同步方法
                 if (sidebarView && typeof sidebarView.syncToWord === 'function') {
                     sidebarView.syncToWord(wordDef.nodeId);

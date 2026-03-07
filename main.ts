@@ -1,4 +1,4 @@
-import { App, Plugin, TFile, Notice, WorkspaceLeaf, Editor, MarkdownView } from 'obsidian';
+import { Plugin, TFile, Notice, WorkspaceLeaf, Editor, MarkdownView } from 'obsidian';
 import { Extension } from '@codemirror/state';
 // 使用新的模块化导入
 import { HiWordsSettings, VocabularyBook, extractSentenceFromEditorMultiline, HIGHLIGHTER_REFRESH, PLUGIN_UNLOAD_TIMEOUT } from './src/utils';
@@ -539,7 +539,7 @@ export default class HiWordsPlugin extends Plugin {
      * 检查单词是否已存在，如果存在则打开编辑模式，否则打开添加模式
      * @param word 要添加或编辑的单词
      */
-    addOrEditWord(word: string, sentence: string = '') {
+    addOrEditWord(word: string, sentence = '') {
         if (this.migrationRequired) {
             this.showMigrationRequiredNotice();
             return;

@@ -136,7 +136,7 @@ export class VocabularyManager {
     /**
      * 加载单个生词本
      */
-    async loadVocabularyBook(book: VocabularyBook, invalidateSnapshot: boolean = true): Promise<void> {
+    async loadVocabularyBook(book: VocabularyBook, invalidateSnapshot = true): Promise<void> {
         const file = this.app.vault.getAbstractFileByPath(book.path);
 
         if (!file || !(file instanceof TFile)) {
@@ -355,7 +355,7 @@ export class VocabularyManager {
     /**
      * 使匹配快照失效并递增版本号
      */
-    invalidateMatcherSnapshot(reason: string = 'unknown'): void {
+    invalidateMatcherSnapshot(reason = 'unknown'): void {
         this.matcherSnapshotVersion++;
         if (this.settings.debugMode) {
             console.debug('[HiWords] matcher snapshot invalidated', {
@@ -1117,21 +1117,16 @@ export class VocabularyManager {
         visited: Set<string>,
         language: 'korean' | 'japanese' | 'unknown' = 'unknown'
     ): Promise<void> {
-        try {
-            // 使用统一形态学服务进行分析
-            const morphologyLang = language === 'unknown' ? 'auto' : language;
-            const baseForm = await this.analyzeWordToBaseForm(word, morphologyLang);
-            if (baseForm && baseForm !== word) {
-                // 用原型再次查找
-                const baseDefinition = this.getDefinition(baseForm, visited);
-                if (baseDefinition) {
-                    // 缓存活用形到原型的映射
-                    this.cacheManager.setDefinition(word, baseDefinition);
-                }
+        // 使用统一形态学服务进行分析
+        const morphologyLang = language === 'unknown' ? 'auto' : language;
+        const baseForm = await this.analyzeWordToBaseForm(word, morphologyLang);
+        if (baseForm && baseForm !== word) {
+            // 用原型再次查找
+            const baseDefinition = this.getDefinition(baseForm, visited);
+            if (baseDefinition) {
+                // 缓存活用形到原型的映射
+                this.cacheManager.setDefinition(word, baseDefinition);
             }
-        } catch (error) {
-            // 错误已在调用处处理，这里静默失败
-            throw error;
         }
     }
 }

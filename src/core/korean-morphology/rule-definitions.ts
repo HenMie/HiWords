@@ -1,7 +1,4 @@
-import type {
-    TokenAnalysisRule,
-    TokenRuleContext
-} from './types';
+import type { TokenAnalysisRule } from './types';
 
 import {
     buildCompoundWordResult,
@@ -11,7 +8,6 @@ import {
     isHadaRelatedToken,
     isNounToken,
     isVerbOrAdjective,
-    mergeSubsequentEndings,
     shouldMergeHadaEndings
 } from './token-normalizer';
 
@@ -358,4 +354,3 @@ function collectConsumedIndices(startIndex: number, baseLength: number, processe
     }
     return consumed;
 }
-

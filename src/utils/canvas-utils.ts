@@ -6,12 +6,20 @@
 import { App, TFile } from 'obsidian';
 import { CanvasData, CanvasNode } from './types';
 
+type CryptoWindow = Window & typeof globalThis & {
+    msCrypto?: Crypto;
+};
+
 /**
  * 生成 16 位十六进制小写 ID（贴近标准 Canvas ID 风格）
  */
 export function genHex16(): string {
     const bytes = new Uint8Array(8);
-    (window.crypto || (window as any).msCrypto).getRandomValues(bytes);
+    const cryptoApi = (window as CryptoWindow).crypto || (window as CryptoWindow).msCrypto;
+    if (!cryptoApi) {
+        throw new Error('Crypto API is not available');
+    }
+    cryptoApi.getRandomValues(bytes);
     return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
@@ -58,7 +66,7 @@ export function clamp(value: number, min: number, max: number): number {
 /**
  * 安全获取数值（带默认值）
  */
-export function num(value: any, defaultValue: number): number {
+export function num(value: unknown, defaultValue: number): number {
     return typeof value === 'number' ? value : defaultValue;
 }
 
@@ -136,4 +144,3 @@ export class CanvasLoader {
         }
     }
 }
-

@@ -2,6 +2,8 @@
  * 句子提取工具
  */
 
+import type { Editor } from 'obsidian';
+
 /**
  * 从文本中提取包含指定位置的句子
  * @param text 完整文本
@@ -48,7 +50,7 @@ export function extractSentence(text: string, position: number): string {
  * @param editor Obsidian 编辑器实例
  * @returns 提取的句子
  */
-export function extractSentenceFromEditor(editor: any): string {
+export function extractSentenceFromEditor(editor: Editor): string {
     try {
         const cursor = editor.getCursor();
         const line = editor.getLine(cursor.line);
@@ -66,7 +68,7 @@ export function extractSentenceFromEditor(editor: any): string {
  * @param editor Obsidian 编辑器实例
  * @returns 提取的句子（可能跨行）
  */
-export function extractSentenceFromEditorMultiline(editor: any): string {
+export function extractSentenceFromEditorMultiline(editor: Editor): string {
     try {
         const cursor = editor.getCursor();
         const doc = editor.getValue();
@@ -85,4 +87,3 @@ export function extractSentenceFromEditorMultiline(editor: any): string {
         return '';
     }
 }
-

@@ -102,7 +102,7 @@ export class CanvasParser {
                     }
                 }
                 // 文件节点（Markdown）
-                else if (node.type === 'file' && (node as any).file) {
+                else if (node.type === 'file' && node.file) {
                     const wordDef = await this.parseFileNode(node, file.path);
                     if (wordDef) {
                         if (detectionMode === 'group') {
@@ -223,7 +223,7 @@ export class CanvasParser {
      */
     private async parseFileNode(node: CanvasNode, sourcePath: string): Promise<WordDefinition | null> {
         try {
-            const filePath = (node as any).file as string | undefined;
+            const filePath = node.file;
             if (!filePath) return null;
 
             const abs = this.app.vault.getAbstractFileByPath(filePath);

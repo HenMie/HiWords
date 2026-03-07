@@ -1,17 +1,20 @@
-# vscode
-.vscode
+# editors
+.vscode/
+.idea/
 
 # Intellij
 *.iml
-.idea
 
 # npm
-node_modules
+node_modules/
 .npm-cache/
+npm-debug.log*
 
-# Don't include the compiled main.js file in the repo.
-# They should be uploaded to GitHub releases instead.
+# build output
 main.js
+*.tsbuildinfo
+.eslintcache
+coverage/
 
 # Exclude sourcemaps
 *.map
@@ -22,5 +25,5 @@ data.json
 # Exclude macOS Finder (System Explorer) View States
 .DS_Store
 
-# Claude Code configuration
+# local agent/tooling data
 .claude

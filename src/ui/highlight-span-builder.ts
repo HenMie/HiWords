@@ -71,7 +71,7 @@ export class HighlightSpanBuilder {
         matchedText: string,
         match: {
             word: string;
-            payload: any;
+            payload: unknown;
         },
         highlightStyle: HighlightStyle,
         additionalClasses: string[] = []
@@ -88,4 +88,3 @@ export class HighlightSpanBuilder {
         );
     }
 }
-
