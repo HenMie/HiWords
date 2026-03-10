@@ -509,7 +509,10 @@ export class UnifiedMorphologyService {
             partOfSpeech.startsWith('VV') ||
             partOfSpeech.startsWith('VA') ||
             partOfSpeech.startsWith('動詞') ||
-            partOfSpeech.startsWith('形容詞')
+            partOfSpeech.startsWith('形容詞') ||
+            partOfSpeech.includes('HADA') ||
+            partOfSpeech.includes('XSA') ||
+            partOfSpeech.includes('XSV')
         ) {
             return 0.15;
         }

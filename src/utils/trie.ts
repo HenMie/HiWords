@@ -89,8 +89,16 @@ export class Trie<TPayload = unknown> {
                 // 如果到达单词结尾，检查是否为更长的匹配
                 if (node.isEndOfWord) {
                     // 检查单词边界
-                    const isWordBoundaryStart = i === 0 || !isAlphaNumeric(lowerText[i - 1]);
-                    const isWordBoundaryEnd = j === lowerText.length || !isAlphaNumeric(lowerText[j]);
+                    const matchedText = text.slice(i, j);
+                    const isCjkWord = containsCjkOrKanaOrHangul(matchedText);
+                    const beforeChar = i > 0 ? lowerText[i - 1] : '';
+                    const afterChar = j < lowerText.length ? lowerText[j] : '';
+                    const isWordBoundaryStart = i === 0
+                        || !isAlphaNumeric(beforeChar)
+                        || (isCjkWord && isDigit(beforeChar));
+                    const isWordBoundaryEnd = j === lowerText.length
+                        || !isAlphaNumeric(afterChar)
+                        || (isCjkWord && isDigit(afterChar));
                     
                     if (isWordBoundaryStart && isWordBoundaryEnd) {
                         // 保存当前匹配，如果更长则替换之前的匹配
@@ -161,6 +169,14 @@ export interface TrieMatch<TPayload = unknown> {
  */
 function isAlphaNumeric(char: string): boolean {
     return /[a-z0-9]/i.test(char);
+}
+
+function isDigit(char: string): boolean {
+    return /[0-9]/.test(char);
+}
+
+function containsCjkOrKanaOrHangul(text: string): boolean {
+    return /[\u3040-\u30FF\u3400-\u9FFF\uAC00-\uD7AF]/.test(text);
 }
 
 /**
