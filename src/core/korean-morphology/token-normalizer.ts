@@ -57,29 +57,84 @@ export function shouldMergeHadaEndings(nextToken: NormalizedToken): boolean {
     return !(nextToken.surface.startsWith('해') && nextToken.surface.length > 1);
 }
 
-export function mergeSubsequentEndings(
+const DEFAULT_INFLECTION_CHAIN_LOOKAHEAD = 6;
+const LEMMA_PRESERVING_AUXILIARY_BASE_FORMS = new Set(['있다', '없다', '않다']);
+
+function isAuxiliaryVerbToken(token: NormalizedToken | null | undefined): boolean {
+    if (!token) {
+        return false;
+    }
+    const pos = token.partOfSpeech;
+    return typeof pos === 'string' && (pos.includes('VX') || pos.includes('VV'));
+}
+
+export function isLemmaPreservingAuxiliaryToken(token: NormalizedToken | null | undefined): boolean {
+    return !!token &&
+        isAuxiliaryVerbToken(token) &&
+        LEMMA_PRESERVING_AUXILIARY_BASE_FORMS.has(token.baseForm);
+}
+
+export function isLemmaChangingAuxiliaryToken(token: NormalizedToken | null | undefined): boolean {
+    return !!token &&
+        isAuxiliaryVerbToken(token) &&
+        !isLemmaPreservingAuxiliaryToken(token);
+}
+
+export function mergeSubsequentInflectionChain(
     tokens: NormalizedToken[],
     startIndex: number,
-    maxLookAhead = 5,
+    maxLookAhead = DEFAULT_INFLECTION_CHAIN_LOOKAHEAD,
     processedTokens?: Set<number>,
     debugLog?: DebugLog
-): { mergedSurface: string; processedCount: number } {
+): {
+    mergedSurface: string;
+    processedCount: number;
+    blockedByLemmaChangingAuxiliary: boolean;
+} {
     let mergedSurface = '';
     let processedCount = 0;
+    const lastToken = startIndex > 0 ? tokens[startIndex - 1] : null;
+    let canMergeAuxiliary = !!lastToken && isEndingPartOfSpeech(lastToken.partOfSpeech);
 
     for (let j = startIndex; j < tokens.length && j < startIndex + maxLookAhead; j++) {
         const subsequentTokenInfo = tokens[j];
+
+        if (canMergeAuxiliary && isLemmaPreservingAuxiliaryToken(subsequentTokenInfo)) {
+            debugLog?.(`[mergeSubsequentInflectionChain] 添加 보조용언: ${subsequentTokenInfo.surface}`);
+            mergedSurface += subsequentTokenInfo.surface;
+            processedCount++;
+            processedTokens?.add(j);
+            canMergeAuxiliary = false;
+            continue;
+        }
+
+        // Prevent partial highlights like "먹고" inside "먹고싶다".
+        if (canMergeAuxiliary && isLemmaChangingAuxiliaryToken(subsequentTokenInfo)) {
+            debugLog?.(`[mergeSubsequentInflectionChain] 阻断 보조용언: ${subsequentTokenInfo.surface}`);
+            return {
+                mergedSurface,
+                processedCount,
+                blockedByLemmaChangingAuxiliary: true
+            };
+        }
+
         if (subsequentTokenInfo && isEndingPartOfSpeech(subsequentTokenInfo.partOfSpeech)) {
             debugLog?.(`[mergeSubsequentEndings] 添加语尾: ${subsequentTokenInfo.surface}`);
             mergedSurface += subsequentTokenInfo.surface;
             processedCount++;
             processedTokens?.add(j);
-        } else {
-            break;
+            canMergeAuxiliary = true;
+            continue;
         }
+
+        break;
     }
 
-    return { mergedSurface, processedCount };
+    return {
+        mergedSurface,
+        processedCount,
+        blockedByLemmaChangingAuxiliary: false
+    };
 }
 
 export function buildCompoundWordResult(
@@ -90,23 +145,29 @@ export function buildCompoundWordResult(
     partOfSpeech: string,
     confidence: number,
     processedTokens: Set<number>,
-    shouldMergeEndings = true,
+    shouldMergeInflectionChain = true,
     debugLog?: DebugLog
-): { result: MorphologyAnalysisResult; processedCount: number } {
+): {
+    result: MorphologyAnalysisResult;
+    processedCount: number;
+    blockedByLemmaChangingAuxiliary: boolean;
+} {
     let combinedSurface = tokenInfos.map(t => t.surface).join('');
     let processedCount = 0;
+    let blockedByLemmaChangingAuxiliary = false;
 
-    if (shouldMergeEndings) {
+    if (shouldMergeInflectionChain) {
         const nextIndex = startIndexInAllTokens + tokenInfos.length;
-        const mergeResult = mergeSubsequentEndings(
+        const mergeResult = mergeSubsequentInflectionChain(
             allTokens,
             nextIndex,
-            5,
+            DEFAULT_INFLECTION_CHAIN_LOOKAHEAD,
             processedTokens,
             debugLog
         );
         combinedSurface += mergeResult.mergedSurface;
         processedCount = mergeResult.processedCount;
+        blockedByLemmaChangingAuxiliary = mergeResult.blockedByLemmaChangingAuxiliary;
     }
 
     debugLog?.(`[buildCompoundWordResult] 最终结果: ${combinedSurface} → ${baseForm}`);
@@ -118,7 +179,8 @@ export function buildCompoundWordResult(
             partOfSpeech,
             confidence
         },
-        processedCount
+        processedCount,
+        blockedByLemmaChangingAuxiliary
     };
 }
 
@@ -457,4 +519,3 @@ function isTokenMap(value: unknown): value is Map<string, unknown> {
     const candidate = value as { get?: unknown };
     return typeof candidate.get === 'function';
 }
-

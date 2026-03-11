@@ -25,6 +25,7 @@ export interface RulePipelines {
  * 创建日语形态学规则管道
  */
 export function createJapaneseMorphologyRulePipelines(): RulePipelines {
+    const documentInflectionChainRule = createDocumentInflectionChainRule();
     const verbConjugationRule = createVerbConjugationRule();
     const adjectiveConjugationRule = createAdjectiveConjugationRule();
     const naAdjectiveRule = createNaAdjectiveRule();
@@ -42,12 +43,60 @@ export function createJapaneseMorphologyRulePipelines(): RulePipelines {
         ],
         documentRules: [
             suruVerbRule,
+            compoundVerbRule,
+            documentInflectionChainRule,
             verbConjugationRule,
             adjectiveConjugationRule,
             naAdjectiveRule,
-            compoundVerbRule,
             auxiliaryVerbRule
         ]
+    };
+}
+
+/**
+ * 文档级活用链规则
+ * 处理「动词/い形容词 + 后续活用链」的完整表层合并
+ */
+function createDocumentInflectionChainRule(): TokenAnalysisRule {
+    return {
+        name: 'document-inflection-chain',
+        apply: (context) => {
+            if (context.scope !== 'document') {
+                return null;
+            }
+
+            const current = context.tokens[context.index];
+            if (!current) {
+                return null;
+            }
+
+            const isInflectable = isVerb(current.partOfSpeech) || isIAdjective(current.partOfSpeech);
+            if (!isInflectable) {
+                return null;
+            }
+
+            const baseForm = current.baseForm || current.surface;
+            const { result, processedCount } = buildCompoundWordResult(
+                [current],
+                context.tokens,
+                context.index,
+                baseForm,
+                current.partOfSpeech,
+                calculateConfidence(current.rawToken),
+                context.processedTokens,
+                true,
+                context.debugLog
+            );
+            if (processedCount === 0) {
+                return null;
+            }
+
+            context.debugLog?.(`[document-inflection-chain] ${result.surface} → ${baseForm}`);
+            return {
+                result,
+                consumedTokenIndices: collectConsumedIndices(context.index, 1, processedCount)
+            };
+        }
     };
 }
 
@@ -234,14 +283,33 @@ function createCompoundVerbRule(): TokenAnalysisRule {
                     
                     context.debugLog?.(`[compound-verb] ${current.surface}${next.surface} → ${combinedBaseForm}`);
 
+                    if (context.scope === 'word') {
+                        return {
+                            result: {
+                                surface: current.surface + next.surface,
+                                baseForm: combinedBaseForm,
+                                partOfSpeech: '動詞-複合',
+                                confidence: 0.88
+                            },
+                            consumedTokenIndices: [context.index, context.index + 1]
+                        };
+                    }
+
+                    const { result, processedCount } = buildCompoundWordResult(
+                        [current, next],
+                        context.tokens,
+                        context.index,
+                        combinedBaseForm,
+                        '動詞-複合',
+                        0.88,
+                        context.processedTokens,
+                        true,
+                        context.debugLog
+                    );
+
                     return {
-                        result: {
-                            surface: current.surface + next.surface,
-                            baseForm: combinedBaseForm,
-                            partOfSpeech: '動詞-複合',
-                            confidence: 0.88
-                        },
-                        consumedTokenIndices: [context.index, context.index + 1]
+                        result,
+                        consumedTokenIndices: collectConsumedIndices(context.index, 2, processedCount)
                     };
                 }
             }

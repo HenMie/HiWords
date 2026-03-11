@@ -100,7 +100,11 @@ function createNounHadaRule(): TokenAnalysisRule {
             }
 
             const shouldMerge = shouldMergeHadaEndings(next);
-            const { result, processedCount } = buildCompoundWordResult(
+            const {
+                result,
+                processedCount,
+                blockedByLemmaChangingAuxiliary
+            } = buildCompoundWordResult(
                 [current, next],
                 context.tokens,
                 context.index,
@@ -111,6 +115,9 @@ function createNounHadaRule(): TokenAnalysisRule {
                 shouldMerge,
                 context.debugLog
             );
+            if (blockedByLemmaChangingAuxiliary) {
+                return null;
+            }
 
             const consumed = collectConsumedIndices(context.index, 2, processedCount);
 
@@ -152,7 +159,11 @@ function createRootWithSuffixRule(): TokenAnalysisRule {
                 };
             }
 
-            const { result, processedCount } = buildCompoundWordResult(
+            const {
+                result,
+                processedCount,
+                blockedByLemmaChangingAuxiliary
+            } = buildCompoundWordResult(
                 [current, next],
                 context.tokens,
                 context.index,
@@ -163,6 +174,9 @@ function createRootWithSuffixRule(): TokenAnalysisRule {
                 true,
                 context.debugLog
             );
+            if (blockedByLemmaChangingAuxiliary) {
+                return null;
+            }
 
             const consumed = collectConsumedIndices(context.index, 2, processedCount);
 
@@ -246,7 +260,11 @@ function createVerbWithEndingRule(): TokenAnalysisRule {
 
             const next = context.tokens[context.index + 1];
             if (next && isEndingPartOfSpeech(next.partOfSpeech)) {
-                const { result, processedCount } = buildCompoundWordResult(
+                const {
+                    result,
+                    processedCount,
+                    blockedByLemmaChangingAuxiliary
+                } = buildCompoundWordResult(
                     [current, next],
                     context.tokens,
                     context.index,
@@ -257,6 +275,9 @@ function createVerbWithEndingRule(): TokenAnalysisRule {
                     true,
                     context.debugLog
                 );
+                if (blockedByLemmaChangingAuxiliary) {
+                    return null;
+                }
 
                 const consumed = collectConsumedIndices(context.index, 2, processedCount);
 

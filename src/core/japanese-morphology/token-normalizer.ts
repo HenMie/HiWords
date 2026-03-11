@@ -113,8 +113,17 @@ function normalizeToken(token: Token, debugLog?: DebugLog): NormalizedToken | nu
                             ? tokenObj.lemma
                             : surface;
 
+            posDetail1 = getOptionalObjectString(tokenObj, ['partOfSpeechSubcategory1', 'part_of_speech_subcategory1']);
+            posDetail2 = getOptionalObjectString(tokenObj, ['partOfSpeechSubcategory2', 'part_of_speech_subcategory2']);
+            posDetail3 = getOptionalObjectString(tokenObj, ['partOfSpeechSubcategory3', 'part_of_speech_subcategory3']);
+            conjugationType = getOptionalObjectString(tokenObj, ['conjugationForm', 'conjugation_form']);
+            conjugationForm = getOptionalObjectString(tokenObj, ['conjugationType', 'conjugation_type']);
+
             reading = typeof tokenObj.reading === 'string' && tokenObj.reading !== '*'
                 ? tokenObj.reading
+                : undefined;
+            pronunciation = typeof tokenObj.pronunciation === 'string' && tokenObj.pronunciation !== '*'
+                ? tokenObj.pronunciation
                 : undefined;
         }
     }
@@ -165,6 +174,19 @@ function getFeatureValue(features: unknown[], index: number): string {
         return value;
     }
     return '';
+}
+
+function getOptionalObjectString(
+    token: Record<string, unknown>,
+    keys: readonly string[]
+): string | undefined {
+    for (const key of keys) {
+        const value = token[key];
+        if (typeof value === 'string' && value !== '*') {
+            return value;
+        }
+    }
+    return undefined;
 }
 
 /**
@@ -274,6 +296,11 @@ export function isSuruConjugation(token: NormalizedToken | null | undefined): bo
            (isVerb(token.partOfSpeech) || isAuxiliaryVerb(token.partOfSpeech));
 }
 
+const DEFAULT_INFLECTION_CHAIN_LOOKAHEAD = 6;
+const LINKING_PARTICLE_SURFACES = new Set(['て', 'で']);
+const SUFFIX_VERB_SUBCATEGORY = '接尾';
+const NON_INDEPENDENT_VERB_SUBCATEGORY = '非自立';
+
 /**
  * 计算置信度
  */
@@ -307,28 +334,71 @@ export function calculateConfidence(token: Token): number {
 }
 
 /**
- * 合并后续的助动词/助词
+ * 检查是否为可并入活用链的接续助词
  */
-export function mergeSubsequentAuxiliaries(
+export function isLinkingParticle(token: NormalizedToken | null | undefined): boolean {
+    if (!token || !isParticle(token.partOfSpeech)) {
+        return false;
+    }
+    return token.posDetail1 === '接続助詞' && LINKING_PARTICLE_SURFACES.has(token.surface);
+}
+
+/**
+ * 检查是否为可并入活用链的依赖动词
+ */
+export function isInflectionChainVerb(token: NormalizedToken | null | undefined): boolean {
+    if (!token || !isVerb(token.partOfSpeech)) {
+        return false;
+    }
+    return token.posDetail1 === SUFFIX_VERB_SUBCATEGORY
+        || token.posDetail1 === NON_INDEPENDENT_VERB_SUBCATEGORY;
+}
+
+function isInflectionChainSuffixVerb(token: NormalizedToken | null | undefined): boolean {
+    return !!token && isVerb(token.partOfSpeech) && token.posDetail1 === SUFFIX_VERB_SUBCATEGORY;
+}
+
+function isNonIndependentInflectionChainVerb(token: NormalizedToken | null | undefined): boolean {
+    return !!token && isVerb(token.partOfSpeech) && token.posDetail1 === NON_INDEPENDENT_VERB_SUBCATEGORY;
+}
+
+function canMergeInflectionChainToken(
+    token: NormalizedToken | null | undefined,
+    allowNonIndependentVerb: boolean
+): boolean {
+    return !!token && (
+        isAuxiliaryVerb(token.partOfSpeech)
+        || isLinkingParticle(token)
+        || isInflectionChainSuffixVerb(token)
+        || (allowNonIndependentVerb && isNonIndependentInflectionChainVerb(token))
+    );
+}
+
+/**
+ * 合并后续的活用链 token
+ */
+export function mergeSubsequentInflectionChain(
     tokens: NormalizedToken[],
     startIndex: number,
-    maxLookAhead = 5,
+    maxLookAhead = DEFAULT_INFLECTION_CHAIN_LOOKAHEAD,
     processedTokens?: Set<number>,
     debugLog?: DebugLog
 ): { mergedSurface: string; processedCount: number } {
     let mergedSurface = '';
     let processedCount = 0;
+    let allowNonIndependentVerb = false;
 
     for (let j = startIndex; j < tokens.length && j < startIndex + maxLookAhead; j++) {
         const token = tokens[j];
-        if (token && (isAuxiliaryVerb(token.partOfSpeech) || isParticle(token.partOfSpeech))) {
-            debugLog?.(`[mergeSubsequentAuxiliaries] 添加: ${token.surface}`);
-            mergedSurface += token.surface;
-            processedCount++;
-            processedTokens?.add(j);
-        } else {
+        if (!canMergeInflectionChainToken(token, allowNonIndependentVerb)) {
             break;
         }
+
+        debugLog?.(`[mergeSubsequentInflectionChain] 添加: ${token.surface}`);
+        mergedSurface += token.surface;
+        processedCount++;
+        processedTokens?.add(j);
+        allowNonIndependentVerb = true;
     }
 
     return { mergedSurface, processedCount };
@@ -345,18 +415,18 @@ export function buildCompoundWordResult(
     partOfSpeech: string,
     confidence: number,
     processedTokens: Set<number>,
-    shouldMergeAuxiliaries = true,
+    shouldMergeInflectionChain = true,
     debugLog?: DebugLog
 ): { result: MorphologyAnalysisResult; processedCount: number } {
     let combinedSurface = tokenInfos.map(t => t.surface).join('');
     let processedCount = 0;
 
-    if (shouldMergeAuxiliaries) {
+    if (shouldMergeInflectionChain) {
         const nextIndex = startIndexInAllTokens + tokenInfos.length;
-        const mergeResult = mergeSubsequentAuxiliaries(
+        const mergeResult = mergeSubsequentInflectionChain(
             allTokens,
             nextIndex,
-            5,
+            DEFAULT_INFLECTION_CHAIN_LOOKAHEAD,
             processedTokens,
             debugLog
         );
@@ -376,4 +446,3 @@ export function buildCompoundWordResult(
         processedCount
     };
 }
-

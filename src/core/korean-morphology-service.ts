@@ -13,6 +13,8 @@ import type {
 } from './korean-morphology/types';
 import {
     calculateConfidence,
+    isEndingPartOfSpeech,
+    isLemmaChangingAuxiliaryToken,
     isVerbOrAdjective,
     normalizeTokens
 } from './korean-morphology/token-normalizer';
@@ -452,6 +454,17 @@ export class KoreanMorphologyService {
             }
 
             if (!this.isKoreanText(token.surface)) {
+                continue;
+            }
+
+            const nextToken = tokens[i + 1];
+            const nextNextToken = tokens[i + 2];
+            const startsLemmaChangingChain = isVerbOrAdjective(token.partOfSpeech) &&
+                !!nextToken &&
+                isEndingPartOfSpeech(nextToken.partOfSpeech) &&
+                isLemmaChangingAuxiliaryToken(nextNextToken);
+            if (startsLemmaChangingChain) {
+                processedTokens.add(i);
                 continue;
             }
 
