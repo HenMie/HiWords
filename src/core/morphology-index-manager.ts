@@ -60,11 +60,10 @@ export class MorphologyIndexManager {
                 return false;
             }
 
-            const preferredLanguage = this.getPreferredLanguageForIndexing();
             const analysisResult = await this.morphologyService.analyzeDocument(
                 content,
                 'auto',
-                { bookLanguagePreference: preferredLanguage }
+                { languagePolicy: this.getPreferredLanguageForIndexing() }
             );
 
             if (existingIndex) {

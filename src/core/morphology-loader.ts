@@ -1,5 +1,6 @@
 import type { MorphologyLanguage, VocabularyBook } from '../utils/types';
 import { KoreanMorphologyService } from './korean-morphology-service';
+import { getBookLanguagePolicy } from './morphology-language-resolver';
 // 日语服务将在后续任务中实现，这里先用类型占位
 import type { JapaneseMorphologyService } from './japanese-morphology-service';
 import type { MorphologyAssetProvider } from './morphology-asset-manager';
@@ -51,8 +52,9 @@ export class MorphologyLoader {
         const languages = new Set<MorphologyLanguage>();
         
         for (const book of vocabularyBooks) {
-            if (book.enabled && book.morphology && book.morphology !== 'none') {
-                languages.add(book.morphology);
+            const languagePolicy = getBookLanguagePolicy(book);
+            if (book.enabled && languagePolicy !== 'none') {
+                languages.add(languagePolicy);
             }
         }
         

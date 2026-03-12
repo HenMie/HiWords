@@ -47,7 +47,7 @@ export interface VocabularyBook {
     path: string; // Canvas 文件路径
     name: string; // 显示名称
     enabled: boolean; // 是否启用
-    morphology?: MorphologyLanguage; // 形态学语言，默认 'none'
+    languagePolicy: MorphologyLanguage; // 词书语言策略，默认 'none'
 }
 
 // 高亮样式类型

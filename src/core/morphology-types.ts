@@ -4,7 +4,7 @@ export type MorphologyDetectionLanguage = 'korean' | 'japanese' | 'unknown';
 export type MorphologyCandidateSource = 'tokenizer' | 'reverse-rule' | 'fallback';
 
 export interface MorphologyAnalyzeOptions {
-    bookLanguagePreference?: MorphologyLanguage;
+    languagePolicy?: MorphologyLanguage;
     contextText?: string;
 }
 

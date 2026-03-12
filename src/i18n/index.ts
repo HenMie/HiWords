@@ -67,6 +67,7 @@ export interface LanguagePack {
         mode_filename_with_content?: string;
         mode_filename?: string;
         mode_content?: string;
+        book_language_policy?: string;
         morphology_assets?: string;
         morphology_assets_desc?: string;
         morphology_asset_status_loading?: string;

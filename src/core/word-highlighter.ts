@@ -253,6 +253,7 @@ export class WordHighlighter implements PluginValue {
             const attributes = {
                 'data-word': match.baseForm || match.word, // 优先使用原型，回退到匹配的词汇
                 'data-definition': match.definition.definition,
+                'data-source': match.definition.source,
                 'data-color': highlightColor,
                 'data-style': highlightStyle,
                 'style': `--word-highlight-color: ${highlightColor};`

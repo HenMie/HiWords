@@ -45,6 +45,9 @@ export class HighlightSpanBuilder {
             if (definition.etymology) {
                 span.setAttribute('data-etymology', definition.etymology);
             }
+            if (definition.source) {
+                span.setAttribute('data-source', definition.source);
+            }
         }
         
         // 设置样式和颜色

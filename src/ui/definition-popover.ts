@@ -235,6 +235,12 @@ export class DefinitionPopover extends Component {
      */
     private async getWordDefinitionAsync(word: string, target: HTMLElement) {
         try {
+            const sourcePath = target.getAttribute('data-source');
+            const sourceBook = sourcePath
+                ? this.vocabularyManager?.getSettings().vocabularyBooks.find((book) => book.path === sourcePath)
+                : undefined;
+            const languagePolicy = sourceBook?.languagePolicy || 'auto';
+
             // 获取完整的词汇定义，包括词源信息
             // 首先尝试直接查找（原型词汇）
             let wordDefinition = this.vocabularyManager?.getDefinition(word);
@@ -243,7 +249,7 @@ export class DefinitionPopover extends Component {
             if (!wordDefinition && this.vocabularyManager) {
                 try {
                     // 使用词汇管理器的公共方法进行形态素分析
-                    const baseForm = await this.vocabularyManager.analyzeWordToBaseForm(word);
+                    const baseForm = await this.vocabularyManager.analyzeWordToBaseForm(word, languagePolicy);
                     if (baseForm) {
                         // 使用分析得到的原型查找定义
                         wordDefinition = this.vocabularyManager.getDefinition(baseForm);

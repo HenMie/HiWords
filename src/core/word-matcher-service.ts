@@ -2,14 +2,13 @@ import {
     Trie,
     generateCommonInflections,
     generateJapaneseInflections,
-    isKoreanText,
-    isJapaneseText,
     containsKana,
     katakanaToHiragana,
     hiraganaToKatakana,
     findPatternMatches
 } from '../utils';
 import type { MorphologyLanguage, WordDefinition } from '../utils';
+import { detectMorphologyLanguage, getBookLanguagePolicy } from './morphology-language-resolver';
 import type { UnifiedMorphologyService } from './unified-morphology-service';
 import type { VocabularyManager } from './vocabulary-manager';
 
@@ -90,9 +89,9 @@ export class WordMatcherService {
 
             // 根据词书配置或自动检测语言来生成活用形
             const bookConfig = settings.vocabularyBooks.find(b => b.path === definition.source);
-            const morphologyLang = bookConfig?.morphology || 'none';
+            const languagePolicy = getBookLanguagePolicy(bookConfig);
 
-            const primaryForms = this.collectPrimaryForms(baseWord, indexedInflectionForms, morphologyLang);
+            const primaryForms = this.collectPrimaryForms(baseWord, indexedInflectionForms, languagePolicy);
             this.addFormsToTrie(primaryForms, definition, PRIMARY_WORD_MATCH_PRIORITY);
 
             const pronunciationForms = this.collectPronunciationForms(definition);
@@ -173,10 +172,11 @@ export class WordMatcherService {
 
         // auto 模式：根据文本特征自动检测语言
         if (morphologyLang === 'auto') {
-            if (isKoreanText(baseWord)) {
+            const detectedLanguage = detectMorphologyLanguage(baseWord);
+            if (detectedLanguage === 'korean') {
                 return generateCommonInflections(baseWord);
             }
-            if (isJapaneseText(baseWord)) {
+            if (detectedLanguage === 'japanese') {
                 return generateJapaneseInflections(baseWord);
             }
         }
@@ -254,8 +254,12 @@ export class WordMatcherService {
         }
 
         // 检测文本语言
-        const langBefore = this.unifiedMorphologyService.detectLanguage(textBeforeSpace);
-        const langAfter = this.unifiedMorphologyService.detectLanguage(textAfterSpace);
+        const langBefore = this.unifiedMorphologyService.detectLanguage(textBeforeSpace, {
+            languagePolicy: 'auto'
+        });
+        const langAfter = this.unifiedMorphologyService.detectLanguage(textAfterSpace, {
+            languagePolicy: 'auto'
+        });
 
         // 只对韩语文本进行跨空格名词检查
         if (langBefore !== 'korean' || langAfter !== 'korean') {
@@ -358,10 +362,11 @@ export class WordMatcherService {
         }
 
         if (morphologyLang === 'auto') {
-            if (isKoreanText(baseWord)) {
+            const detectedLanguage = detectMorphologyLanguage(baseWord);
+            if (detectedLanguage === 'korean') {
                 return !this.unifiedMorphologyService.isKoreanLoaded();
             }
-            if (isJapaneseText(baseWord)) {
+            if (detectedLanguage === 'japanese') {
                 return !this.unifiedMorphologyService.isJapaneseLoaded();
             }
         }

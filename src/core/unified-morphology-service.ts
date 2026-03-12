@@ -5,12 +5,17 @@
  */
 
 import type { MorphologyLanguage, VocabularyBook } from '../utils/types';
-import { isKoreanText } from '../utils/korean-text-utils';
-import { getScriptStatistics, isJapaneseText } from '../utils/japanese-text-utils';
+import { getScriptStatistics } from '../utils/japanese-text-utils';
 import { MorphologyLoader } from './morphology-loader';
 import type { KoreanMorphologyService } from './korean-morphology-service';
 import type { JapaneseMorphologyService } from './japanese-morphology-service';
 import type { MorphologyAssetProvider } from './morphology-asset-manager';
+import {
+    detectMorphologyLanguage,
+    getBookLanguagePolicy,
+    resolveMorphologyTargetLanguage,
+    toDetectionPreference
+} from './morphology-language-resolver';
 import type {
     MorphologyAnalyzeOptions,
     MorphologyCandidate,
@@ -85,48 +90,14 @@ export class UnifiedMorphologyService {
      * 检测文本语言
      */
     public detectLanguage(text: string, options?: MorphologyAnalyzeOptions): MorphologyDetectionLanguage {
-        if (!text) return 'unknown';
-
-        if (isKoreanText(text)) {
-            return 'korean';
-        }
-
-        if (isJapaneseText(text)) {
-            return 'japanese';
-        }
-
-        const preferred = this.normalizePreferredLanguage(options?.bookLanguagePreference);
-        const scriptStats = getScriptStatistics(`${options?.contextText || ''}${text}`);
-
-        if (scriptStats.korean > 0 && scriptStats.korean >= scriptStats.kana) {
-            return 'korean';
-        }
-
-        if (scriptStats.kana > 0) {
-            return 'japanese';
-        }
-
-        if (scriptStats.cjk > 0 && preferred === 'japanese') {
-            return 'japanese';
-        }
-
-        if (
-            scriptStats.cjk > 0 &&
-            preferred === 'unknown' &&
-            this.loader.isJapaneseLoaded() &&
-            !this.loader.isKoreanLoaded()
-        ) {
-            return 'japanese';
-        }
-
-        return 'unknown';
+        return detectMorphologyLanguage(text, options);
     }
 
     /**
      * 根据词书配置获取词书的形态学语言
      */
     public getBookMorphologyLanguage(book: VocabularyBook): MorphologyLanguage {
-        return book.morphology || 'none';
+        return getBookLanguagePolicy(book);
     }
 
     /**
@@ -179,7 +150,7 @@ export class UnifiedMorphologyService {
             };
         }
 
-        const preferredLanguage = this.normalizePreferredLanguage(options?.bookLanguagePreference);
+        const preferredLanguage = toDetectionPreference(options?.languagePolicy);
         const contextText = options?.contextText || '';
 
         let serviceResult: MorphologyServiceResult | null = null;
@@ -344,24 +315,7 @@ export class UnifiedMorphologyService {
      * 检查文本是否需要形态学分析
      */
     public needsMorphologyAnalysis(text: string, language: MorphologyLanguage): boolean {
-        if (language === 'none') {
-            return false;
-        }
-
-        if (language === 'auto') {
-            const detected = this.detectLanguage(text);
-            return detected !== 'unknown';
-        }
-
-        if (language === 'korean') {
-            return isKoreanText(text);
-        }
-
-        if (language === 'japanese') {
-            return isJapaneseText(text) || getScriptStatistics(text).cjk > 0;
-        }
-
-        return false;
+        return this.resolveTargetLanguage(text, language) !== 'unknown';
     }
 
     /**
@@ -425,27 +379,7 @@ export class UnifiedMorphologyService {
         language: MorphologyLanguage,
         options?: MorphologyAnalyzeOptions
     ): MorphologyDetectionLanguage {
-        if (language === 'none') {
-            return 'unknown';
-        }
-
-        if (language === 'korean' || language === 'japanese') {
-            return language;
-        }
-
-        return this.detectLanguage(text, options);
-    }
-
-    private normalizePreferredLanguage(
-        language?: MorphologyLanguage
-    ): MorphologyDetectionLanguage | 'none' {
-        if (!language || language === 'auto') {
-            return 'unknown';
-        }
-        if (language === 'none') {
-            return 'none';
-        }
-        return language;
+        return resolveMorphologyTargetLanguage(text, language, options);
     }
 
     private async analyzeWordByLanguage(
@@ -551,10 +485,6 @@ export class UnifiedMorphologyService {
         }
 
         if (preferredLanguage === language) {
-            return 0.1;
-        }
-
-        if (preferredLanguage === 'unknown') {
             return 0.1;
         }
 

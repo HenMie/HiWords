@@ -15,49 +15,9 @@ import {
 import type { MorphologyAssetLanguage, MorphologyAssetState } from './src/core';
 import { DefinitionPopover, HiWordsSettingTab, HiWordsSidebarView, SIDEBAR_VIEW_TYPE, AddWordModal } from './src/ui';
 import { i18n, t } from './src/i18n';
-
-// 默认设置
-const DEFAULT_SETTINGS: HiWordsSettings = {
-    vocabularyBooks: [],
-    showDefinitionOnHover: true,
-    enableAutoHighlight: true,
-    highlightStyle: 'underline', // 默认使用下划线样式
-    enableMasteredFeature: true, // 默认启用已掌握功能
-    showMasteredInSidebar: true,  // 跟随 enableMasteredFeature 的值
-    blurDefinitions: false, // 默认不启用模糊效果
-    showWordSource: true, // Default: display vocabulary book source
-    // 发音地址模板（用户可在设置里修改）
-    ttsTemplate: 'https://dict.youdao.com/dictvoice?audio={{word}}&type=2',
-    // 调试模式（默认关闭）
-    debugMode: false,
-    aiDictionary: {
-        apiUrl: 'https://api.openai.com/v1/chat/completions',
-        apiKey: '',
-        model: 'gpt-4o-mini',
-        prompt: 'Please provide a concise definition for the word "{{word}}" based on this context:\\n\\nSentence: {{sentence}}\\n\\nFormat:\\n1) Part of speech\\n2) English definition\\n3) Chinese translation\\n4) Example sentence (use the original sentence if appropriate)'
-    },
-    highlightMode: 'all',
-    highlightPaths: '',
-    fileNodeParseMode: 'filename-with-content',
-    morphologyEngineMode: 'hybrid',
-    morphologyFallbackMode: 'conservative'
-};
-
-const LEGACY_CANVAS_LAYOUT_SETTING_KEYS = [
-    'autoLayoutEnabled',
-    'cardWidth',
-    'cardHeight',
-    'horizontalGap',
-    'verticalGap',
-    'leftPadding',
-    'columnsAuto',
-    'columns',
-    'minLeftX',
-    'maxColumns',
-    'groupInnerPadding',
-    'groupInnerColumns',
-    'groupInnerGap'
-] as const;
+import { buildNormalizedSettings } from './src/plugin-settings';
+import { registerPluginCommands } from './src/plugin-commands';
+import { registerPluginEvents } from './src/plugin-events';
 
 export default class HiWordsPlugin extends Plugin {
     settings: HiWordsSettings;
@@ -177,206 +137,31 @@ export default class HiWordsPlugin extends Plugin {
         }
     }
 
-    /**
-     * 注册命令
-     */
     private registerCommands() {
-        // 刷新生词本命令
-        this.addCommand({
-            id: 'refresh-vocabulary',
-            name: t('commands.refresh_vocabulary'),
-            callback: async () => {
-                if (this.migrationRequired) {
-                    this.showMigrationRequiredNotice();
-                    return;
-                }
-                await this.vocabularyManager.loadAllVocabularyBooks();
-                this.refreshHighlighter();
-                new Notice(t('notices.vocabulary_refreshed'));
-            }
-        });
-
-        // 打开生词列表侧边栏命令
-        this.addCommand({
-            id: 'open-vocabulary-sidebar',
-            name: t('commands.show_sidebar'),
-            callback: () => {
-                this.activateSidebarView();
-            }
-        });
-
-        // 添加选中单词的快捷键命令
-        this.addCommand({
-            id: 'add-selected-word',
-            name: t('commands.add_selected_word'),
-            editorCallback: async (editor: Editor, view: MarkdownView) => {
-                const selectedText = editor.getSelection().trim();
-
-                if (!selectedText) {
-                    new Notice(t('notices.no_selection'));
-                    return;
-                }
-                if (this.migrationRequired) {
-                    this.showMigrationRequiredNotice();
-                    return;
-                }
-
-                const sentence = extractSentenceFromEditorMultiline(editor);
-                // 使用 addOrEditWord 方法，自动判断是添加还是编辑
-                this.addOrEditWord(selectedText, sentence);
-            }
-        });
-
-        this.addCommand({
-            id: 'import-canvas-books-to-jsonl',
-            name: '导入 Canvas 词书到 JSONL',
-            callback: async () => {
-                await this.importLegacyCanvasBooks();
-            }
+        registerPluginCommands({
+            addCommand: (command) => this.addCommand(command),
+            isMigrationRequired: () => this.migrationRequired,
+            showMigrationRequiredNotice: () => this.showMigrationRequiredNotice(),
+            loadAllVocabularyBooks: () => this.vocabularyManager.loadAllVocabularyBooks(),
+            refreshHighlighter: () => this.refreshHighlighter(),
+            activateSidebarView: () => this.activateSidebarView(),
+            addOrEditWord: (word, sentence) => this.addOrEditWord(word, sentence),
+            importLegacyCanvasBooks: () => this.importLegacyCanvasBooks()
         });
     }
 
-    /**
-     * 注册事件
-     */
     private registerEvents() {
-        const modifiedBookFiles = new Set<string>();
-        let activeBookFile: string | null = null;
-        const replaceTrackedBookPath = (oldPath: string, newPath: string) => {
-            if (activeBookFile === oldPath) {
-                activeBookFile = newPath;
-            }
-            if (modifiedBookFiles.delete(oldPath)) {
-                modifiedBookFiles.add(newPath);
-            }
-        };
-        
-        // 监听文件变化
-        this.registerEvent(
-            this.app.vault.on('modify', (file) => {
-                if (!(file instanceof TFile)) {
-                    return;
-                }
-                const isVocabBook = this.settings.vocabularyBooks.some(book => book.path === file.path);
-                if (isVocabBook) {
-                    modifiedBookFiles.add(file.path);
-                }
-            })
-        );
-
-        // 监听词书重命名，保持路径与内存数据一致
-        this.registerEvent(
-            this.app.vault.on('rename', async (file, oldPath) => {
-                if (!(file instanceof TFile)) {
-                    return;
-                }
-
-                const bookIndex = this.settings.vocabularyBooks.findIndex(book => book.path === oldPath);
-                if (bookIndex === -1) {
-                    replaceTrackedBookPath(oldPath, file.path);
-                    return;
-                }
-
-                this.settings.vocabularyBooks[bookIndex].path = file.path;
-                this.settings.vocabularyBooks[bookIndex].name = file.basename;
-                replaceTrackedBookPath(oldPath, file.path);
-
-                await this.saveSettings();
-                this.vocabularyManager.removeBookData(oldPath);
-                if (this.migrationRequired) {
-                    modifiedBookFiles.delete(file.path);
-                    this.refreshHighlighter();
-                    return;
-                }
-                await this.vocabularyManager.reloadVocabularyBook(file.path);
-                modifiedBookFiles.delete(file.path);
-                this.refreshHighlighter();
-            })
-        );
-
-        // 监听活动文件变化
-        this.registerEvent(
-            this.app.workspace.on('active-leaf-change', async (leaf) => {
-                // 获取当前活动文件
-                const activeFile = this.app.workspace.getActiveFile();
-                
-                // 如果之前有活动词书文件，且已经变化，并且现在切换到了其他文件
-                // 说明用户已经编辑完成并切换了焦点，此时解析该文件
-                if (activeBookFile &&
-                    modifiedBookFiles.has(activeBookFile) &&
-                    (!activeFile || activeFile.path !== activeBookFile)) {
-                    if (!this.migrationRequired) {
-                        await this.vocabularyManager.reloadVocabularyBook(activeBookFile);
-                        this.refreshHighlighter();
-                    }
-                    
-                    // 从待解析列表中移除
-                    modifiedBookFiles.delete(activeBookFile);
-                }
-                
-                // 更新当前活动的词书文件
-                const isActiveBook = activeFile
-                    ? this.settings.vocabularyBooks.some(book => book.path === activeFile.path)
-                    : false;
-                if (activeFile && isActiveBook) {
-                    activeBookFile = activeFile.path;
-                } else {
-                    activeBookFile = null;
-                    
-                    // 如果切换到非词书文件，处理所有待解析的词书
-                    if (modifiedBookFiles.size > 0) {
-                        // 创建一个副本并清空原集合
-                        const filesToProcess = Array.from(modifiedBookFiles);
-                        modifiedBookFiles.clear();
-                        
-                        // 处理所有待解析的文件
-                        if (!this.migrationRequired) {
-                            for (const filePath of filesToProcess) {
-                                await this.vocabularyManager.reloadVocabularyBook(filePath);
-                            }
-                            // 刷新高亮
-                            this.refreshHighlighter();
-                        }
-                    } else {
-                        // 当切换文件时，可能需要更新高亮
-                        this.registerTimeout(() => this.refreshHighlighter(), HIGHLIGHTER_REFRESH.FILE_SWITCH);
-
-                        // 索引新的当前文档
-                        this.registerTimeout(async () => {
-                            await this.indexCurrentDocument();
-                            this.refreshHighlighter();
-                        }, HIGHLIGHTER_REFRESH.INDEX_COMPLETE);
-                    }
-                }
-            })
-        );
-        
-        // 注册编辑器右键菜单
-        this.registerEvent(
-            this.app.workspace.on('editor-menu', (menu, editor) => {
-                const selection = editor.getSelection();
-                if (selection && selection.trim()) {
-                    if (this.migrationRequired) {
-                        return;
-                    }
-                    const word = selection.trim();
-                    // 检查单词是否已存在
-                    const exists = this.vocabularyManager.hasWord(word);
-                    
-                    menu.addItem((item) => {
-                        // 根据单词是否存在显示不同的菜单项文本
-                        const titleKey = exists ? 'commands.edit_word' : 'commands.add_word';
-                        
-                        item
-                            .setTitle(t(titleKey))
-                            .onClick(() => {
-                                const sentence = extractSentenceFromEditorMultiline(editor);
-                                this.addOrEditWord(word, sentence);
-                            });
-                    });
-                }
-            })
-        );
+        registerPluginEvents({
+            app: this.app,
+            registerEvent: (eventRef) => this.registerEvent(eventRef),
+            registerTimeout: (callback, delay) => this.registerTimeout(callback, delay),
+            getVocabularyBooks: () => this.settings.vocabularyBooks,
+            isMigrationRequired: () => this.migrationRequired,
+            saveSettings: () => this.saveSettings(),
+            vocabularyManager: this.vocabularyManager,
+            refreshHighlighter: () => this.refreshHighlighter(),
+            addOrEditWord: (word, sentence) => this.addOrEditWord(word, sentence)
+        });
     }
 
 
@@ -481,32 +266,12 @@ export default class HiWordsPlugin extends Plugin {
      */
     async loadSettings() {
         const rawSettings = await this.loadData();
-        const { sanitized, removed } = this.stripLegacyCanvasLayoutSettings(rawSettings);
-        this.settings = Object.assign({}, DEFAULT_SETTINGS, sanitized);
-        if (removed) {
+        const { settings, changed } = buildNormalizedSettings(rawSettings);
+        this.settings = settings;
+        if (changed) {
             await this.saveData(this.settings);
         }
         this.updateMigrationRequirement();
-    }
-
-    private stripLegacyCanvasLayoutSettings(data: unknown): {
-        sanitized: Record<string, unknown>;
-        removed: boolean;
-    } {
-        if (!data || typeof data !== 'object') {
-            return { sanitized: {}, removed: false };
-        }
-
-        const sanitized = { ...(data as Record<string, unknown>) };
-        let removed = false;
-        for (const key of LEGACY_CANVAS_LAYOUT_SETTING_KEYS) {
-            if (Object.prototype.hasOwnProperty.call(sanitized, key)) {
-                delete sanitized[key];
-                removed = true;
-            }
-        }
-
-        return { sanitized, removed };
     }
 
     /**
