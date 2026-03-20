@@ -74,3 +74,10 @@ Manual evidence to collect before calling V2 done:
 - V2 matrix results (V2-R1 .. V2-G2)
 - legacy duplicate audit output
 - at least one screenshot or recording set for add/edit + rename conflict flows
+
+
+## Verification snapshot on this review branch
+- `npm ci` ✅ installed local dependencies successfully.
+- `npm run build` ✅ passed after installing dependencies.
+- `npm run lint` ⚠️ fails on pre-existing repository issues in `main.ts` (`TFile`, `Editor`, `MarkdownView`, `extractSentenceFromEditorMultiline`, `HIGHLIGHTER_REFRESH`, `t` are unused). This review lane did not modify `main.ts`, so the lint failure is recorded as baseline debt rather than introduced by this documentation change.
+- Manual V1/V2 matrix: not executed in this lane because the branch does not yet contain the V2 implementation required by the test spec.
