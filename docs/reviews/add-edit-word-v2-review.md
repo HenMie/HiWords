@@ -4,80 +4,53 @@
 - PRD: `.omx/plans/prd-add-edit-word-ux-redesign-20260320T113757Z.md`
 - Test spec: `.omx/plans/test-spec-add-edit-word-ux-redesign-20260320T113757Z.md`
 - Review focus: V2 rename flow, global duplicate policy, entrypoint consistency, and verification evidence
+- Reviewed implementation baseline: `4363ef4` plus follow-up fixes in current worktree
 
-## Current baseline on `ee16a6a`
-The current branch only contains the V1 UX-contract cleanup from `ee16a6a`.
-That V1 work keeps add/edit copy honest, preserves `draft` + `analysisRunId`, and makes ownership cues visible, but it does **not** implement the V2 acceptance contract yet.
+## Current baseline on current branch
+当前分支已经落地 V2 的基础实现：
+- 入口分流改为 `getWordEntryIntent()`，不再只靠 `hasWord()`
+- edit 模式可编辑词头，并在提交前通过 `checkRenameConflict()` 做冲突预检查
+- 已新增 legacy duplicate audit command
+- add/edit copy、ownership cues、inline blocking error、i18n key 已补齐
 
-### Verified baseline gaps
-1. **Rename is still unavailable in edit mode**
-   - `src/ui/add-word-form.ts` only renders the word input in add mode.
-   - `src/ui/add-word-form.ts` submits `initialWord` in edit mode, so edit cannot change the headword.
-2. **No global duplicate precheck API exists yet**
-   - `src/core/vocabulary-manager.ts` exposes `hasWord()`, `updateWordInCanvas()`, and `moveWordToBook()`, but no V2-style `checkRenameConflict()` or legacy duplicate audit helper.
-3. **Entry intent still depends on global `hasWord()` only**
-   - `main.ts`, `src/plugin-events.ts`, and `src/plugin-commands.ts` still resolve add-vs-edit from `vocabularyManager.hasWord(selection)` and do not yet expose any V2-specific rename or legacy-duplicate guardrail.
-4. **No repeatable legacy duplicate audit artifact exists yet**
-   - The test spec requires repeatable output containing normalized word, book path, node id, and raw word.
-5. **No V2 manual-evidence record exists yet**
-   - The test spec requires build output, V1/V2 matrix results, legacy duplicate audit output, and at least one screenshot or recording set.
+本次 follow-up review 的目标不是确认“V2 是否存在”，而是确认其 duplicate gate、入口行为与文档是否一致。
 
-## Acceptance review checklist
+## Verified follow-up fixes on current worktree
+1. **允许针对 legacy duplicate 词条进入具体编辑页**
+   - `src/core/vocabulary-manager.ts` 现在优先返回带 `definition` 的 `edit` intent；若当前词本身存在重复，只把 duplicate entries 挂到 edit intent 上，不再一律卡死在入口外。
+   - `main.ts` 会把 `definition + duplicateEntries` 传给 `AddWordModal`，从而允许用户查看、删除、或仅修改 metadata。
+2. **legacy duplicate 阻断改为局部相关，而非全局误伤**
+   - `checkRenameConflict()` 只在 `currentNormalizedWord` 或 `candidateNormalizedWord` 命中历史重复时返回 `legacy-duplicate-state`。
+   - 无关词条不再因为仓库里其它重复词而被全局禁止 rename/move。
+3. **文档改为反映当前分支状态**
+   - review/verification 文档已从“V2 尚未实现”更新为“V2 已实现，但仍需手工矩阵补完”。
 
-### V2 rename / collision behavior
-- [ ] Same-book rename with globally unique normalized word succeeds.
-- [ ] Same-book rename conflict blocks save and leaves data untouched.
-- [ ] Cross-book move without rename succeeds when no global conflict exists.
-- [ ] Cross-book move + rename conflict blocks save and leaves source/target untouched.
-- [ ] Case-only / whitespace-only rename is treated as metadata-only.
+## Remaining review verdict
+### Strengths
+- 入口、modal、store、i18n 的职责边界比 V1 清晰。
+- duplicate audit 已形成可重复执行的 debug command，输出包含 normalized/raw/book/node 信息。
+- rename/move 仍复用 `updateWordInCanvas()` / `moveWordToBook()`，没有引入平行持久化通道。
 
-### Entry-point consistency
-- [ ] `main.ts#addOrEditWord()` matches the same mode/result as editor menu flow.
-- [ ] `src/plugin-events.ts` editor menu flow matches command flow.
-- [ ] `src/plugin-commands.ts` `add-selected-word` flow matches main flow.
-- [ ] Post-rename re-entry from all three entrypoints hits the updated unique word.
-
-### Global duplicate / audit gates
-- [ ] A repeatable audit command or script reports legacy duplicate state.
-- [ ] Audit output includes normalized word, raw word, book path, and node id.
-- [ ] V2 does not claim completion if legacy cross-book duplicates still exist.
-
-### Regression protection
-- [ ] Add-mode still preserves draft state on book switch.
-- [ ] Add-mode `analysisRunId` still prevents stale morphology writes.
-- [ ] V1 truthful-copy and mode-specific affordances still hold after V2 lands.
-
-## Files that should change when V2 is actually complete
-- `src/core/vocabulary-manager.ts`
-- `src/core/vocabulary-book-store.ts` and/or lower-level lookup helpers
-- `src/ui/add-word-modal.ts`
-- `src/ui/add-word-form.ts`
-- `src/i18n/*`
-- `main.ts`
-- `src/plugin-events.ts`
-- `src/plugin-commands.ts`
-- one repeatable audit/evidence artifact (script or doc)
+### Remaining gaps / watch items
+1. **Manual matrix evidence is still missing**
+   - `npm run build` / `npm run lint` 可以覆盖静态链路，但 PRD/test spec 明确要求 V1/V2 手工矩阵和至少一组 UI 证据。
+2. **Direct ambiguous entry is still blocked outside the sidebar path**
+   - 当用户只通过选区入口命中“历史重复词”且系统无法唯一定位 node 时，当前仍会 notice 提示改从侧边栏进入。这是可接受的保守策略，但应在后续 UX 中确认是否需要更直接的 disambiguation chooser。
 
 ## Review verdict on current branch
-- **V1 status:** implemented previously by `ee16a6a`, but not re-manually-verified in this review lane.
-- **V2 status:** **not implemented on current branch**.
-- **Release readiness for V2:** **blocked** until the rename conflict API, duplicate audit path, entrypoint consistency changes, and manual evidence are added.
+- **V1 status:** 已实现，且未见本轮 follow-up 回归。
+- **V2 status:** 已实现基础 contract，并修复了 duplicate gate 的两处阻断级问题。
+- **Release readiness for V2:** **有条件通过** —— 代码层 blocking issue 已修复，但在补齐手工矩阵、duplicate audit 实录和 UI 证据前，不应把 V2 宣称为 fully verified。
 
-## Verification commands for the eventual V2 lane
+## Verification commands rerun on current branch
 ```bash
 npm run build
 npm run lint
 ```
 
-Manual evidence to collect before calling V2 done:
-- V1 matrix results (V1-A1 .. V1-O1)
-- V2 matrix results (V2-R1 .. V2-G2)
-- legacy duplicate audit output
-- at least one screenshot or recording set for add/edit + rename conflict flows
-
-
-## Verification snapshot on this review branch
-- `npm ci` ✅ installed local dependencies successfully.
-- `npm run build` ✅ passed after installing dependencies.
-- `npm run lint` ⚠️ fails on pre-existing repository issues in `main.ts` (`TFile`, `Editor`, `MarkdownView`, `extractSentenceFromEditorMultiline`, `HIGHLIGHTER_REFRESH`, `t` are unused). This review lane did not modify `main.ts`, so the lint failure is recorded as baseline debt rather than introduced by this documentation change.
-- Manual V1/V2 matrix: not executed in this lane because the branch does not yet contain the V2 implementation required by the test spec.
+## Evidence snapshot on this review branch
+- `npm run build` ✅ 通过
+- `npm run lint` ✅ 通过
+- 手工 V1/V2 matrix：未在本 follow-up lane 执行
+- legacy duplicate audit 实录：未在真实词书数据上留档
+- screenshot / recording：未收集

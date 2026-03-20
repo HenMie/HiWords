@@ -22,7 +22,7 @@ export class WordActionUtils {
      */
     openWordEditor(wordDef: WordDefinition, onCloseCallback?: () => void): void {
         try {
-            const editModal = new AddWordModal(this.app, this.plugin, wordDef.word, '', true);
+            const editModal = new AddWordModal(this.app, this.plugin, wordDef.word, '', true, wordDef);
 
             // 如果提供了关闭回调，则在模态框关闭时调用
             if (onCloseCallback) {

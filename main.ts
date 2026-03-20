@@ -325,7 +325,15 @@ export default class HiWordsPlugin extends Plugin {
         }
 
         if (intent.kind === 'edit') {
-            new AddWordModal(this.app, this, intent.definition.word, sentence, true).open();
+            new AddWordModal(
+                this.app,
+                this,
+                intent.definition.word,
+                sentence,
+                true,
+                intent.definition,
+                intent.duplicateEntries
+            ).open();
             return
         }
 
@@ -364,7 +372,7 @@ export default class HiWordsPlugin extends Plugin {
             .map((entry) => `${entry.rawWord} (${entry.bookPath})`)
             .join(' / ')
         new Notice(
-            t('notices.legacy_duplicate_blocked', 'Legacy duplicate words block V2 edit entry. Run duplicate audit first.')
+            t('notices.legacy_duplicate_blocked', 'Legacy duplicate words make direct edit entry ambiguous. Open the specific entry from the sidebar or run duplicate audit first.')
                 .replace('{0}', preview || '')
         )
     }

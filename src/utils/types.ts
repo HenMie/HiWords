@@ -42,7 +42,12 @@ export interface DuplicateWordAuditEntry {
 
 export type WordEntryIntent =
     | { kind: 'add'; normalizedWord: string }
-    | { kind: 'edit'; normalizedWord: string; definition: WordDefinition }
+    | {
+        kind: 'edit';
+        normalizedWord: string;
+        definition: WordDefinition;
+        duplicateEntries?: DuplicateWordAuditEntry[];
+    }
     | { kind: 'legacy-duplicate'; normalizedWord: string; entries: DuplicateWordAuditEntry[] };
 
 export interface RenameConflictCheckParams {

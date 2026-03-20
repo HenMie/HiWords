@@ -36,14 +36,24 @@ export class AddWordModal extends Modal {
 
     private static lastSelectedBookPath: string | null = null
 
-    constructor(app: App, plugin: HiWordsPlugin, word: string, sentence = '', isEditMode = false) {
+    constructor(
+        app: App,
+        plugin: HiWordsPlugin,
+        word: string,
+        sentence = '',
+        isEditMode = false,
+        definitionOverride?: WordDefinition | null,
+        duplicateEntries?: DuplicateWordAuditEntry[]
+    ) {
         super(app)
         this.plugin = plugin
-        this.originalWord = word
-        this.word = word
         this.sentence = sentence
         this.isEditMode = isEditMode
-        this.definition = isEditMode ? this.plugin.vocabularyManager.getDefinition(word) : null
+        this.definition = isEditMode
+            ? definitionOverride ?? this.plugin.vocabularyManager.getDefinition(word)
+            : null
+        this.originalWord = this.definition?.word ?? word
+        this.word = this.definition?.word ?? word
         this.dictionaryService = plugin.settings.aiDictionary
             ? new DictionaryService(plugin.settings.aiDictionary)
             : null
@@ -59,6 +69,10 @@ export class AddWordModal extends Modal {
             this.definition?.source ?? null,
             AddWordModal.lastSelectedBookPath
         )
+
+        if (this.isEditMode && duplicateEntries && duplicateEntries.length > 0) {
+            this.conflictMessage = this.formatLegacyDuplicateContext(duplicateEntries)
+        }
     }
 
     onOpen(): void {
@@ -350,6 +364,16 @@ export class AddWordModal extends Modal {
             .map((entry) => `${entry.rawWord} @ ${entry.bookPath}`)
             .join(' | ')
         return template.replace('{0}', detail)
+    }
+
+    private formatLegacyDuplicateContext(entries: DuplicateWordAuditEntry[]): string {
+        return this.formatConflictMessage(
+            t(
+                'notices.legacy_duplicate_edit_context',
+                'Legacy duplicates already exist for this word. You can review or delete this entry, but rename or move is blocked until duplicates are cleaned up. {0}'
+            ),
+            entries
+        )
     }
 
     private parseColorValue(color?: string): number | undefined {

@@ -133,6 +133,7 @@ export interface LanguagePack {
         duplicate_audit_clean?: string;
         duplicate_audit_found?: string;
         legacy_duplicate_blocked?: string;
+        legacy_duplicate_edit_context?: string;
         rename_conflict_detected?: string;
         rename_conflict_legacy_state?: string;
         morphology_asset_downloaded?: string;

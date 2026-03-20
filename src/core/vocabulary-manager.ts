@@ -248,20 +248,21 @@ export class VocabularyManager {
             (entry) => entry.normalizedWord === normalizedWord
         )
 
-        if (duplicateEntries.length > 0) {
-            return {
-                kind: 'legacy-duplicate',
-                normalizedWord,
-                entries: duplicateEntries
-            }
-        }
-
         const definition = this.getDefinition(word)
         if (definition) {
             return {
                 kind: 'edit',
                 normalizedWord,
-                definition
+                definition,
+                duplicateEntries: duplicateEntries.length > 0 ? duplicateEntries : undefined
+            }
+        }
+
+        if (duplicateEntries.length > 0) {
+            return {
+                kind: 'legacy-duplicate',
+                normalizedWord,
+                entries: duplicateEntries
             }
         }
 
@@ -295,11 +296,13 @@ export class VocabularyManager {
             return { kind: 'same-node-noop' }
         }
 
-        const legacyDuplicates = this.getLegacyDuplicateEntries()
-        if (legacyDuplicates.length > 0) {
+        const relatedLegacyDuplicates = this.getLegacyDuplicateEntries().filter((entry) =>
+            entry.normalizedWord === currentNormalizedWord || entry.normalizedWord === candidateNormalizedWord
+        )
+        if (relatedLegacyDuplicates.length > 0) {
             return {
                 kind: 'legacy-duplicate-state',
-                conflictingEntries: legacyDuplicates
+                conflictingEntries: relatedLegacyDuplicates
             }
         }
 
