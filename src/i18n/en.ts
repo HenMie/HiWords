@@ -165,12 +165,16 @@ export default {
     
     // Modals
     modals: {
-        add_word_title: "Add ",
-        edit_word_title: "Edit ",
+        add_word_title: "Add word",
+        add_word_helper: "Choose a book, review the normalized headword if needed, then save the definition first.",
+        edit_word_title: "Update word details",
+        edit_word_helper: "Update the definition, notes, color, or book. Renaming the headword is not supported in V1.",
         word_label: "Word",
         word_placeholder: "Enter the word",
         definition_label: "Definition",
         book_label: "Vocabulary book",
+        current_book_label: "Current book",
+        target_book_label: "Target book",
         select_book: "Select a vocabulary book",
         color_label: "Card color",
         color_gray: "Gray",
@@ -190,6 +194,7 @@ export default {
         definition_placeholder: "Enter word definition...",
         add_button: "Add",
         save_button: "Save",
+        delete_button: "Delete",
         cancel_button: "Cancel",
         select_canvas_file: "Select vocabulary book file",
         delete_confirmation: "Are you sure you want to delete the word \"{0}\"?\nThis action cannot be undone.",

@@ -459,6 +459,79 @@
     width: 100%;
 }
 
+.hiwords-modal-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.hiwords-modal-header {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.hiwords-modal-title {
+    margin: 0;
+}
+
+.hiwords-modal-helper {
+    margin: 0;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+.hiwords-ownership-panel {
+    padding: 12px 14px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 10px;
+    background: var(--background-secondary);
+}
+
+.hiwords-ownership-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+}
+
+.hiwords-ownership-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.hiwords-ownership-label {
+    color: var(--text-muted);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.hiwords-ownership-value {
+    color: var(--text-normal);
+    font-weight: 600;
+    word-break: break-word;
+}
+
+.hiwords-ownership-value.is-muted {
+    color: var(--text-faint);
+    font-weight: 500;
+}
+
+.hiwords-form-section {
+    display: flex;
+    flex-direction: column;
+}
+
+.hiwords-form-section-primary {
+    order: 1;
+}
+
+.hiwords-form-section-secondary {
+    order: 2;
+}
+
 .hiwords-form-item-label {
     display: block;
     margin-bottom: 6px;
@@ -489,16 +562,19 @@
 }
 
 .hiwords-modal-button-container {
-    margin-top: 16px;
+    margin-top: 8px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
 }
 
 .hiwords-button-group-left,
 .hiwords-button-group-right {
     display: flex;
     gap: 8px;
+    flex-wrap: wrap;
 }
 
 .hiwords-button-group-right {
@@ -520,6 +596,24 @@
 .hiwords-auto-fill-btn:hover {
     background-color: var(--background-modifier-hover);
     color: var(--interactive-accent);
+}
+
+.delete-word-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-error);
+    border: 1px solid color-mix(in srgb, var(--text-error) 35%, transparent);
+}
+
+.delete-word-button:hover {
+    background: color-mix(in srgb, var(--text-error) 10%, transparent);
+    border-color: color-mix(in srgb, var(--text-error) 50%, transparent);
+}
+
+.delete-word-button-icon {
+    display: inline-flex;
+    align-items: center;
 }
 
 .hiwords-auto-fill-icon {

@@ -152,12 +152,16 @@ export default {
 
     // Modals
     modals: {
-        add_word_title: "Agregar ",
-        edit_word_title: "Editar ",
+        add_word_title: "Agregar palabra",
+        add_word_helper: "Elige un libro, revisa la forma normalizada si aparece y completa primero la definición.",
+        edit_word_title: "Actualizar detalles de la palabra",
+        edit_word_helper: "En V1 solo puedes actualizar definición, notas, color o libro; no renombrar la palabra.",
         word_label: "Palabra",
         word_placeholder: "Introduce la palabra",
         definition_label: "Definición",
         book_label: "Libro de palabras",
+        current_book_label: "Libro actual",
+        target_book_label: "Libro de destino",
         select_book: "Selecciona un libro",
         color_label: "Color de tarjeta",
         color_gray: "Gris",
@@ -177,6 +181,7 @@ export default {
         definition_placeholder: "Introduce la definición...",
         add_button: "Agregar",
         save_button: "Guardar",
+        delete_button: "Eliminar",
         cancel_button: "Cancelar",
         select_canvas_file: "Seleccionar archivo del libro",
         delete_confirmation: "¿Seguro que deseas eliminar la palabra \"{0}\"?\nEsta acción no se puede deshacer.",

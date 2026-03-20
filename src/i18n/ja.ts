@@ -152,12 +152,16 @@ export default {
 
     // Modals
     modals: {
-        add_word_title: "追加 ",
-        edit_word_title: "編集 ",
+        add_word_title: "単語を追加",
+        add_word_helper: "単語帳を選び、必要なら正規化結果を確認してから、まず定義を入力してください。",
+        edit_word_title: "単語情報を更新",
+        edit_word_helper: "V1 では定義・メモ・色・単語帳のみ更新できます。見出し語の変更はできません。",
         word_label: "単語",
         word_placeholder: "単語を入力",
         definition_label: "定義",
         book_label: "単語帳",
+        current_book_label: "現在の単語帳",
+        target_book_label: "変更先の単語帳",
         select_book: "単語帳を選択",
         color_label: "カードの色",
         color_gray: "グレー",
@@ -177,6 +181,7 @@ export default {
         definition_placeholder: "定義を入力...",
         add_button: "追加",
         save_button: "保存",
+        delete_button: "削除",
         cancel_button: "キャンセル",
         select_canvas_file: "単語帳ファイルを選択",
         delete_confirmation: "単語 \"{0}\" を削除してもよろしいですか？\nこの操作は元に戻せません。",

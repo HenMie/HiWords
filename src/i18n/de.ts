@@ -152,12 +152,16 @@ export default {
 
     // Modals
     modals: {
-        add_word_title: "Hinzufügen ",
-        edit_word_title: "Bearbeiten ",
+        add_word_title: "Wort hinzufügen",
+        add_word_helper: "Wähle ein Vokabelbuch, prüfe bei Bedarf die normalisierte Form und trage zuerst die Definition ein.",
+        edit_word_title: "Wortdetails aktualisieren",
+        edit_word_helper: "In V1 können nur Definition, Notizen, Farbe oder Buch geändert werden – nicht das Stichwort selbst.",
         word_label: "Wort",
         word_placeholder: "Wort eingeben",
         definition_label: "Definition",
         book_label: "Wörterbuch",
+        current_book_label: "Aktuelles Buch",
+        target_book_label: "Zielbuch",
         select_book: "Wörterbuch auswählen",
         color_label: "Kartenfarbe",
         color_gray: "Grau",
@@ -177,6 +181,7 @@ export default {
         definition_placeholder: "Definition eingeben...",
         add_button: "Hinzufügen",
         save_button: "Speichern",
+        delete_button: "Löschen",
         cancel_button: "Abbrechen",
         select_canvas_file: "Datei des Wörterbuchs auswählen",
         delete_confirmation: "Möchten Sie das Wort \"{0}\" wirklich löschen?\nDiese Aktion kann nicht rückgängig gemacht werden.",

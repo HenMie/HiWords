@@ -9,6 +9,7 @@ import { getPronunciationPlaceholderKey } from './add-word-language-policy'
 interface AddWordFormOptions {
     containerEl: HTMLElement
     titleLabel: string
+    helperText: string
     initialWord: string
     originalWord: string
     sentence: string
@@ -19,6 +20,7 @@ interface AddWordFormOptions {
     colorValue?: number
     enabledBooks: VocabularyBook[]
     selectedBookPath: string | null
+    sourceBookPath?: string | null
     dictionaryService: DictionaryService | null
     isAnalyzing: boolean
     onWordChange: (word: string) => void
@@ -49,6 +51,7 @@ export function renderAddWordForm(options: AddWordFormOptions): AddWordFormRefs 
     const {
         containerEl,
         titleLabel,
+        helperText,
         initialWord,
         originalWord,
         sentence,
@@ -59,6 +62,7 @@ export function renderAddWordForm(options: AddWordFormOptions): AddWordFormRefs 
         colorValue,
         enabledBooks,
         selectedBookPath,
+        sourceBookPath,
         dictionaryService,
         isAnalyzing,
         onWordChange,
@@ -73,7 +77,76 @@ export function renderAddWordForm(options: AddWordFormOptions): AddWordFormRefs 
         onCancel
     } = options
 
-    const titleEl = containerEl.createEl('h2', { text: `${titleLabel} "${initialWord}"` })
+    containerEl.addClass('hiwords-modal-shell')
+
+    const resolveBookDisplayName = (bookPath: string | null): string => {
+        if (!bookPath) {
+            return t('modals.select_book')
+        }
+
+        return enabledBooks.find((book) => book.path === bookPath)?.name ?? bookPath
+    }
+
+    const createOwnershipItem = (
+        parentEl: HTMLElement,
+        label: string,
+        value: string,
+        muted = false
+    ): HTMLSpanElement => {
+        const itemEl = parentEl.createDiv({ cls: 'hiwords-ownership-item' })
+        itemEl.createEl('span', {
+            text: label,
+            cls: 'hiwords-ownership-label'
+        })
+        return itemEl.createEl('span', {
+            text: value,
+            cls: `hiwords-ownership-value${muted ? ' is-muted' : ''}`
+        })
+    }
+
+    const headerEl = containerEl.createDiv({ cls: 'hiwords-modal-header' })
+    headerEl.createEl('h2', {
+        text: titleLabel,
+        cls: 'hiwords-modal-title'
+    })
+    headerEl.createEl('p', {
+        text: helperText,
+        cls: 'hiwords-modal-helper'
+    })
+
+    const ownershipEl = containerEl.createDiv({ cls: 'hiwords-ownership-panel' })
+    const ownershipGridEl = ownershipEl.createDiv({ cls: 'hiwords-ownership-grid' })
+    const wordValueEl = createOwnershipItem(
+        ownershipGridEl,
+        t('modals.word_label'),
+        initialWord || t('modals.word_placeholder'),
+        !initialWord
+    )
+
+    if (!isEditMode && originalWord !== initialWord) {
+        createOwnershipItem(
+            ownershipGridEl,
+            t('notices.morphology_detected') || 'Original word',
+            originalWord
+        )
+    }
+
+    if (isEditMode && sourceBookPath) {
+        createOwnershipItem(
+            ownershipGridEl,
+            t('modals.current_book_label', 'Current book'),
+            resolveBookDisplayName(sourceBookPath)
+        )
+    }
+
+    const targetBookValueEl = createOwnershipItem(
+        ownershipGridEl,
+        isEditMode
+            ? t('modals.target_book_label', 'Target book')
+            : t('modals.book_label'),
+        resolveBookDisplayName(selectedBookPath),
+        !selectedBookPath
+    )
 
     if (isAnalyzing) {
         const loadingEl = containerEl.createEl('div', { cls: 'loading-indicator' })
@@ -84,7 +157,7 @@ export function renderAddWordForm(options: AddWordFormOptions): AddWordFormRefs 
         const noteEl = containerEl.createEl('div', { cls: 'morphology-note' })
         const noteContent = noteEl.createEl('div', { cls: 'morphology-note-content' })
         noteContent.createEl('span', {
-            text: `${t('notices.morphology_detected') || '原始单词'}："${originalWord}" → ${t('notices.normalized_to') || '识别为原型'}："${initialWord}"`,
+            text: `${t('notices.morphology_detected') || '原始单词'}: “${originalWord}” → ${t('notices.normalized_to') || '识别为原型'}: “${initialWord}”`,
             cls: 'note-text'
         })
         const restoreButton = noteContent.createEl('button', {
@@ -96,8 +169,69 @@ export function renderAddWordForm(options: AddWordFormOptions): AddWordFormRefs 
 
     let currentWord = initialWord
     let wordInput: HTMLInputElement | null = null
+
+    const definitionSection = containerEl.createDiv({
+        cls: 'hiwords-form-section hiwords-form-section-primary'
+    })
+    const definitionContainer = definitionSection.createDiv({ cls: 'hiwords-form-item' })
+    const definitionLabelContainer = definitionContainer.createDiv({
+        cls: 'hiwords-definition-label-container'
+    })
+    definitionLabelContainer.createEl('label', {
+        text: t('modals.definition_label'),
+        cls: 'hiwords-form-item-label'
+    })
+
     if (!isEditMode) {
-        const wordContainer = containerEl.createDiv({ cls: 'hiwords-form-item' })
+        const autoFillBtn = definitionLabelContainer.createDiv({ cls: 'hiwords-auto-fill-btn' })
+        autoFillBtn.setAttribute('aria-label', t('modals.auto_fill_definition'))
+        const iconContainer = autoFillBtn.createDiv({ cls: 'hiwords-auto-fill-icon' })
+        setIcon(iconContainer, 'sparkles')
+
+        autoFillBtn.addEventListener('click', async () => {
+            const queryWord = wordInput?.value.trim() || currentWord
+            if (!queryWord) {
+                new Notice(t('notices.enter_word_first') || '请先输入单词')
+                return
+            }
+            if (!dictionaryService) {
+                new Notice(t('notices.ai_config_required') || '请先在设置中配置 AI 词典')
+                return
+            }
+            autoFillBtn.addClass('hiwords-loading')
+            iconContainer.empty()
+            setIcon(iconContainer, 'loader')
+            try {
+                const result = await dictionaryService.fetchDefinition(queryWord, sentence)
+                definitionInput.value = result
+                onDefinitionChange(result)
+                new Notice(t('notices.definition_fetched') || '已获取释义')
+            } catch (error) {
+                console.error('Failed to fetch definition from AI:', error)
+                new Notice(t('notices.definition_fetch_failed') || '获取释义失败')
+            } finally {
+                autoFillBtn.removeClass('hiwords-loading')
+                iconContainer.empty()
+                setIcon(iconContainer, 'sparkles')
+            }
+        })
+    }
+
+    const definitionInput = definitionContainer.createEl('textarea', {
+        cls: 'setting-item-input definition-input',
+        attr: { rows: '5', placeholder: t('modals.definition_placeholder') }
+    })
+    definitionInput.value = definitionValue
+    definitionInput.addEventListener('input', () => {
+        onDefinitionChange(definitionInput.value)
+    })
+
+    const metadataSection = containerEl.createDiv({
+        cls: 'hiwords-form-section hiwords-form-section-secondary'
+    })
+
+    if (!isEditMode) {
+        const wordContainer = metadataSection.createDiv({ cls: 'hiwords-form-item' })
         wordContainer.createEl('label', {
             text: t('modals.word_label'),
             cls: 'hiwords-form-item-label'
@@ -112,14 +246,17 @@ export function renderAddWordForm(options: AddWordFormOptions): AddWordFormRefs 
             const target = event.target as HTMLInputElement
             currentWord = target.value.trim()
             onWordChange(currentWord)
-            titleEl.textContent = `${titleLabel} "${currentWord}"`
+            wordValueEl.textContent = currentWord || t('modals.word_placeholder')
+            wordValueEl.classList.toggle('is-muted', !currentWord)
             updatePronunciationPlaceholder()
         })
     }
 
-    const bookSelectContainer = containerEl.createDiv({ cls: 'hiwords-form-item' })
+    const bookSelectContainer = metadataSection.createDiv({ cls: 'hiwords-form-item' })
     bookSelectContainer.createEl('label', {
-        text: t('modals.book_label'),
+        text: isEditMode
+            ? t('modals.target_book_label', 'Target book')
+            : t('modals.book_label'),
         cls: 'hiwords-form-item-label'
     })
     const bookSelect = bookSelectContainer.createEl('select', { cls: 'dropdown' })
@@ -139,7 +276,7 @@ export function renderAddWordForm(options: AddWordFormOptions): AddWordFormRefs 
         return enabledBooks.find((book) => book.path === bookPath)
     }
 
-    const colorSelectContainer = containerEl.createDiv({ cls: 'hiwords-form-item' })
+    const colorSelectContainer = metadataSection.createDiv({ cls: 'hiwords-form-item' })
     colorSelectContainer.createEl('label', {
         text: t('modals.color_label'),
         cls: 'hiwords-form-item-label'
@@ -166,7 +303,7 @@ export function renderAddWordForm(options: AddWordFormOptions): AddWordFormRefs 
         onColorChange(colorSelect.value ? parseInt(colorSelect.value, 10) : undefined)
     })
 
-    const etymologyContainer = containerEl.createDiv({ cls: 'hiwords-form-item' })
+    const etymologyContainer = metadataSection.createDiv({ cls: 'hiwords-form-item' })
     etymologyContainer.createEl('label', {
         text: t('modals.etymology_label') || '词源（可选）',
         cls: 'hiwords-form-item-label'
@@ -181,7 +318,7 @@ export function renderAddWordForm(options: AddWordFormOptions): AddWordFormRefs 
         onEtymologyChange(etymologyInput.value)
     })
 
-    const pronunciationContainer = containerEl.createDiv({ cls: 'hiwords-form-item' })
+    const pronunciationContainer = metadataSection.createDiv({ cls: 'hiwords-form-item' })
     pronunciationContainer.createEl('label', {
         text: t('modals.pronunciation_label') || '发音（可选）',
         cls: 'hiwords-form-item-label'
@@ -214,65 +351,22 @@ export function renderAddWordForm(options: AddWordFormOptions): AddWordFormRefs 
     updatePronunciationPlaceholder()
     bookSelect.addEventListener('change', () => {
         onBookChange(bookSelect.value || null)
+        targetBookValueEl.textContent = resolveBookDisplayName(bookSelect.value || null)
+        targetBookValueEl.classList.toggle('is-muted', !bookSelect.value)
         updatePronunciationPlaceholder()
-    })
-
-    const definitionContainer = containerEl.createDiv({ cls: 'hiwords-form-item' })
-    const definitionLabelContainer = definitionContainer.createDiv({
-        cls: 'hiwords-definition-label-container'
-    })
-    definitionLabelContainer.createEl('label', {
-        text: t('modals.definition_label'),
-        cls: 'hiwords-form-item-label'
-    })
-
-    const autoFillBtn = definitionLabelContainer.createDiv({ cls: 'hiwords-auto-fill-btn' })
-    autoFillBtn.setAttribute('aria-label', t('modals.auto_fill_definition'))
-    const iconContainer = autoFillBtn.createDiv({ cls: 'hiwords-auto-fill-icon' })
-    setIcon(iconContainer, 'sparkles')
-
-    const definitionInput = definitionContainer.createEl('textarea', {
-        cls: 'setting-item-input definition-input',
-        attr: { rows: '5', placeholder: t('modals.definition_placeholder') }
-    })
-    definitionInput.value = definitionValue
-    definitionInput.addEventListener('input', () => {
-        onDefinitionChange(definitionInput.value)
-    })
-
-    autoFillBtn.addEventListener('click', async () => {
-        const queryWord = isEditMode ? initialWord : wordInput?.value.trim() || ''
-        if (!queryWord) {
-            new Notice(t('notices.enter_word_first') || '请先输入单词')
-            return
-        }
-        if (!dictionaryService) {
-            new Notice(t('notices.ai_config_required') || '请先在设置中配置 AI 词典')
-            return
-        }
-        autoFillBtn.addClass('hiwords-loading')
-        iconContainer.empty()
-        setIcon(iconContainer, 'loader')
-        try {
-            const result = await dictionaryService.fetchDefinition(queryWord, sentence)
-            definitionInput.value = result
-            onDefinitionChange(result)
-            new Notice(t('notices.definition_fetched') || '已获取释义')
-        } catch (error) {
-            console.error('Failed to fetch definition from AI:', error)
-            new Notice(t('notices.definition_fetch_failed') || '获取释义失败')
-        } finally {
-            autoFillBtn.removeClass('hiwords-loading')
-            iconContainer.empty()
-            setIcon(iconContainer, 'sparkles')
-        }
     })
 
     const buttonContainer = containerEl.createDiv({ cls: 'hiwords-modal-button-container' })
     const leftButtonGroup = buttonContainer.createDiv({ cls: 'hiwords-button-group-left' })
     if (isEditMode && onDelete) {
         const deleteButton = leftButtonGroup.createEl('button', { cls: 'delete-word-button' })
-        setIcon(deleteButton, 'trash')
+        deleteButton.setAttribute('aria-label', t('modals.delete_button', 'Delete'))
+        const deleteIcon = deleteButton.createSpan({ cls: 'delete-word-button-icon' })
+        setIcon(deleteIcon, 'trash')
+        deleteButton.createSpan({
+            text: t('modals.delete_button', 'Delete'),
+            cls: 'delete-word-button-label'
+        })
         deleteButton.onclick = () => void onDelete()
     }
 

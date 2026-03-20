@@ -118,9 +118,14 @@ export interface LanguagePack {
     };
     modals: {
         add_word_title: string;
+        add_word_helper: string;
+        edit_word_title: string;
+        edit_word_helper: string;
         word_label: string;
         definition_label: string;
         book_label: string;
+        current_book_label?: string;
+        target_book_label?: string;
         select_book: string;
         color_label: string;
         color_gray: string;
@@ -128,10 +133,16 @@ export interface LanguagePack {
         pronunciation_placeholder: string;
         pronunciation_placeholder_japanese: string;
         pronunciation_placeholder_english: string;
+        etymology_label?: string;
+        etymology_placeholder?: string;
+        auto_fill_definition?: string;
         definition_placeholder: string;
         add_button: string;
+        save_button?: string;
+        delete_button?: string;
         cancel_button: string;
         select_canvas_file: string;
+        delete_confirmation?: string;
     };
     // Common action labels used in UI
     actions?: {
@@ -139,6 +150,7 @@ export interface LanguagePack {
         collapse: string;      // 收起
         mark_mastered: string; // 已掌握
         unmark_mastered: string; // 忘记了（取消已掌握）
+        restore?: string;
     };
 }
 
@@ -269,4 +281,4 @@ export class I18n {
 export const i18n = I18n.getInstance();
 
 // 导出翻译函数，方便使用
-export const t = (key: string): string => i18n.t(key);
+export const t = (key: string, fallback?: string): string => i18n.t(key, fallback);

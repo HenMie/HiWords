@@ -76,6 +76,7 @@ export class AddWordModal extends Modal {
         const refs = renderAddWordForm({
             containerEl: contentEl,
             titleLabel: t(this.isEditMode ? 'modals.edit_word_title' : 'modals.add_word_title'),
+            helperText: t(this.isEditMode ? 'modals.edit_word_helper' : 'modals.add_word_helper'),
             initialWord: this.word,
             originalWord: this.originalWord,
             sentence: this.sentence,
@@ -86,6 +87,7 @@ export class AddWordModal extends Modal {
             colorValue: this.draft.colorValue,
             enabledBooks: this.getEnabledBooks(),
             selectedBookPath: this.selectedBookPath,
+            sourceBookPath: this.definition?.source ?? null,
             dictionaryService: this.dictionaryService,
             isAnalyzing: this.isAnalyzing,
             onWordChange: (word) => {
@@ -180,11 +182,10 @@ export class AddWordModal extends Modal {
             console.error('Analyze word failed:', error)
             this.word = this.originalWord
         } finally {
-            if (analysisRunId !== this.analysisRunId) {
-                return
+            if (analysisRunId === this.analysisRunId) {
+                this.isAnalyzing = false
+                this.render()
             }
-            this.isAnalyzing = false
-            this.render()
         }
     }
 

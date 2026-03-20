@@ -152,12 +152,16 @@ export default {
 
     // Modals
     modals: {
-        add_word_title: "Ajouter ",
-        edit_word_title: "Éditer ",
+        add_word_title: "Ajouter un mot",
+        add_word_helper: "Choisissez un carnet, vérifiez la forme normalisée si besoin, puis renseignez d'abord la définition.",
+        edit_word_title: "Mettre à jour la fiche du mot",
+        edit_word_helper: "En V1, vous pouvez modifier la définition, les notes, la couleur ou le carnet, mais pas renommer le mot.",
         word_label: "Mot",
         word_placeholder: "Saisir le mot",
         definition_label: "Définition",
         book_label: "Livre de mots",
+        current_book_label: "Carnet actuel",
+        target_book_label: "Carnet cible",
         select_book: "Sélectionnez un livre",
         color_label: "Couleur de la carte",
         color_gray: "Gris",
@@ -177,6 +181,7 @@ export default {
         definition_placeholder: "Saisissez la définition...",
         add_button: "Ajouter",
         save_button: "Enregistrer",
+        delete_button: "Supprimer",
         cancel_button: "Annuler",
         select_canvas_file: "Sélectionner le fichier du livre",
         delete_confirmation: "Êtes-vous sûr de vouloir supprimer le mot \"{0}\" ?\nCette action est irréversible.",

@@ -165,12 +165,16 @@ export default {
     
     // 模态框
     modals: {
-        add_word_title: "添加 ",
-        edit_word_title: "编辑 ",
+        add_word_title: "添加单词",
+        add_word_helper: "先确认目标单词本，再优先填写释义；若识别出原型，可按需还原原词。",
+        edit_word_title: "更新词条信息",
+        edit_word_helper: "V1 仅支持更新释义、备注、颜色或所属单词本，不支持直接改词头。",
         word_label: "单词",
         word_placeholder: "请输入单词",
         definition_label: "释义",
         book_label: "单词本",
+        current_book_label: "当前单词本",
+        target_book_label: "目标单词本",
         select_book: "选择单词本",
         color_label: "卡片颜色",
         color_gray: "灰色",
@@ -190,6 +194,7 @@ export default {
         definition_placeholder: "输入词汇释义...",
         add_button: "添加",
         save_button: "保存",
+        delete_button: "删除",
         cancel_button: "取消",
         select_canvas_file: "选择 Canvas 文件",
         delete_confirmation: "确定要删除词汇 \"{0}\" 吗？\n此操作不可撤销。",
