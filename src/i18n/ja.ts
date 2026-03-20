@@ -101,6 +101,7 @@ export default {
         add_word: "HiWords: 単語を追加",
         edit_word: "HiWords: 単語を編集",
         show_sidebar: "HiWords サイドバーを表示",
+        audit_legacy_duplicate_words: "既存重複語を監査",
     },
 
     // Notices
@@ -145,6 +146,11 @@ export default {
         definition_fetched: "定義を取得しました",
         definition_fetch_failed: "定義の取得に失敗しました",
         word_required: "単語は必須です",
+        duplicate_audit_clean: "既存の重複語は見つかりませんでした。",
+        duplicate_audit_found: "既存の重複語が見つかりました。詳細はコンソールを確認してください。",
+        legacy_duplicate_blocked: "既存の重複語により V2 の編集導線がブロックされています。先に監査を実行してください。{0}",
+        rename_conflict_detected: "競合する単語が既に存在します。{0}",
+        rename_conflict_legacy_state: "既存の重複状態により名前変更または移動がブロックされています。先に解消してください。{0}",
         morphology_asset_downloaded: "{0} の形態素リソースをダウンロードしました",
         morphology_asset_deleted: "{0} の形態素リソースを削除しました",
         morphology_asset_operation_failed: "{0} の形態素リソース操作に失敗しました",
@@ -154,8 +160,8 @@ export default {
     modals: {
         add_word_title: "単語を追加",
         add_word_helper: "単語帳を選び、必要なら正規化結果を確認してから、まず定義を入力してください。",
-        edit_word_title: "単語情報を更新",
-        edit_word_helper: "V1 では定義・メモ・色・単語帳のみ更新できます。見出し語の変更はできません。",
+        edit_word_title: "単語を改名または移動",
+        edit_word_helper: "見出し語、定義、メモ、色、単語帳を更新できます。グローバル競合がある場合は保存できません。",
         word_label: "単語",
         word_placeholder: "単語を入力",
         definition_label: "定義",

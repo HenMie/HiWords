@@ -94,8 +94,11 @@ export interface LanguagePack {
     };
     commands: {
         add_word: string;
+        edit_word?: string;
+        add_selected_word?: string;
         refresh_vocabulary: string;
         show_sidebar: string;
+        audit_legacy_duplicate_words?: string;
     };
     notices: {
         vocabulary_refreshed: string;
@@ -112,6 +115,26 @@ export interface LanguagePack {
         book_added: string;
         book_reloaded: string;
         book_removed: string;
+        updating_word?: string;
+        update_word_failed?: string;
+        error_processing_word?: string;
+        deleting_word?: string;
+        word_deleted?: string;
+        delete_word_failed?: string;
+        error_deleting_word?: string;
+        analyzing_word?: string;
+        morphology_detected?: string;
+        normalized_to?: string;
+        enter_word_first?: string;
+        ai_config_required?: string;
+        definition_fetched?: string;
+        definition_fetch_failed?: string;
+        word_required?: string;
+        duplicate_audit_clean?: string;
+        duplicate_audit_found?: string;
+        legacy_duplicate_blocked?: string;
+        rename_conflict_detected?: string;
+        rename_conflict_legacy_state?: string;
         morphology_asset_downloaded?: string;
         morphology_asset_deleted?: string;
         morphology_asset_operation_failed?: string;
@@ -122,6 +145,7 @@ export interface LanguagePack {
         edit_word_title: string;
         edit_word_helper: string;
         word_label: string;
+        word_placeholder?: string;
         definition_label: string;
         book_label: string;
         current_book_label?: string;

@@ -10,6 +10,7 @@ interface AddWordFormOptions {
     containerEl: HTMLElement
     titleLabel: string
     helperText: string
+    errorMessage?: string | null
     initialWord: string
     originalWord: string
     sentence: string
@@ -52,6 +53,7 @@ export function renderAddWordForm(options: AddWordFormOptions): AddWordFormRefs 
         containerEl,
         titleLabel,
         helperText,
+        errorMessage,
         initialWord,
         originalWord,
         sentence,
@@ -167,6 +169,13 @@ export function renderAddWordForm(options: AddWordFormOptions): AddWordFormRefs 
         restoreButton.onclick = onRestoreOriginal
     }
 
+    if (errorMessage) {
+        containerEl.createEl('div', {
+            text: errorMessage,
+            cls: 'hiwords-form-error'
+        })
+    }
+
     let currentWord = initialWord
     let wordInput: HTMLInputElement | null = null
 
@@ -230,27 +239,25 @@ export function renderAddWordForm(options: AddWordFormOptions): AddWordFormRefs 
         cls: 'hiwords-form-section hiwords-form-section-secondary'
     })
 
-    if (!isEditMode) {
-        const wordContainer = metadataSection.createDiv({ cls: 'hiwords-form-item' })
-        wordContainer.createEl('label', {
-            text: t('modals.word_label'),
-            cls: 'hiwords-form-item-label'
-        })
-        wordInput = wordContainer.createEl('input', {
-            type: 'text',
-            value: initialWord,
-            cls: 'setting-item-input word-input',
-            placeholder: t('modals.word_placeholder')
-        })
-        wordInput.addEventListener('input', (event) => {
-            const target = event.target as HTMLInputElement
-            currentWord = target.value.trim()
-            onWordChange(currentWord)
-            wordValueEl.textContent = currentWord || t('modals.word_placeholder')
-            wordValueEl.classList.toggle('is-muted', !currentWord)
-            updatePronunciationPlaceholder()
-        })
-    }
+    const wordContainer = metadataSection.createDiv({ cls: 'hiwords-form-item' })
+    wordContainer.createEl('label', {
+        text: t('modals.word_label'),
+        cls: 'hiwords-form-item-label'
+    })
+    wordInput = wordContainer.createEl('input', {
+        type: 'text',
+        value: initialWord,
+        cls: 'setting-item-input word-input',
+        placeholder: t('modals.word_placeholder')
+    })
+    wordInput.addEventListener('input', (event) => {
+        const target = event.target as HTMLInputElement
+        currentWord = target.value.trim()
+        onWordChange(currentWord)
+        wordValueEl.textContent = currentWord || t('modals.word_placeholder')
+        wordValueEl.classList.toggle('is-muted', !currentWord)
+        updatePronunciationPlaceholder()
+    })
 
     const bookSelectContainer = metadataSection.createDiv({ cls: 'hiwords-form-item' })
     bookSelectContainer.createEl('label', {
@@ -334,7 +341,7 @@ export function renderAddWordForm(options: AddWordFormOptions): AddWordFormRefs 
     })
 
     const updatePronunciationPlaceholder = () => {
-        const sourceWord = isEditMode ? initialWord : wordInput?.value ?? currentWord
+        const sourceWord = wordInput?.value ?? currentWord
         const key = getPronunciationPlaceholderKey(
             getBookLanguagePolicy(resolveSelectedBook()),
             sourceWord,
@@ -386,13 +393,11 @@ export function renderAddWordForm(options: AddWordFormOptions): AddWordFormRefs 
         const colorValue = colorSelect.value ? parseInt(colorSelect.value, 10) : undefined
         const etymology = etymologyInput.value.trim() || undefined
         const pronunciation = pronunciationInput.value.trim() || undefined
-        const finalWord = (isEditMode ? initialWord : wordInput?.value.trim() || currentWord).trim()
+        const finalWord = (wordInput?.value.trim() || currentWord).trim()
 
         if (!finalWord) {
             new Notice(t('notices.word_required') || '单词不能为空')
-            if (!isEditMode) {
-                wordInput?.focus()
-            }
+            wordInput?.focus()
             return
         }
 

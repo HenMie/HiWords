@@ -101,6 +101,7 @@ export default {
         add_word: "HiWords : Ajouter un mot",
         edit_word: "HiWords : Éditer un mot",
         show_sidebar: "Afficher la barre latérale HiWords",
+        audit_legacy_duplicate_words: "Auditer les doublons hérités",
     },
 
     // Notices
@@ -145,6 +146,11 @@ export default {
         definition_fetched: "Définition récupérée",
         definition_fetch_failed: "Impossible de récupérer la définition",
         word_required: "Le mot ne peut pas être vide",
+        duplicate_audit_clean: "Aucun doublon hérité détecté.",
+        duplicate_audit_found: "Des doublons hérités ont été détectés. Consultez la console pour les détails.",
+        legacy_duplicate_blocked: "Les doublons hérités bloquent l'entrée d'édition V2. Lancez d'abord l'audit. {0}",
+        rename_conflict_detected: "Un mot en conflit existe déjà. {0}",
+        rename_conflict_legacy_state: "L'état de doublons hérités bloque le renommage ou le déplacement. Résolvez-le d'abord. {0}",
         morphology_asset_downloaded: "Ressource morphologique {0} téléchargée",
         morphology_asset_deleted: "Ressource morphologique {0} supprimée",
         morphology_asset_operation_failed: "Échec de la gestion de la ressource morphologique {0}",
@@ -154,8 +160,8 @@ export default {
     modals: {
         add_word_title: "Ajouter un mot",
         add_word_helper: "Choisissez un carnet, vérifiez la forme normalisée si besoin, puis renseignez d'abord la définition.",
-        edit_word_title: "Mettre à jour la fiche du mot",
-        edit_word_helper: "En V1, vous pouvez modifier la définition, les notes, la couleur ou le carnet, mais pas renommer le mot.",
+        edit_word_title: "Renommer ou déplacer le mot",
+        edit_word_helper: "Modifiez le mot, la définition, les notes, la couleur ou le carnet. Les conflits globaux bloquent l'enregistrement.",
         word_label: "Mot",
         word_placeholder: "Saisir le mot",
         definition_label: "Définition",

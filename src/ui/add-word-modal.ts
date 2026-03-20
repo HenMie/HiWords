@@ -1,5 +1,9 @@
 import { App, Modal, Notice } from 'obsidian'
-import type { VocabularyBook, WordDefinition } from '../utils'
+import type {
+    DuplicateWordAuditEntry,
+    VocabularyBook,
+    WordDefinition
+} from '../utils'
 import { isKoreanText, INPUT_FOCUS_DELAY } from '../utils'
 import HiWordsPlugin from '../../main'
 import { t } from '../i18n'
@@ -28,6 +32,7 @@ export class AddWordModal extends Modal {
     private hasQueuedInitialAnalysis = false
     private analysisRunId = 0
     private draft: AddWordDraftState
+    private conflictMessage: string | null = null
 
     private static lastSelectedBookPath: string | null = null
 
@@ -77,6 +82,7 @@ export class AddWordModal extends Modal {
             containerEl: contentEl,
             titleLabel: t(this.isEditMode ? 'modals.edit_word_title' : 'modals.add_word_title'),
             helperText: t(this.isEditMode ? 'modals.edit_word_helper' : 'modals.add_word_helper'),
+            errorMessage: this.conflictMessage,
             initialWord: this.word,
             originalWord: this.originalWord,
             sentence: this.sentence,
@@ -92,6 +98,7 @@ export class AddWordModal extends Modal {
             isAnalyzing: this.isAnalyzing,
             onWordChange: (word) => {
                 this.word = word
+                this.conflictMessage = null
             },
             onDefinitionChange: (value) => {
                 this.draft.definition = value
@@ -107,12 +114,14 @@ export class AddWordModal extends Modal {
             },
             onBookChange: (bookPath) => {
                 this.selectedBookPath = bookPath
+                this.conflictMessage = null
                 if (!this.isEditMode) {
                     void this.analyzeWordAsync()
                 }
             },
             onRestoreOriginal: () => {
                 this.word = this.originalWord
+                this.conflictMessage = null
                 this.render()
             },
             onDelete: this.isEditMode && this.definition
@@ -124,7 +133,7 @@ export class AddWordModal extends Modal {
 
         setTimeout(() => {
             if (this.isEditMode) {
-                refs.definitionInput.focus()
+                refs.wordInput?.focus()
                 return
             }
 
@@ -231,6 +240,35 @@ export class AddWordModal extends Modal {
         etymology?: string
         pronunciation?: string
     }): Promise<void> {
+        this.conflictMessage = null
+
+        if (this.isEditMode && this.definition) {
+            const conflict = this.plugin.vocabularyManager.checkRenameConflict({
+                sourceBookPath: this.definition.source,
+                targetBookPath: payload.selectedBook,
+                nodeId: this.definition.nodeId,
+                candidateWord: payload.finalWord
+            })
+
+            if (conflict.kind === 'legacy-duplicate-state') {
+                this.conflictMessage = this.formatConflictMessage(
+                    t('notices.rename_conflict_legacy_state', 'Legacy duplicate state blocks rename or move. Resolve duplicates first. {0}'),
+                    conflict.conflictingEntries
+                )
+                this.render()
+                return
+            }
+
+            if (conflict.kind === 'global-conflict') {
+                this.conflictMessage = this.formatConflictMessage(
+                    t('notices.rename_conflict_detected', 'A conflicting word already exists. {0}'),
+                    conflict.conflictingEntries
+                )
+                this.render()
+                return
+            }
+        }
+
         const loadingNotice = this.isEditMode
             ? new Notice(t('notices.updating_word'), 0)
             : new Notice(t('notices.adding_word'), 0)
@@ -304,6 +342,14 @@ export class AddWordModal extends Modal {
             payload.etymology,
             payload.pronunciation
         )
+    }
+
+    private formatConflictMessage(template: string, entries: DuplicateWordAuditEntry[]): string {
+        const detail = entries
+            .slice(0, 2)
+            .map((entry) => `${entry.rawWord} @ ${entry.bookPath}`)
+            .join(' | ')
+        return template.replace('{0}', detail)
     }
 
     private parseColorValue(color?: string): number | undefined {

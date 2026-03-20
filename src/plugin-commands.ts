@@ -12,6 +12,7 @@ interface PluginCommandDeps {
     activateSidebarView: () => Promise<void>
     addOrEditWord: (word: string, sentence?: string) => void
     importLegacyCanvasBooks: () => Promise<void>
+    auditLegacyDuplicateWords: () => Promise<void>
 }
 
 export function registerPluginCommands(deps: PluginCommandDeps): void {
@@ -49,6 +50,14 @@ export function registerPluginCommands(deps: PluginCommandDeps): void {
         name: '导入 Canvas 词书到 JSONL',
         callback: async () => {
             await deps.importLegacyCanvasBooks()
+        }
+    })
+
+    deps.addCommand({
+        id: 'audit-legacy-duplicate-words',
+        name: t('commands.audit_legacy_duplicate_words', 'Audit legacy duplicate words'),
+        callback: async () => {
+            await deps.auditLegacyDuplicateWords()
         }
     })
 }

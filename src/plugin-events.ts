@@ -1,6 +1,6 @@
 import { TFile } from 'obsidian'
 import type { App, Editor, EventRef } from 'obsidian'
-import type { VocabularyBook } from './utils'
+import type { VocabularyBook, WordEntryIntent } from './utils'
 import { HIGHLIGHTER_REFRESH, extractSentenceFromEditorMultiline } from './utils'
 import type { VocabularyManager } from './core'
 import { t } from './i18n'
@@ -184,9 +184,7 @@ function addEditorMenuItem(
         return
     }
 
-    const titleKey = deps.vocabularyManager.hasWord(selection)
-        ? 'commands.edit_word'
-        : 'commands.add_word'
+    const titleKey = resolveEditorMenuTitleKey(deps.vocabularyManager.getWordEntryIntent(selection))
 
     menu.addItem((item) => {
         item
@@ -196,4 +194,12 @@ function addEditorMenuItem(
                 deps.addOrEditWord(selection, sentence)
             })
     })
+}
+
+function resolveEditorMenuTitleKey(intent: WordEntryIntent): string {
+    if (intent.kind === 'add') {
+        return 'commands.add_word'
+    }
+
+    return 'commands.edit_word'
 }

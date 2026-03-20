@@ -113,6 +113,7 @@ export default {
         edit_word: "HiWords: 编辑单词",
         show_sidebar: "显示 HiWords 侧边栏",
         add_selected_word: "添加选中的单词",
+        audit_legacy_duplicate_words: "审计历史重复词",
     },
     
     // 通知
@@ -158,6 +159,11 @@ export default {
         definition_fetched: "已获取释义",
         definition_fetch_failed: "获取释义失败",
         word_required: "单词不能为空",
+        duplicate_audit_clean: "未发现历史重复词。",
+        duplicate_audit_found: "发现历史重复词，请查看控制台详情。",
+        legacy_duplicate_blocked: "历史重复词会阻止 V2 编辑入口。请先运行重复词审计。{0}",
+        rename_conflict_detected: "已存在冲突词条。{0}",
+        rename_conflict_legacy_state: "历史重复状态会阻止改名或移动。请先清理重复词。{0}",
         morphology_asset_downloaded: "{0}形态学资源已下载",
         morphology_asset_deleted: "{0}形态学资源已删除",
         morphology_asset_operation_failed: "{0}形态学资源操作失败",
@@ -167,8 +173,8 @@ export default {
     modals: {
         add_word_title: "添加单词",
         add_word_helper: "先确认目标单词本，再优先填写释义；若识别出原型，可按需还原原词。",
-        edit_word_title: "更新词条信息",
-        edit_word_helper: "V1 仅支持更新释义、备注、颜色或所属单词本，不支持直接改词头。",
+        edit_word_title: "重命名或移动词条",
+        edit_word_helper: "可更新词头、释义、备注、颜色或所属单词本；若存在全局重复冲突则禁止保存。",
         word_label: "单词",
         word_placeholder: "请输入单词",
         definition_label: "释义",

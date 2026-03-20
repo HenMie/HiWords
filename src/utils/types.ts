@@ -33,6 +33,31 @@ export interface WordDefinition {
     patternParts?: string[]; // 模式短语固定片段
 }
 
+export interface DuplicateWordAuditEntry {
+    normalizedWord: string;
+    rawWord: string;
+    bookPath: string;
+    nodeId: string;
+}
+
+export type WordEntryIntent =
+    | { kind: 'add'; normalizedWord: string }
+    | { kind: 'edit'; normalizedWord: string; definition: WordDefinition }
+    | { kind: 'legacy-duplicate'; normalizedWord: string; entries: DuplicateWordAuditEntry[] };
+
+export interface RenameConflictCheckParams {
+    sourceBookPath: string;
+    targetBookPath: string;
+    nodeId: string;
+    candidateWord: string;
+}
+
+export type RenameConflictCheckResult =
+    | { kind: 'none' }
+    | { kind: 'same-node-noop' }
+    | { kind: 'global-conflict'; conflictingEntries: DuplicateWordAuditEntry[] }
+    | { kind: 'legacy-duplicate-state'; conflictingEntries: DuplicateWordAuditEntry[] };
+
 // 形态学语言类型
 export type MorphologyLanguage = 'none' | 'korean' | 'japanese' | 'auto';
 

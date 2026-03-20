@@ -532,6 +532,15 @@
     order: 2;
 }
 
+.hiwords-form-error {
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid color-mix(in srgb, var(--text-error) 35%, transparent);
+    background: color-mix(in srgb, var(--text-error) 10%, transparent);
+    color: var(--text-error);
+    line-height: 1.5;
+}
+
 .hiwords-form-item-label {
     display: block;
     margin-bottom: 6px;

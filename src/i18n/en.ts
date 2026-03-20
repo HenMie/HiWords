@@ -113,6 +113,7 @@ export default {
         edit_word: "HiWords: Edit word",
         show_sidebar: "Show HiWords sidebar",
         add_selected_word: "Add selected word",
+        audit_legacy_duplicate_words: "Audit legacy duplicate words",
     },
 
     // Notices
@@ -158,6 +159,11 @@ export default {
         definition_fetched: "Definition fetched",
         definition_fetch_failed: "Failed to fetch definition",
         word_required: "Word cannot be empty",
+        duplicate_audit_clean: "No legacy duplicate words found.",
+        duplicate_audit_found: "Legacy duplicate words detected. See console for details.",
+        legacy_duplicate_blocked: "Legacy duplicate words block V2 edit entry. Run duplicate audit first. {0}",
+        rename_conflict_detected: "A conflicting word already exists. {0}",
+        rename_conflict_legacy_state: "Legacy duplicate state blocks rename or move. Resolve duplicates first. {0}",
         morphology_asset_downloaded: "{0} morphology resource downloaded",
         morphology_asset_deleted: "{0} morphology resource deleted",
         morphology_asset_operation_failed: "Failed to manage {0} morphology resource",
@@ -167,8 +173,8 @@ export default {
     modals: {
         add_word_title: "Add word",
         add_word_helper: "Choose a book, review the normalized headword if needed, then save the definition first.",
-        edit_word_title: "Update word details",
-        edit_word_helper: "Update the definition, notes, color, or book. Renaming the headword is not supported in V1.",
+        edit_word_title: "Rename or move word",
+        edit_word_helper: "Update the headword, definition, notes, color, or book. Saves are blocked when global duplicates exist.",
         word_label: "Word",
         word_placeholder: "Enter the word",
         definition_label: "Definition",

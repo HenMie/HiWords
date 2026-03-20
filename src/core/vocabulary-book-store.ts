@@ -1,4 +1,4 @@
-import type { WordDefinition } from '../utils'
+import type { DuplicateWordAuditEntry, WordDefinition } from '../utils'
 import type { VocabularyCacheManager } from './vocabulary-cache-manager'
 import type { JsonlVocabularyService } from './jsonl-vocabulary-service'
 import {
@@ -287,6 +287,33 @@ export class VocabularyBookStore {
 
     public async getWordDefinitionsByBook(bookPath: string): Promise<WordDefinition[]> {
         return [...(this.definitions.get(bookPath) || [])]
+    }
+
+    public getLegacyDuplicateEntries(): DuplicateWordAuditEntry[] {
+        const grouped = new Map<string, DuplicateWordAuditEntry[]>()
+
+        for (const [bookPath, bookWords] of this.definitions.entries()) {
+            for (const wordDef of bookWords) {
+                const normalizedWord = normalizeWordValue(wordDef.word)
+                if (!normalizedWord) {
+                    continue
+                }
+
+                const entry: DuplicateWordAuditEntry = {
+                    normalizedWord,
+                    rawWord: wordDef.word,
+                    bookPath,
+                    nodeId: wordDef.nodeId
+                }
+                const entries = grouped.get(normalizedWord) ?? []
+                entries.push(entry)
+                grouped.set(normalizedWord, entries)
+            }
+        }
+
+        return Array.from(grouped.values())
+            .filter((entries) => entries.length > 1)
+            .flat()
     }
 
     public async getUnmasteredWords(): Promise<string[]> {

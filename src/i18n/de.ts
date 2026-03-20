@@ -101,6 +101,7 @@ export default {
         add_word: "HiWords: Wort hinzufügen",
         edit_word: "HiWords: Wort bearbeiten",
         show_sidebar: "HiWords-Seitenleiste anzeigen",
+        audit_legacy_duplicate_words: "Historische Duplikate prüfen",
     },
 
     // Notices
@@ -145,6 +146,11 @@ export default {
         definition_fetched: "Definition abgerufen",
         definition_fetch_failed: "Definition konnte nicht abgerufen werden",
         word_required: "Das Wort darf nicht leer sein",
+        duplicate_audit_clean: "Keine historischen Duplikate gefunden.",
+        duplicate_audit_found: "Historische Duplikate erkannt. Details stehen in der Konsole.",
+        legacy_duplicate_blocked: "Historische Duplikate blockieren den V2-Bearbeitungseinstieg. Führe zuerst die Duplikatsprüfung aus. {0}",
+        rename_conflict_detected: "Ein kollidierender Eintrag existiert bereits. {0}",
+        rename_conflict_legacy_state: "Der historische Duplikatzustand blockiert Umbenennen oder Verschieben. Bitte zuerst bereinigen. {0}",
         morphology_asset_downloaded: "{0}-Morphologie-Ressource heruntergeladen",
         morphology_asset_deleted: "{0}-Morphologie-Ressource gelöscht",
         morphology_asset_operation_failed: "{0}-Morphologie-Ressource konnte nicht verwaltet werden",
@@ -154,8 +160,8 @@ export default {
     modals: {
         add_word_title: "Wort hinzufügen",
         add_word_helper: "Wähle ein Vokabelbuch, prüfe bei Bedarf die normalisierte Form und trage zuerst die Definition ein.",
-        edit_word_title: "Wortdetails aktualisieren",
-        edit_word_helper: "In V1 können nur Definition, Notizen, Farbe oder Buch geändert werden – nicht das Stichwort selbst.",
+        edit_word_title: "Wort umbenennen oder verschieben",
+        edit_word_helper: "Bearbeite Stichwort, Definition, Notizen, Farbe oder Buch. Bei globalen Konflikten wird das Speichern blockiert.",
         word_label: "Wort",
         word_placeholder: "Wort eingeben",
         definition_label: "Definition",

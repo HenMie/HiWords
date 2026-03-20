@@ -1,8 +1,12 @@
 import { App, TFile } from 'obsidian'
 import {
+    DuplicateWordAuditEntry,
     HiWordsSettings,
     MorphologyLanguage,
+    RenameConflictCheckParams,
+    RenameConflictCheckResult,
     VocabularyBook,
+    WordEntryIntent,
     WordDefinition,
     logAndFormatError
 } from '../utils'
@@ -232,6 +236,93 @@ export class VocabularyManager {
             return this.cacheManager.hasWord(normalizedWord)
         }
         return this.getDefinition(word) !== null
+    }
+
+    getLegacyDuplicateEntries(): DuplicateWordAuditEntry[] {
+        return this.bookStore.getLegacyDuplicateEntries()
+    }
+
+    getWordEntryIntent(word: string): WordEntryIntent {
+        const normalizedWord = normalizeWordValue(word)
+        const duplicateEntries = this.getLegacyDuplicateEntries().filter(
+            (entry) => entry.normalizedWord === normalizedWord
+        )
+
+        if (duplicateEntries.length > 0) {
+            return {
+                kind: 'legacy-duplicate',
+                normalizedWord,
+                entries: duplicateEntries
+            }
+        }
+
+        const definition = this.getDefinition(word)
+        if (definition) {
+            return {
+                kind: 'edit',
+                normalizedWord,
+                definition
+            }
+        }
+
+        return {
+            kind: 'add',
+            normalizedWord
+        }
+    }
+
+    checkRenameConflict(params: RenameConflictCheckParams): RenameConflictCheckResult {
+        const candidateNormalizedWord = normalizeWordValue(params.candidateWord)
+        const allDefinitions = Array.from(this.definitions.entries()).flatMap(([bookPath, defs]) =>
+            defs.map((definition) => ({ bookPath, definition }))
+        )
+
+        const sameNode = allDefinitions.find(
+            ({ bookPath, definition }) =>
+                bookPath === params.sourceBookPath && definition.nodeId === params.nodeId
+        )
+
+        if (!sameNode) {
+            return { kind: 'global-conflict', conflictingEntries: [] }
+        }
+
+        const currentNormalizedWord = normalizeWordValue(sameNode.definition.word)
+        const isMetadataOnlyUpdate =
+            candidateNormalizedWord === currentNormalizedWord &&
+            params.sourceBookPath === params.targetBookPath
+
+        if (isMetadataOnlyUpdate) {
+            return { kind: 'same-node-noop' }
+        }
+
+        const legacyDuplicates = this.getLegacyDuplicateEntries()
+        if (legacyDuplicates.length > 0) {
+            return {
+                kind: 'legacy-duplicate-state',
+                conflictingEntries: legacyDuplicates
+            }
+        }
+
+        const conflicts = allDefinitions
+            .filter(({ bookPath, definition }) =>
+                !(bookPath === params.sourceBookPath && definition.nodeId === params.nodeId) &&
+                normalizeWordValue(definition.word) === candidateNormalizedWord
+            )
+            .map(({ bookPath, definition }) => ({
+                normalizedWord: candidateNormalizedWord,
+                rawWord: definition.word,
+                bookPath,
+                nodeId: definition.nodeId
+            }))
+
+        if (conflicts.length > 0) {
+            return {
+                kind: 'global-conflict',
+                conflictingEntries: conflicts
+            }
+        }
+
+        return { kind: 'none' }
     }
 
     clear(): void {

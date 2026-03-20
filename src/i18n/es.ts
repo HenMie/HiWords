@@ -101,6 +101,7 @@ export default {
         add_word: "HiWords: Agregar palabra",
         edit_word: "HiWords: Editar palabra",
         show_sidebar: "Mostrar barra lateral de HiWords",
+        audit_legacy_duplicate_words: "Auditar duplicados heredados",
     },
 
     // Notices
@@ -145,6 +146,11 @@ export default {
         definition_fetched: "Definición obtenida",
         definition_fetch_failed: "No se pudo obtener la definición",
         word_required: "La palabra no puede estar vacía",
+        duplicate_audit_clean: "No se encontraron palabras duplicadas heredadas.",
+        duplicate_audit_found: "Se detectaron palabras duplicadas heredadas. Consulta la consola para ver los detalles.",
+        legacy_duplicate_blocked: "Los duplicados heredados bloquean la entrada de edición V2. Ejecuta primero la auditoría. {0}",
+        rename_conflict_detected: "Ya existe una palabra en conflicto. {0}",
+        rename_conflict_legacy_state: "El estado de duplicados heredados bloquea renombrar o mover. Resuélvelo primero. {0}",
         morphology_asset_downloaded: "Recurso morfológico de {0} descargado",
         morphology_asset_deleted: "Recurso morfológico de {0} eliminado",
         morphology_asset_operation_failed: "No se pudo gestionar el recurso morfológico de {0}",
@@ -154,8 +160,8 @@ export default {
     modals: {
         add_word_title: "Agregar palabra",
         add_word_helper: "Elige un libro, revisa la forma normalizada si aparece y completa primero la definición.",
-        edit_word_title: "Actualizar detalles de la palabra",
-        edit_word_helper: "En V1 solo puedes actualizar definición, notas, color o libro; no renombrar la palabra.",
+        edit_word_title: "Renombrar o mover palabra",
+        edit_word_helper: "Actualiza la palabra, la definición, las notas, el color o el libro. Si existe un conflicto global, no se puede guardar.",
         word_label: "Palabra",
         word_placeholder: "Introduce la palabra",
         definition_label: "Definición",

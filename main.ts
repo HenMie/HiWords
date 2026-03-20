@@ -1,7 +1,12 @@
-import { Plugin, TFile, Notice, WorkspaceLeaf, Editor, MarkdownView } from 'obsidian';
+import { Plugin, Notice, WorkspaceLeaf } from 'obsidian';
 import { Extension } from '@codemirror/state';
 // 使用新的模块化导入
-import { HiWordsSettings, VocabularyBook, extractSentenceFromEditorMultiline, HIGHLIGHTER_REFRESH, PLUGIN_UNLOAD_TIMEOUT } from './src/utils';
+import {
+    HiWordsSettings,
+    VocabularyBook,
+    PLUGIN_UNLOAD_TIMEOUT,
+    type DuplicateWordAuditEntry
+} from './src/utils';
 import { registerReadingModeHighlighter } from './src/ui/reading-mode-highlighter';
 import { registerPDFHighlighter, cleanupPDFHighlighter } from './src/ui/pdf-highlighter';
 import {
@@ -146,7 +151,8 @@ export default class HiWordsPlugin extends Plugin {
             refreshHighlighter: () => this.refreshHighlighter(),
             activateSidebarView: () => this.activateSidebarView(),
             addOrEditWord: (word, sentence) => this.addOrEditWord(word, sentence),
-            importLegacyCanvasBooks: () => this.importLegacyCanvasBooks()
+            importLegacyCanvasBooks: () => this.importLegacyCanvasBooks(),
+            auditLegacyDuplicateWords: () => this.auditLegacyDuplicateWords()
         });
     }
 
@@ -310,17 +316,57 @@ export default class HiWordsPlugin extends Plugin {
             return;
         }
 
-        // 检查单词是否已存在
         const normalizedWord = word.trim();
-        const exists = this.vocabularyManager.hasWord(normalizedWord);
-        
-        if (exists) {
-            // 如果单词已存在，打开编辑模式
-            new AddWordModal(this.app, this, normalizedWord, sentence, true).open();
-        } else {
-            // 如果单词不存在，打开添加模式
-            new AddWordModal(this.app, this, normalizedWord, sentence).open();
+        const intent = this.vocabularyManager.getWordEntryIntent(normalizedWord)
+
+        if (intent.kind === 'legacy-duplicate') {
+            this.showLegacyDuplicateNotice(intent.entries)
+            return
         }
+
+        if (intent.kind === 'edit') {
+            new AddWordModal(this.app, this, intent.definition.word, sentence, true).open();
+            return
+        }
+
+        new AddWordModal(this.app, this, normalizedWord, sentence).open();
+    }
+
+    async auditLegacyDuplicateWords(): Promise<void> {
+        const entries = this.vocabularyManager.getLegacyDuplicateEntries()
+        if (entries.length === 0) {
+            new Notice(t('notices.duplicate_audit_clean', 'No legacy duplicate words found.'))
+            return
+        }
+
+        const grouped = new Map<string, DuplicateWordAuditEntry[]>()
+        entries.forEach((entry) => {
+            const group = grouped.get(entry.normalizedWord) ?? []
+            group.push(entry)
+            grouped.set(entry.normalizedWord, group)
+        })
+
+        const summary = Array.from(grouped.entries())
+            .map(([normalizedWord, group]) =>
+                `${normalizedWord}: ${group.map((entry) => `${entry.rawWord} @ ${entry.bookPath}#${entry.nodeId}`).join(' | ')}`
+            )
+            .join('\n')
+
+        console.warn('[HiWords] Legacy duplicate audit', summary)
+        new Notice(
+            t('notices.duplicate_audit_found', 'Legacy duplicate words detected. See console for details.')
+        )
+    }
+
+    private showLegacyDuplicateNotice(entries: DuplicateWordAuditEntry[]): void {
+        const preview = entries
+            .slice(0, 2)
+            .map((entry) => `${entry.rawWord} (${entry.bookPath})`)
+            .join(' / ')
+        new Notice(
+            t('notices.legacy_duplicate_blocked', 'Legacy duplicate words block V2 edit entry. Run duplicate audit first.')
+                .replace('{0}', preview || '')
+        )
     }
 
     /**
