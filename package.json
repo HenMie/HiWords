@@ -1,6 +1,6 @@
 {
 	"name": "hi-words-chouann",
-	"version": "1.0.6",
+	"version": "1.0.7",
 	"description": "Effortlessly grow your vocabulary as you read, with automatic highlighting and translation of unfamiliar words. (Personal fork with customizations)",
 	"main": "main.js",
 	"scripts": {
