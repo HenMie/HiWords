@@ -21,6 +21,7 @@ import type {
     MorphologyCandidate,
     MorphologyCandidateSource,
     MorphologyDecision,
+    MorphologyDecisionReason,
     MorphologyDetectionLanguage
 } from './morphology-types';
 
@@ -52,11 +53,21 @@ interface MorphologyServiceResult {
 }
 
 const SCORE_THRESHOLD = 0.65;
+const MIN_SCORE_MARGIN = 0.08;
+const FALLBACK_ACCEPTANCE_THRESHOLD = 0.72;
 const SOURCE_WEIGHTS: Record<MorphologyCandidateSource, number> = {
-    tokenizer: 0.6,
-    'reverse-rule': 0.25,
-    fallback: 0.1
+    tokenizer: 0.3,
+    'reverse-rule': 0.22,
+    fallback: 0.04
 };
+
+interface CandidateEvaluation {
+    accepted: boolean;
+    acceptanceReason?: MorphologyDecisionReason;
+    rejectReason?: MorphologyDecisionReason;
+    selectedCandidate: MorphologyCandidate | null;
+    selectedCandidateMargin: number | null;
+}
 
 /**
  * 统一形态学服务
@@ -142,8 +153,10 @@ export class UnifiedMorphologyService {
                 candidates: [],
                 trace: {
                     threshold: SCORE_THRESHOLD,
+                    minimumMargin: MIN_SCORE_MARGIN,
                     candidates: [],
                     selectedCandidate: null,
+                    selectedCandidateMargin: null,
                     rejected: true,
                     reason: 'language-undetermined'
                 }
@@ -192,16 +205,20 @@ export class UnifiedMorphologyService {
         );
 
         candidates.sort((a, b) => b.finalScore - a.finalScore);
-        const selectedCandidate = candidates.length > 0 ? candidates[0] : null;
-        const accepted = !!selectedCandidate && selectedCandidate.finalScore >= SCORE_THRESHOLD;
+        const evaluation = this.evaluateCandidates(normalizedWord, candidates);
+        const { accepted, acceptanceReason, rejectReason, selectedCandidate, selectedCandidateMargin } = evaluation;
 
         if (this.debugMode) {
             this.debugLog('analyzeWordDetailed', {
                 word: normalizedWord,
                 language: targetLanguage,
                 threshold: SCORE_THRESHOLD,
+                minimumMargin: MIN_SCORE_MARGIN,
                 selected: selectedCandidate,
+                selectedCandidateMargin,
                 accepted,
+                acceptanceReason,
+                rejectReason,
                 candidates
             });
         }
@@ -217,10 +234,13 @@ export class UnifiedMorphologyService {
             candidates,
             trace: {
                 threshold: SCORE_THRESHOLD,
+                minimumMargin: MIN_SCORE_MARGIN,
                 candidates,
                 selectedCandidate,
+                selectedCandidateMargin,
                 rejected: !accepted,
-                reason: accepted ? undefined : 'score-below-threshold'
+                acceptanceReason,
+                reason: accepted ? undefined : rejectReason
             }
         };
     }
@@ -411,12 +431,13 @@ export class UnifiedMorphologyService {
     ): MorphologyCandidate {
         const source = serviceResult.analysisSource ?? 'tokenizer';
         const sourceWeight = SOURCE_WEIGHTS[source];
+        const confidenceWeight = this.calculateConfidenceWeight(serviceResult.confidence);
         const posWeight = this.calculatePosWeight(serviceResult.partOfSpeech);
         const contextWeight = this.calculateContextWeight(surface, language, contextText);
         const bookLanguageWeight = this.calculateBookLanguageWeight(language, preferredLanguage);
         const finalScore = Math.min(
             1,
-            sourceWeight + posWeight + contextWeight + bookLanguageWeight
+            sourceWeight + confidenceWeight + posWeight + contextWeight + bookLanguageWeight
         );
 
         return {
@@ -427,11 +448,108 @@ export class UnifiedMorphologyService {
             confidence: serviceResult.confidence,
             source,
             sourceWeight,
+            confidenceWeight,
             posWeight,
             contextWeight,
             bookLanguageWeight,
             finalScore
         };
+    }
+
+    private evaluateCandidates(
+        surface: string,
+        candidates: MorphologyCandidate[]
+    ): CandidateEvaluation {
+        const selectedCandidate = candidates.length > 0 ? candidates[0] : null;
+        const selectedCandidateMargin = this.calculateCandidateMargin(candidates);
+        if (!selectedCandidate) {
+            return {
+                accepted: false,
+                rejectReason: 'no-candidates',
+                selectedCandidate: null,
+                selectedCandidateMargin
+            };
+        }
+
+        if (
+            selectedCandidate.source === 'fallback' &&
+            selectedCandidate.baseForm === surface
+        ) {
+            return {
+                accepted: false,
+                rejectReason: 'fallback-only-candidate',
+                selectedCandidate,
+                selectedCandidateMargin
+            };
+        }
+
+        const acceptanceThreshold = selectedCandidate.source === 'fallback'
+            ? FALLBACK_ACCEPTANCE_THRESHOLD
+            : SCORE_THRESHOLD;
+        if (selectedCandidate.finalScore < acceptanceThreshold) {
+            return {
+                accepted: false,
+                rejectReason: 'score-below-threshold',
+                selectedCandidate,
+                selectedCandidateMargin
+            };
+        }
+
+        if (this.isAmbiguousTopCandidate(candidates, selectedCandidateMargin)) {
+            return {
+                accepted: false,
+                rejectReason: 'ambiguous-top-candidates',
+                selectedCandidate,
+                selectedCandidateMargin
+            };
+        }
+
+        return {
+            accepted: true,
+            acceptanceReason: candidates.length === 1 || selectedCandidateMargin === null
+                ? 'accepted-single-candidate'
+                : 'accepted-high-confidence',
+            selectedCandidate,
+            selectedCandidateMargin
+        };
+    }
+
+    private calculateCandidateMargin(candidates: MorphologyCandidate[]): number | null {
+        if (candidates.length < 2) {
+            return null;
+        }
+
+        return candidates[0].finalScore - candidates[1].finalScore;
+    }
+
+    private isAmbiguousTopCandidate(
+        candidates: MorphologyCandidate[],
+        selectedCandidateMargin: number | null
+    ): boolean {
+        if (candidates.length < 2 || selectedCandidateMargin === null) {
+            return false;
+        }
+
+        const nextCandidate = candidates[1];
+        const topCandidate = candidates[0];
+        if (!nextCandidate || !topCandidate) {
+            return false;
+        }
+
+        if (topCandidate.baseForm === nextCandidate.baseForm) {
+            return false;
+        }
+
+        return selectedCandidateMargin < MIN_SCORE_MARGIN;
+    }
+
+    private calculateConfidenceWeight(confidence?: number): number {
+        if (typeof confidence !== 'number' || Number.isNaN(confidence)) {
+            return 0;
+        }
+
+        const normalizedConfidence = Math.max(0, Math.min(confidence, 1));
+        return normalizedConfidence * 0.35;
     }
 
     private calculatePosWeight(partOfSpeech?: string): number {
@@ -448,10 +566,10 @@ export class UnifiedMorphologyService {
             partOfSpeech.includes('XSA') ||
             partOfSpeech.includes('XSV')
         ) {
-            return 0.15;
+            return 0.14;
         }
 
-        return 0.1;
+        return 0.08;
     }
 
     private calculateContextWeight(
@@ -466,11 +584,11 @@ export class UnifiedMorphologyService {
         const scriptStats = getScriptStatistics(`${contextText}${surface}`);
 
         if (language === 'korean' && scriptStats.korean > 0) {
-            return 0.15;
+            return 0.12;
         }
 
         if (language === 'japanese' && (scriptStats.kana > 0 || scriptStats.cjk > 0)) {
-            return 0.15;
+            return 0.12;
         }
 
         return 0;
@@ -485,11 +603,11 @@ export class UnifiedMorphologyService {
         }
 
         if (preferredLanguage === language) {
-            return 0.1;
+            return 0.09;
         }
 
         if (preferredLanguage === 'unknown') {
-            return 0.1;
+            return 0.09;
         }
 
         return 0;

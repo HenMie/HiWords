@@ -2,6 +2,14 @@ import type { MorphologyLanguage } from '../utils/types';
 
 export type MorphologyDetectionLanguage = 'korean' | 'japanese' | 'unknown';
 export type MorphologyCandidateSource = 'tokenizer' | 'reverse-rule' | 'fallback';
+export type MorphologyDecisionReason =
+    | 'accepted-high-confidence'
+    | 'accepted-single-candidate'
+    | 'language-undetermined'
+    | 'no-candidates'
+    | 'score-below-threshold'
+    | 'ambiguous-top-candidates'
+    | 'fallback-only-candidate';
 
 export interface MorphologyAnalyzeOptions {
     languagePolicy?: MorphologyLanguage;
@@ -16,6 +24,7 @@ export interface MorphologyCandidate {
     confidence: number;
     source: MorphologyCandidateSource;
     sourceWeight: number;
+    confidenceWeight: number;
     posWeight: number;
     contextWeight: number;
     bookLanguageWeight: number;
@@ -24,10 +33,13 @@ export interface MorphologyCandidate {
 
 export interface MorphologyAnalysisTrace {
     threshold: number;
+    minimumMargin: number;
     candidates: MorphologyCandidate[];
     selectedCandidate: MorphologyCandidate | null;
+    selectedCandidateMargin: number | null;
     rejected: boolean;
-    reason?: string;
+    acceptanceReason?: MorphologyDecisionReason;
+    reason?: MorphologyDecisionReason;
 }
 
 export interface MorphologyDecision {

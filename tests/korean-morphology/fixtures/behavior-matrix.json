@@ -1,0 +1,198 @@
+{
+  "meta": {
+    "name": "korean-morphology-behavior-matrix",
+    "version": 1,
+    "sourcePlan": ".omx/plans/korean-morphology-optimal-improvement-20260326T164853Z.md",
+    "notes": [
+      "Matrix freezes expected cross-lane semantics before scorer/refactor work lands.",
+      "Word-analysis lanes share Add Word and Definition Popover expectations.",
+      "Document indexing keeps lemma-changing auxiliary safety boundaries."
+    ]
+  },
+  "cases": [
+    {
+      "id": "ko-word-accept-dagaowatda",
+      "surface": "다가왔습니다",
+      "entrypoint": "word-analysis",
+      "languagePolicy": "korean",
+      "serviceState": "service-loaded",
+      "generatedFallbackAllowed": false,
+      "expected": {
+        "outcome": "accept",
+        "baseForm": "다가오다"
+      },
+      "uiParity": {
+        "addWord": "same-as-word-analysis",
+        "popover": "same-as-word-analysis"
+      },
+      "documentExpectation": "non-goal",
+      "matcherExpectation": "same-as-word-analysis"
+    },
+    {
+      "id": "ko-word-accept-dagaon",
+      "surface": "다가온",
+      "entrypoint": "word-analysis",
+      "languagePolicy": "korean",
+      "serviceState": "service-loaded",
+      "generatedFallbackAllowed": false,
+      "expected": {
+        "outcome": "accept",
+        "baseForm": "다가오다"
+      },
+      "uiParity": {
+        "addWord": "same-as-word-analysis",
+        "popover": "same-as-word-analysis"
+      },
+      "documentExpectation": "non-goal",
+      "matcherExpectation": "same-as-word-analysis"
+    },
+    {
+      "id": "ko-word-accept-putputhan",
+      "surface": "풋풋한",
+      "entrypoint": "word-analysis",
+      "languagePolicy": "korean",
+      "serviceState": "service-loaded",
+      "generatedFallbackAllowed": false,
+      "expected": {
+        "outcome": "accept",
+        "baseForm": "풋풋하다"
+      },
+      "uiParity": {
+        "addWord": "same-as-word-analysis",
+        "popover": "same-as-word-analysis"
+      },
+      "documentExpectation": "non-goal",
+      "matcherExpectation": "same-as-word-analysis"
+    },
+    {
+      "id": "ko-word-reject-meokkosipda",
+      "surface": "먹고싶다",
+      "entrypoint": "word-analysis",
+      "languagePolicy": "korean",
+      "serviceState": "service-loaded",
+      "generatedFallbackAllowed": false,
+      "expected": {
+        "outcome": "reject",
+        "baseForm": null,
+        "reason": "lemma-changing-auxiliary-boundary"
+      },
+      "uiParity": {
+        "addWord": "same-as-word-analysis",
+        "popover": "same-as-word-analysis"
+      },
+      "documentExpectation": "partial-block",
+      "matcherExpectation": "documented-exception-for-generated-fallback-only"
+    },
+    {
+      "id": "ko-word-reject-ilgeojuda",
+      "surface": "읽어주다",
+      "entrypoint": "word-analysis",
+      "languagePolicy": "korean",
+      "serviceState": "service-loaded",
+      "generatedFallbackAllowed": false,
+      "expected": {
+        "outcome": "reject",
+        "baseForm": null,
+        "reason": "lemma-changing-auxiliary-boundary"
+      },
+      "uiParity": {
+        "addWord": "same-as-word-analysis",
+        "popover": "same-as-word-analysis"
+      },
+      "documentExpectation": "partial-block",
+      "matcherExpectation": "documented-exception-for-generated-fallback-only"
+    },
+    {
+      "id": "ko-word-reject-joajigo",
+      "surface": "좋아지고",
+      "entrypoint": "word-analysis",
+      "languagePolicy": "korean",
+      "serviceState": "service-loaded",
+      "generatedFallbackAllowed": false,
+      "expected": {
+        "outcome": "reject",
+        "baseForm": null,
+        "reason": "lemma-changing-auxiliary-boundary"
+      },
+      "uiParity": {
+        "addWord": "same-as-word-analysis",
+        "popover": "same-as-word-analysis"
+      },
+      "documentExpectation": "partial-block",
+      "matcherExpectation": "documented-exception-for-generated-fallback-only"
+    },
+    {
+      "id": "ko-doc-index-gongbuhagoitda",
+      "surface": "공부하고있다",
+      "entrypoint": "document-index",
+      "languagePolicy": "auto",
+      "serviceState": "service-loaded",
+      "generatedFallbackAllowed": false,
+      "expected": {
+        "outcome": "index",
+        "baseForm": "공부하다"
+      },
+      "uiParity": {
+        "addWord": "non-goal",
+        "popover": "non-goal"
+      },
+      "documentExpectation": "index",
+      "matcherExpectation": "same-as-document-index"
+    },
+    {
+      "id": "ko-doc-index-yeppeujianhta",
+      "surface": "예쁘지않다",
+      "entrypoint": "document-index",
+      "languagePolicy": "auto",
+      "serviceState": "service-loaded",
+      "generatedFallbackAllowed": false,
+      "expected": {
+        "outcome": "index",
+        "baseForm": "예쁘다"
+      },
+      "uiParity": {
+        "addWord": "non-goal",
+        "popover": "non-goal"
+      },
+      "documentExpectation": "index",
+      "matcherExpectation": "same-as-document-index"
+    },
+    {
+      "id": "ko-doc-nongoal-cross-space",
+      "surface": "다가와 요",
+      "entrypoint": "document-index",
+      "languagePolicy": "auto",
+      "serviceState": "service-loaded",
+      "generatedFallbackAllowed": false,
+      "expected": {
+        "outcome": "non-goal",
+        "baseForm": null,
+        "reason": "cross-space-chain"
+      },
+      "uiParity": {
+        "addWord": "non-goal",
+        "popover": "non-goal"
+      },
+      "documentExpectation": "non-goal",
+      "matcherExpectation": "non-goal"
+    },
+    {
+      "id": "ko-matcher-fallback-contract",
+      "surface": "다가왔습니다",
+      "entrypoint": "matcher-highlighting",
+      "languagePolicy": "korean",
+      "serviceState": "generated-fallback-path",
+      "generatedFallbackAllowed": true,
+      "expected": {
+        "outcome": "match-if-generated-form-exists",
+        "baseForm": "다가오다"
+      },
+      "uiParity": {
+        "addWord": "must-not-silently-upgrade-from-reject",
+        "popover": "must-not-silently-upgrade-from-reject"
+      },
+      "documentExpectation": "non-goal",
+      "matcherExpectation": "explicit-secondary-lane-only"
+    }
+  ]
+}
