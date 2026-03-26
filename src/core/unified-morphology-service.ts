@@ -488,6 +488,10 @@ export class UnifiedMorphologyService {
             return 0.1;
         }
 
+        if (preferredLanguage === 'unknown') {
+            return 0.1;
+        }
+
         return 0;
     }
 }
