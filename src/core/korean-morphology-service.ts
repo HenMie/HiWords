@@ -16,6 +16,7 @@ import {
     hasLemmaChangingAuxiliaryChain,
     isEndingPartOfSpeech,
     isLemmaChangingAuxiliaryToken,
+    isNounToken,
     isVerbOrAdjective,
     normalizeTokens
 } from './korean-morphology/token-normalizer';
@@ -251,7 +252,7 @@ export class KoreanMorphologyService {
         baseForm: string;
         partOfSpeech: string;
         confidence: number;
-        analysisSource: 'tokenizer' | 'reverse-rule' | 'fallback';
+        analysisSource: 'tokenizer' | 'reconstructed-tokenizer' | 'reverse-rule' | 'fallback';
         rejectionHint?: 'lemma-changing-auxiliary-boundary';
     } | null {
         if (!tokens || tokens.length === 0) {
@@ -287,6 +288,11 @@ export class KoreanMorphologyService {
             };
         }
 
+        const reconstructedResult = this.reconstructWordLevelCandidate(tokens, originalWord);
+        if (reconstructedResult) {
+            return reconstructedResult;
+        }
+
         const ruleResult = this.applyRulePipeline(wordRulePipeline, context);
         if (ruleResult) {
             return {
@@ -308,6 +314,79 @@ export class KoreanMorphologyService {
         }
 
         return null;
+    }
+
+    private reconstructWordLevelCandidate(tokens: NormalizedToken[], originalWord: string): {
+        surface: string;
+        baseForm: string;
+        partOfSpeech: string;
+        confidence: number;
+        analysisSource: 'reconstructed-tokenizer';
+    } | null {
+        const lexicalVerbIndex = tokens.findIndex((token) =>
+            isVerbOrAdjective(token.partOfSpeech) &&
+            !isLemmaChangingAuxiliaryToken(token)
+        );
+
+        if (lexicalVerbIndex <= 0) {
+            return null;
+        }
+
+        const verbToken = tokens[lexicalVerbIndex];
+        if (!verbToken) {
+            return null;
+        }
+
+        const prefixTokens = tokens.slice(0, lexicalVerbIndex);
+        if (!prefixTokens.every((token) => this.isReconstructablePrefixToken(token))) {
+            return null;
+        }
+
+        if (!prefixTokens.some((token) => isNounToken(token) || token.partOfSpeech.includes('XR'))) {
+            return null;
+        }
+
+        const suffixTokens = tokens.slice(lexicalVerbIndex + 1);
+        if (suffixTokens.some((token) => !this.isReconstructableSuffixToken(token))) {
+            return null;
+        }
+
+        const normalizedVerbBaseForm = verbToken.baseForm.endsWith('다')
+            ? verbToken.baseForm
+            : `${verbToken.baseForm}다`;
+        const reconstructedBaseForm = `${prefixTokens.map((token) => token.surface).join('')}${normalizedVerbBaseForm}`;
+        if (!reconstructedBaseForm || reconstructedBaseForm === originalWord || reconstructedBaseForm === verbToken.baseForm) {
+            return null;
+        }
+
+        this.debugLog('[analyzeTokens] targeted reconstruction 命中:', {
+            originalWord,
+            reconstructedBaseForm,
+            lexicalVerbIndex,
+            prefixTokens,
+            verbToken,
+            suffixTokens
+        });
+
+        return {
+            surface: originalWord,
+            baseForm: reconstructedBaseForm,
+            partOfSpeech: verbToken.partOfSpeech,
+            confidence: 0.78,
+            analysisSource: 'reconstructed-tokenizer'
+        };
+    }
+
+    private isReconstructablePrefixToken(token: NormalizedToken): boolean {
+        return !isEndingPartOfSpeech(token.partOfSpeech) &&
+            !isLemmaChangingAuxiliaryToken(token) &&
+            !token.partOfSpeech.startsWith('J');
+    }
+
+    private isReconstructableSuffixToken(token: NormalizedToken): boolean {
+        return isEndingPartOfSpeech(token.partOfSpeech) ||
+            token.partOfSpeech.startsWith('JX') ||
+            token.partOfSpeech.startsWith('JC');
     }
 
 

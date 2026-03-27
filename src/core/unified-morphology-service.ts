@@ -58,6 +58,7 @@ const MIN_SCORE_MARGIN = 0.08;
 const FALLBACK_ACCEPTANCE_THRESHOLD = 0.72;
 const SOURCE_WEIGHTS: Record<MorphologyCandidateSource, number> = {
     tokenizer: 0.3,
+    'reconstructed-tokenizer': 0.26,
     'reverse-rule': 0.22,
     fallback: 0.04
 };
