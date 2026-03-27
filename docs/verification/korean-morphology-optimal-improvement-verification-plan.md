@@ -1,7 +1,7 @@
 # Korean Morphology Optimal Improvement Verification Plan
 
 ## Scope
-- Plan: `.omx/plans/korean-morphology-optimal-improvement-20260326T164853Z.md`
+- Plan: `.omx/plans/korean-morphology-complete-optimal-plan-20260327T112019Z.md`
 - Verification lane: Task 3 documentation + review support on baseline `e10ed6a`
 - Focus: matcher boundary integration, rule-family split readiness, build/lint/manual evidence expectations
 
@@ -10,6 +10,10 @@
 2. Prove word-level scorer changes do not silently redefine matcher/highlighting or document-index semantics.
 3. Prove Korean reconstruction/rule work does not weaken lemma-changing-auxiliary safety.
 4. Capture enough evidence to distinguish implemented behavior from still-unverified aspirations.
+
+## Companion artifacts
+- Lane contract: `docs/verification/korean-morphology-lane-contract.md`
+- Manual smoke checklist: `docs/verification/korean-morphology-manual-smoke-checklist.md`
 
 ## Automated gates
 

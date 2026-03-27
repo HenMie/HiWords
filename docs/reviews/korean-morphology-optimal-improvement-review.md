@@ -1,7 +1,7 @@
 # Korean Morphology Optimal Improvement Review
 
 ## Scope
-- Plan: `.omx/plans/korean-morphology-optimal-improvement-20260326T164853Z.md`
+- Plan: `.omx/plans/korean-morphology-complete-optimal-plan-20260327T112019Z.md`
 - Review lane: Task 3 review/documentation on detached baseline `e10ed6a`
 - Focus: word-level scorer behavior, matcher/generated-inflection contract, rule-family boundaries, and verification/documentation readiness
 

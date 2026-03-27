@@ -2,7 +2,7 @@
   "meta": {
     "name": "korean-morphology-behavior-matrix",
     "version": 1,
-    "sourcePlan": ".omx/plans/korean-morphology-optimal-improvement-20260326T164853Z.md",
+    "sourcePlan": ".omx/plans/korean-morphology-complete-optimal-plan-20260327T112019Z.md",
     "notes": [
       "Matrix freezes expected cross-lane semantics before scorer/refactor work lands.",
       "Word-analysis lanes share Add Word and Definition Popover expectations.",
