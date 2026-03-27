@@ -12,6 +12,7 @@ const bundlePath = path.join(tempDir, 'probe.bundle.mjs')
 const source = `
 import { KoreanMorphologyService } from ${JSON.stringify(path.join(repoRoot, 'src/core/korean-morphology-service.ts'))}
 import type { NormalizedToken } from ${JSON.stringify(path.join(repoRoot, 'src/core/korean-morphology/types.ts'))}
+import assert from 'node:assert/strict'
 
 function oldFirstTokenFallback(tokens: NormalizedToken[], originalWord: string) {
   const firstToken = tokens[0]
@@ -62,6 +63,17 @@ const analyzeTokens = (service as any).analyzeTokens.bind(service)
 for (const testCase of cases) {
   const before = oldFirstTokenFallback(testCase.tokens, testCase.originalWord)
   const after = analyzeTokens(testCase.tokens, testCase.originalWord)
+  if (testCase.name === 'tokenizer-split-dagaowatda') {
+    assert.equal(after?.baseForm, '다가오다')
+    assert.equal(after?.analysisSource, 'reconstructed-tokenizer')
+  }
+  if (testCase.name === 'tokenizer-split-dagawayo') {
+    assert.equal(after?.baseForm, '다가오다')
+    assert.equal(after?.analysisSource, 'reconstructed-tokenizer')
+  }
+  if (testCase.name === 'lemma-changing-auxiliary-still-blocked') {
+    assert.equal(after?.rejectionHint, 'lemma-changing-auxiliary-boundary')
+  }
   console.log(JSON.stringify({ name: testCase.name, before, after }, null, 2))
 }
 `

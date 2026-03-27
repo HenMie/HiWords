@@ -65,6 +65,24 @@
       "matcherExpectation": "same-as-word-analysis"
     },
     {
+      "id": "ko-word-accept-dagawayo-reconstructed",
+      "surface": "다가와요",
+      "entrypoint": "word-analysis",
+      "languagePolicy": "korean",
+      "serviceState": "service-loaded",
+      "generatedFallbackAllowed": false,
+      "expected": {
+        "outcome": "accept",
+        "baseForm": "다가오다"
+      },
+      "uiParity": {
+        "addWord": "same-as-word-analysis",
+        "popover": "same-as-word-analysis"
+      },
+      "documentExpectation": "non-goal",
+      "matcherExpectation": "same-as-word-analysis"
+    },
+    {
       "id": "ko-word-reject-meokkosipda",
       "surface": "먹고싶다",
       "entrypoint": "word-analysis",

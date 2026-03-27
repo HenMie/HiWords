@@ -56,7 +56,7 @@ The implementation is not fully verified unless a checked-in Korean matrix cover
 - `다가왔습니다 -> 다가오다`
 - `다가온 -> 다가오다`
 - `풋풋한 -> 풋풋하다`
-- tokenizer-split reconstruction examples such as `다가와요` once Phase 3 lands
+- tokenizer-split reconstruction examples such as `다가와요 -> 다가오다` once Phase 4 lands
 
 #### Word-level should-reject / preserve-boundary
 - `먹고싶다`

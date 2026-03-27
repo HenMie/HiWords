@@ -23,6 +23,7 @@
 | `다가왔습니다` | `korean` | accept -> `다가오다` | same-as-word-analysis | same-as-word-analysis | non-goal | same-as-word-analysis | service-loaded | None |
 | `다가온` | `korean` | accept -> `다가오다` | same-as-word-analysis | same-as-word-analysis | non-goal | same-as-word-analysis | service-loaded | None |
 | `풋풋한` | `korean` | accept -> `풋풋하다` | same-as-word-analysis | same-as-word-analysis | non-goal | same-as-word-analysis | service-loaded | None |
+| `다가와요` | `korean` | accept -> `다가오다` | same-as-word-analysis | same-as-word-analysis | non-goal | same-as-word-analysis | service-loaded | Targeted word-level reconstruction covers tokenizer-split lexical prefix + verb cases |
 | `먹고싶다` | `korean` | reject -> `lemma-changing-auxiliary-boundary` | same-as-word-analysis | same-as-word-analysis | partial-block | documented-exception-for-generated-fallback-only | service-loaded | Prevent unsafe partial highlights and silent lemma upgrades |
 | `읽어주다` | `korean` | reject -> `lemma-changing-auxiliary-boundary` | same-as-word-analysis | same-as-word-analysis | partial-block | documented-exception-for-generated-fallback-only | service-loaded | Same auxiliary-boundary guard as above |
 | `좋아지고` | `korean` | reject -> `lemma-changing-auxiliary-boundary` | same-as-word-analysis | same-as-word-analysis | partial-block | documented-exception-for-generated-fallback-only | service-loaded | Same auxiliary-boundary guard as above |

@@ -325,7 +325,7 @@ export class KoreanMorphologyService {
     } | null {
         const lexicalVerbIndex = tokens.findIndex((token) =>
             isVerbOrAdjective(token.partOfSpeech) &&
-            !isLemmaChangingAuxiliaryToken(token)
+            !token.partOfSpeech.includes('VX')
         );
 
         if (lexicalVerbIndex <= 0) {
