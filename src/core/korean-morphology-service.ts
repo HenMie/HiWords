@@ -13,6 +13,7 @@ import type {
 } from './korean-morphology/types';
 import {
     calculateConfidence,
+    hasLemmaChangingAuxiliaryChain,
     isEndingPartOfSpeech,
     isLemmaChangingAuxiliaryToken,
     isVerbOrAdjective,
@@ -226,7 +227,8 @@ export class KoreanMorphologyService {
                     baseForm: normalizedBaseForm,
                     partOfSpeech,
                     confidence: analysisResult.confidence || 0.8,
-                    analysisSource: analysisResult.analysisSource ?? 'tokenizer'
+                    analysisSource: analysisResult.analysisSource ?? 'tokenizer',
+                    rejectionHint: analysisResult.rejectionHint
                 };
 
                 this.debugLog('最终分析结果:', result);
@@ -250,6 +252,7 @@ export class KoreanMorphologyService {
         partOfSpeech: string;
         confidence: number;
         analysisSource: 'tokenizer' | 'reverse-rule' | 'fallback';
+        rejectionHint?: 'lemma-changing-auxiliary-boundary';
     } | null {
         if (!tokens || tokens.length === 0) {
             return null;
@@ -270,6 +273,18 @@ export class KoreanMorphologyService {
         const wordRulePipeline = this.wordRulePipeline;
         if (!wordRulePipeline) {
             return null;
+        }
+
+        if (hasLemmaChangingAuxiliaryChain(tokens)) {
+            this.debugLog('[analyzeTokens] 检测到 lemma-changing auxiliary chain，拒绝 word-level 逆向还原');
+            return {
+                surface: originalWord,
+                baseForm: originalWord,
+                partOfSpeech: tokens[0]?.partOfSpeech || 'UNKNOWN',
+                confidence: 0.01,
+                analysisSource: 'fallback',
+                rejectionHint: 'lemma-changing-auxiliary-boundary'
+            };
         }
 
         const ruleResult = this.applyRulePipeline(wordRulePipeline, context);

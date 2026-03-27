@@ -7,6 +7,7 @@ export type MorphologyDecisionReason =
     | 'accepted-single-candidate'
     | 'language-undetermined'
     | 'no-candidates'
+    | 'lemma-changing-auxiliary-boundary'
     | 'score-below-threshold'
     | 'ambiguous-top-candidates'
     | 'fallback-only-candidate';
@@ -29,6 +30,7 @@ export interface MorphologyCandidate {
     contextWeight: number;
     bookLanguageWeight: number;
     finalScore: number;
+    rejectionHint?: MorphologyDecisionReason;
 }
 
 export interface MorphologyAnalysisTrace {

@@ -50,6 +50,7 @@ interface MorphologyServiceResult {
     partOfSpeech: string;
     confidence: number;
     analysisSource?: MorphologyCandidateSource;
+    rejectionHint?: MorphologyDecisionReason;
 }
 
 const SCORE_THRESHOLD = 0.65;
@@ -196,7 +197,8 @@ export class UnifiedMorphologyService {
                     baseForm: normalizedWord,
                     partOfSpeech: serviceResult?.partOfSpeech || 'UNKNOWN',
                     confidence: 0.3,
-                    analysisSource: 'fallback'
+                    analysisSource: 'fallback',
+                    rejectionHint: serviceResult?.rejectionHint
                 },
                 targetLanguage,
                 preferredLanguage,
@@ -452,7 +454,8 @@ export class UnifiedMorphologyService {
             posWeight,
             contextWeight,
             bookLanguageWeight,
-            finalScore
+            finalScore,
+            rejectionHint: serviceResult.rejectionHint
         };
     }
 
@@ -477,7 +480,7 @@ export class UnifiedMorphologyService {
         ) {
             return {
                 accepted: false,
-                rejectReason: 'fallback-only-candidate',
+                rejectReason: selectedCandidate.rejectionHint ?? 'fallback-only-candidate',
                 selectedCandidate,
                 selectedCandidateMargin
             };

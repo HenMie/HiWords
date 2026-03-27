@@ -80,6 +80,36 @@ export function isLemmaChangingAuxiliaryToken(token: NormalizedToken | null | un
         !isLemmaPreservingAuxiliaryToken(token);
 }
 
+export function hasLemmaChangingAuxiliaryChain(tokens: NormalizedToken[]): boolean {
+    for (let i = 0; i < tokens.length; i++) {
+        const currentToken = tokens[i];
+        if (!currentToken || !isVerbOrAdjective(currentToken.partOfSpeech)) {
+            continue;
+        }
+
+        let sawEnding = false;
+        for (let j = i + 1; j < tokens.length; j++) {
+            const nextToken = tokens[j];
+            if (!nextToken) {
+                break;
+            }
+
+            if (isEndingPartOfSpeech(nextToken.partOfSpeech)) {
+                sawEnding = true;
+                continue;
+            }
+
+            if (sawEnding && isLemmaChangingAuxiliaryToken(nextToken)) {
+                return true;
+            }
+
+            break;
+        }
+    }
+
+    return false;
+}
+
 export function mergeSubsequentInflectionChain(
     tokens: NormalizedToken[],
     startIndex: number,

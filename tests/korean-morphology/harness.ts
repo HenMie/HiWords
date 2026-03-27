@@ -153,17 +153,21 @@ export function verifyLanguagePolicyContracts(): VerificationResult {
 
 export function verifyAuxiliaryBoundaryContracts(): VerificationResult {
     const source = readSource('src/core/korean-morphology/token-normalizer.ts')
+    const serviceSource = readSource('src/core/korean-morphology-service.ts')
 
     requireMatch(source, /LEMMA_PRESERVING_AUXILIARY_BASE_FORMS = new Set\(\['있다', '없다', '않다'\]\)/, 'lemma-preserving auxiliary set must stay explicit')
     requireMatch(source, /isLemmaPreservingAuxiliaryToken[\s\S]*LEMMA_PRESERVING_AUXILIARY_BASE_FORMS\.has\(token\.baseForm\)/, 'preserving auxiliary check must be base-form driven')
     requireMatch(source, /isLemmaChangingAuxiliaryToken[\s\S]*!isLemmaPreservingAuxiliaryToken\(token\)/, 'lemma-changing auxiliaries must stay negation of preserving set')
+    requireMatch(source, /export function hasLemmaChangingAuxiliaryChain\(tokens: NormalizedToken\[\]\): boolean/, 'word-level chain detector must be exported for Korean auxiliary boundary checks')
     requireMatch(source, /Prevent partial highlights like "먹고" inside "먹고싶다"\./, 'partial-highlight guard comment must stay anchored')
     requireMatch(source, /blockedByLemmaChangingAuxiliary: true/, 'lemma-changing auxiliary merge must block instead of silently merging')
+    requireMatch(serviceSource, /if \(hasLemmaChangingAuxiliaryChain\(tokens\)\) \{[\s\S]*rejectionHint: 'lemma-changing-auxiliary-boundary'[\s\S]*\}/, 'word-level analysis must refuse lemma-changing auxiliary chains before reverse-rule acceptance')
+    requireMatch(serviceSource, /rejectionHint: 'lemma-changing-auxiliary-boundary'/, 'word-level auxiliary-chain rejection should surface an explicit rejection hint')
 
     return {
         name: 'auxiliary-boundary-safety',
         passed: true,
-        details: 'token-normalizer source still preserves explicit lemma-changing auxiliary boundary rules'
+        details: 'token-normalizer and Korean word analysis both preserve explicit lemma-changing auxiliary boundary rules'
     }
 }
 
