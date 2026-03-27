@@ -38,7 +38,7 @@ export interface MorphologyAnalysisResult {
     baseForm: string;
     partOfSpeech: string;
     confidence: number;
-    analysisSource?: 'tokenizer' | 'reverse-rule' | 'fallback';
+    analysisSource?: 'tokenizer' | 'reconstructed-tokenizer' | 'reverse-rule' | 'fallback';
     rejectionHint?: 'lemma-changing-auxiliary-boundary';
 }
 

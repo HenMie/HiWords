@@ -1,7 +1,11 @@
 import type { MorphologyLanguage } from '../utils/types';
 
 export type MorphologyDetectionLanguage = 'korean' | 'japanese' | 'unknown';
-export type MorphologyCandidateSource = 'tokenizer' | 'reverse-rule' | 'fallback';
+export type MorphologyCandidateSource =
+    | 'tokenizer'
+    | 'reconstructed-tokenizer'
+    | 'reverse-rule'
+    | 'fallback';
 export type MorphologyDecisionReason =
     | 'accepted-high-confidence'
     | 'accepted-single-candidate'
