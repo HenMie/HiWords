@@ -14,6 +14,7 @@ import type {
 import {
     calculateConfidence,
     hasLemmaChangingAuxiliaryChain,
+    inferBieupIrregularAdjectiveBaseForm,
     isEndingPartOfSpeech,
     isLemmaChangingAuxiliaryToken,
     isNounToken,
@@ -303,6 +304,25 @@ export class KoreanMorphologyService {
 
         const firstToken = tokens[0];
         if (firstToken) {
+            const bieupIrregularBaseForm = inferBieupIrregularAdjectiveBaseForm(
+                originalWord,
+                firstToken.partOfSpeech
+            );
+            if (bieupIrregularBaseForm) {
+                this.debugLog('[analyzeTokens] ㅂ-irregular adjective reverse candidate 命中:', {
+                    originalWord,
+                    bieupIrregularBaseForm,
+                    firstToken
+                });
+                return {
+                    surface: originalWord,
+                    baseForm: bieupIrregularBaseForm,
+                    partOfSpeech: 'VA',
+                    confidence: 0.82,
+                    analysisSource: 'reverse-rule'
+                };
+            }
+
             this.debugLog('[analyzeTokens] 回退使用首个 token:', firstToken);
             return {
                 surface: originalWord,
@@ -374,6 +394,60 @@ export class KoreanMorphologyService {
             partOfSpeech: verbToken.partOfSpeech,
             confidence: 0.78,
             analysisSource: 'reconstructed-tokenizer'
+        };
+    }
+
+    private analyzeDocumentWordSegment(
+        tokens: NormalizedToken[],
+        startIndex: number
+    ): {
+        result: MorphologyAnalysisResult;
+        consumedTokenIndices: number[];
+    } | null {
+        const tokenizer = this.tokenizer;
+        const token = tokens[startIndex];
+        if (!tokenizer || !token || !this.isKoreanText(token.surface)) {
+            return null;
+        }
+
+        const segmentIndices: number[] = [];
+        let segmentSurface = '';
+
+        for (let i = startIndex; i < tokens.length; i++) {
+            const current = tokens[i];
+            if (!current || !this.isKoreanText(current.surface)) {
+                break;
+            }
+
+            segmentIndices.push(i);
+            segmentSurface += current.surface;
+        }
+
+        if (segmentIndices.length === 0 || !segmentSurface) {
+            return null;
+        }
+
+        const isolatedTokens = normalizeTokens(
+            tokenizer.tokenize(segmentSurface),
+            { debugLog: this.debugLog.bind(this) }
+        );
+        const isolatedAnalysis = this.analyzeTokens(isolatedTokens, segmentSurface);
+        if (!isolatedAnalysis || isolatedAnalysis.analysisSource === 'fallback') {
+            return null;
+        }
+
+        const isVerbLikeResult = isVerbOrAdjective(isolatedAnalysis.partOfSpeech) ||
+            isolatedAnalysis.partOfSpeech.includes('XSA') ||
+            isolatedAnalysis.partOfSpeech.includes('XSV') ||
+            isolatedAnalysis.partOfSpeech.includes('HADA') ||
+            isolatedAnalysis.baseForm.endsWith('다');
+        if (!isVerbLikeResult) {
+            return null;
+        }
+
+        return {
+            result: isolatedAnalysis,
+            consumedTokenIndices: segmentIndices
         };
     }
 
@@ -532,6 +606,18 @@ export class KoreanMorphologyService {
             const documentRulePipeline = this.documentRulePipeline;
             if (!documentRulePipeline) {
                 return results;
+            }
+
+            const segmentResult = this.analyzeDocumentWordSegment(tokens, i);
+            if (segmentResult) {
+                this.debugLog(
+                    `[analyzeDocumentTokens] isolated segment 命中: ${segmentResult.result.surface} → ${segmentResult.result.baseForm}`
+                );
+                results.push(segmentResult.result);
+                for (const consumedIndex of segmentResult.consumedTokenIndices) {
+                    processedTokens.add(consumedIndex);
+                }
+                continue;
             }
 
             const ruleResult = this.applyRulePipeline(documentRulePipeline, context);

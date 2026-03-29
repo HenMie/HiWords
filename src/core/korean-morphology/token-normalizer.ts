@@ -3,6 +3,7 @@ import type {
     NormalizedToken,
     Token
 } from './types';
+import { addFinalConsonant, generateCommonInflections } from '../../utils/korean-inflection-generator';
 
 type DebugLog = ((...args: unknown[]) => void) | undefined;
 
@@ -263,6 +264,69 @@ export function isHadaRelatedToken(tokenInfo: NormalizedToken | null | undefined
     }
 
     return !!(baseForm && baseForm.includes('하다'));
+}
+
+export function reconstructRootWithSuffixBaseForm(
+    rootToken: NormalizedToken | null | undefined,
+    suffixToken: NormalizedToken | null | undefined
+): string | null {
+    if (!rootToken || !suffixToken || !rootToken.partOfSpeech.includes('XR')) {
+        return null;
+    }
+
+    const suffixBaseForm = normalizeSuffixBaseForm(suffixToken);
+    if (!suffixBaseForm) {
+        return null;
+    }
+
+    return `${rootToken.surface}${suffixBaseForm}`;
+}
+
+function normalizeSuffixBaseForm(token: NormalizedToken): string | null {
+    const baseForm = token.baseForm?.trim();
+    if (!baseForm) {
+        return null;
+    }
+
+    if (baseForm.endsWith('다')) {
+        return baseForm;
+    }
+
+    if (token.partOfSpeech.includes('XSA') || token.partOfSpeech.includes('XSV')) {
+        return `${baseForm}다`;
+    }
+
+    return null;
+}
+
+export function inferBieupIrregularAdjectiveBaseForm(
+    surface: string,
+    partOfSpeech: string
+): string | null {
+    if (!surface || !partOfSpeech.startsWith('NN')) {
+        return null;
+    }
+
+    if (!surface.endsWith('운') || surface.length < 2) {
+        return null;
+    }
+
+    const stem = surface.slice(0, -1);
+    const bieupStem = addFinalConsonant(stem, 17);
+    if (bieupStem === stem) {
+        return null;
+    }
+
+    const candidate = `${bieupStem}다`;
+    if (!candidate.endsWith('롭다')) {
+        return null;
+    }
+
+    if (!generateCommonInflections(candidate).includes(surface)) {
+        return null;
+    }
+
+    return candidate;
 }
 
 export function calculateConfidence(token: Token): number {

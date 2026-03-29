@@ -7,6 +7,7 @@ import {
     isEndingPartOfSpeech,
     isHadaRelatedToken,
     isNounToken,
+    reconstructRootWithSuffixBaseForm,
     isVerbOrAdjective,
     shouldMergeHadaEndings
 } from './token-normalizer';
@@ -145,7 +146,10 @@ function createRootWithSuffixRule(): TokenAnalysisRule {
                 return null;
             }
 
-            const baseForm = `${current.surface}하다`;
+            const baseForm = reconstructRootWithSuffixBaseForm(current, next);
+            if (!baseForm) {
+                return null;
+            }
 
             if (context.scope === 'word') {
                 return {

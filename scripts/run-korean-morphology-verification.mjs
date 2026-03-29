@@ -11,9 +11,21 @@ const steps = [
     args: ['--experimental-strip-types', 'tests/korean-morphology/run-behavior-matrix.ts']
   },
   {
+    name: 'document-index-runtime',
+    command: process.execPath,
+    args: ['scripts/run-korean-document-index-runtime-test.mjs']
+  },
+  {
     name: 'lint-tests',
     command: 'npx',
-    args: ['eslint', 'tests/korean-morphology/harness.ts', 'tests/korean-morphology/run-behavior-matrix.ts', 'scripts/run-korean-morphology-verification.mjs']
+    args: [
+      'eslint',
+      'tests/korean-morphology/harness.ts',
+      'tests/korean-morphology/run-behavior-matrix.ts',
+      'tests/korean-morphology/document-index-runtime.test.ts',
+      'scripts/run-korean-document-index-runtime-test.mjs',
+      'scripts/run-korean-morphology-verification.mjs'
+    ]
   },
   {
     name: 'build',
