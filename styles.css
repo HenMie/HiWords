@@ -661,6 +661,7 @@
 /* Tab 导航样式 - 现代化设计 */
 .hi-words-tab-nav {
     display: flex;
+    align-items: center;
     flex-shrink: 0;
     margin-bottom: 12px;
     background: var(--background-primary);
@@ -689,6 +690,33 @@
     margin: 0 2px;
     border: none;
     outline: none;
+}
+
+.hi-words-export-button {
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
+    margin-left: 6px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-muted);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.hi-words-export-button:hover {
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
+    transform: translateY(-1px);
+}
+
+.hi-words-export-button:focus-visible {
+    outline: 2px solid var(--interactive-accent);
+    outline-offset: 2px;
 }
 
 .hi-words-tab:first-child {
@@ -1329,6 +1357,81 @@
     background-color: color-mix(in srgb, var(--color-red) 15%, transparent);
     border: 1px solid color-mix(in srgb, var(--color-red) 25%, transparent);
     color: var(--text-normal);
+}
+
+.hiwords-export-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+    padding: 12px 14px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 10px;
+    background: var(--background-secondary);
+}
+
+.hiwords-export-summary-item {
+    min-width: 0;
+    color: var(--text-normal);
+    font-size: 13px;
+    line-height: 1.5;
+    word-break: break-word;
+}
+
+.hiwords-export-fields-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.hiwords-export-default-fields-setting .setting-item-control {
+    flex: 1 1 100%;
+    margin-top: 8px;
+}
+
+.hiwords-export-fields-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 8px;
+    width: 100%;
+}
+
+.hiwords-export-field-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 36px;
+    padding: 8px 10px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 8px;
+    background: var(--background-secondary);
+    color: var(--text-normal);
+}
+
+.hiwords-export-field-option:hover {
+    border-color: var(--background-modifier-border-hover);
+    background: var(--background-modifier-hover);
+}
+
+.hiwords-export-field-option input {
+    margin: 0;
+}
+
+.hiwords-export-folder-value {
+    min-width: 0;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-secondary);
+    color: var(--text-normal);
+    word-break: break-word;
+}
+
+.hiwords-export-folder-value.is-empty {
+    color: var(--text-faint);
+}
+
+.hiwords-export-validation {
+    margin-top: 4px;
 }
 
 /* 形态学分析提示样式 */

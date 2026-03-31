@@ -15,6 +15,7 @@ export { VocabularyCacheManager } from './vocabulary-cache-manager';
 export { MorphologyLoader } from './morphology-loader';
 export { UnifiedMorphologyService } from './unified-morphology-service';
 export { MorphologyAssetManager } from './morphology-asset-manager';
+export { buildArticleVocabularySnapshot, selectBestDocumentPosition } from './article-vocabulary-snapshot';
 export type { CanvasImportResult } from './canvas-jsonl-importer';
 export type { JsonlWordRecord } from './jsonl-vocabulary-service';
 export type {

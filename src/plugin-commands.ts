@@ -10,6 +10,7 @@ interface PluginCommandDeps {
     loadAllVocabularyBooks: () => Promise<void>
     refreshHighlighter: () => void
     activateSidebarView: () => Promise<void>
+    exportCurrentArticleVocabulary: () => Promise<void>
     addOrEditWord: (word: string, sentence?: string) => void
     importLegacyCanvasBooks: () => Promise<void>
     auditLegacyDuplicateWords: () => Promise<void>
@@ -35,6 +36,19 @@ export function registerPluginCommands(deps: PluginCommandDeps): void {
         id: 'open-vocabulary-sidebar',
         name: t('commands.show_sidebar'),
         callback: () => void deps.activateSidebarView()
+    })
+
+    deps.addCommand({
+        id: 'export-current-article-vocabulary',
+        name: t('commands.export_current_article_vocabulary', 'Export current article vocabulary'),
+        callback: async () => {
+            if (deps.isMigrationRequired()) {
+                deps.showMigrationRequiredNotice()
+                return
+            }
+
+            await deps.exportCurrentArticleVocabulary()
+        }
     })
 
     deps.addCommand({

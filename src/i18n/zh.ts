@@ -90,6 +90,25 @@ export default {
         morphology_asset_status_downloading: "下载中...",
         morphology_asset_download: "下载",
         morphology_asset_delete: "删除",
+        export_settings: "文章词汇导出",
+        export_settings_desc: "设置当前文章词汇 CSV 导出的默认字段和排序方式",
+        export_order_default: "默认导出顺序",
+        export_order_default_desc: "打开导出窗口时默认选中的排序方式",
+        export_fields_default: "默认导出字段",
+        export_fields_default_desc: "打开导出窗口时默认勾选的字段",
+        export_order_document: "文档顺序",
+        export_order_alphabetical: "字母顺序",
+        export_field_order_in_document: "文中序号",
+        export_field_word: "单词",
+        export_field_definition: "释义",
+        export_field_pronunciation: "发音",
+        export_field_etymology: "词源",
+        export_field_source_book_name: "来源词书",
+        export_field_source_path: "来源路径",
+        export_field_node_id: "节点 ID",
+        export_field_color: "颜色",
+        export_field_mastered: "已掌握",
+        export_field_document_name: "文档名",
     },
     
     // 侧边栏
@@ -104,6 +123,7 @@ export default {
         mastered: "已掌握",
         no_learning_words: "没有待学习的单词",
         no_mastered_words: "没有已掌握的单词",
+        export_button: "导出",
     },
     
     // 命令
@@ -114,6 +134,7 @@ export default {
         show_sidebar: "显示 HiWords 侧边栏",
         add_selected_word: "添加选中的单词",
         audit_legacy_duplicate_words: "审计历史重复词",
+        export_current_article_vocabulary: "导出当前文章词汇列表",
     },
     
     // 通知
@@ -168,6 +189,14 @@ export default {
         morphology_asset_downloaded: "{0}形态学资源已下载",
         morphology_asset_deleted: "{0}形态学资源已删除",
         morphology_asset_operation_failed: "{0}形态学资源操作失败",
+        export_missing_supported_file: "请先打开一个 Markdown 文档或 PDF 再导出词汇。",
+        export_snapshot_empty: "当前文章中没有可导出的词汇。",
+        export_snapshot_not_ready: "当前 PDF 文本仍在加载，请稍后重试。",
+        export_snapshot_failed: "准备当前文章词汇导出数据失败。",
+        export_fields_required: "请至少选择一个导出字段。",
+        export_folder_required: "请先选择一个库内文件夹。",
+        export_success: "词汇已导出到 {0}",
+        export_failed: "导出词汇失败，请查看控制台日志。",
     },
     
     // 模态框
@@ -205,6 +234,20 @@ export default {
         cancel_button: "取消",
         select_canvas_file: "选择 Canvas 文件",
         delete_confirmation: "确定要删除词汇 \"{0}\" 吗？\n此操作不可撤销。",
+        export_vocabulary_title: "导出当前文章词汇",
+        export_vocabulary_helper: "选择要导出的字段、排序方式以及库内目标文件夹。",
+        export_document_label: "文档",
+        export_word_count_label: "词条数",
+        export_order_label: "排序方式",
+        export_fields_label: "导出字段",
+        export_folder_label: "目标文件夹",
+        export_select_folder: "选择文件夹",
+        export_folder_placeholder: "请选择一个库内文件夹",
+        export_submit_button: "导出 CSV",
+        export_pick_folder_title: "选择导出文件夹",
+        export_folder_picker_empty_state: "没有可用文件夹",
+        export_folder_picker_navigate: "上下移动",
+        export_folder_picker_choose: "选择文件夹",
     },
     // 通用操作文案
     actions: {
@@ -213,5 +256,6 @@ export default {
         mark_mastered: "已掌握",
         unmark_mastered: "忘记了",
         restore: "还原",
+        export: "导出",
     },
 }

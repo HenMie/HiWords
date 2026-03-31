@@ -1,11 +1,13 @@
-import { Plugin, Notice, WorkspaceLeaf } from 'obsidian';
+import { Plugin, Notice, WorkspaceLeaf, TFile } from 'obsidian';
 import { Extension } from '@codemirror/state';
 // 使用新的模块化导入
 import {
     HiWordsSettings,
     VocabularyBook,
     PLUGIN_UNLOAD_TIMEOUT,
-    type DuplicateWordAuditEntry
+    type DuplicateWordAuditEntry,
+    type ArticleVocabularyExportConfig,
+    type ArticleVocabularySnapshot
 } from './src/utils';
 import { registerReadingModeHighlighter } from './src/ui/reading-mode-highlighter';
 import { registerPDFHighlighter, cleanupPDFHighlighter } from './src/ui/pdf-highlighter';
@@ -15,14 +17,21 @@ import {
     MorphologyAssetManager,
     CanvasJsonlImporter,
     createWordHighlighterExtension,
-    highlighterManager
+    highlighterManager,
+    buildArticleVocabularySnapshot
 } from './src/core';
 import type { MorphologyAssetLanguage, MorphologyAssetState } from './src/core';
-import { DefinitionPopover, HiWordsSettingTab, HiWordsSidebarView, SIDEBAR_VIEW_TYPE, AddWordModal } from './src/ui';
+import { DefinitionPopover, HiWordsSettingTab, HiWordsSidebarView, SIDEBAR_VIEW_TYPE, AddWordModal, ExportVocabularyModal } from './src/ui';
 import { i18n, t } from './src/i18n';
 import { buildNormalizedSettings } from './src/plugin-settings';
 import { registerPluginCommands } from './src/plugin-commands';
 import { registerPluginEvents } from './src/plugin-events';
+import {
+    buildArticleVocabularyExportFilePath,
+    buildArticleVocabularyExportRows,
+    ensureFolderExists,
+    serializeArticleVocabularyRowsToCsv
+} from './src/utils';
 
 export default class HiWordsPlugin extends Plugin {
     settings: HiWordsSettings;
@@ -150,6 +159,7 @@ export default class HiWordsPlugin extends Plugin {
             loadAllVocabularyBooks: () => this.vocabularyManager.loadAllVocabularyBooks(),
             refreshHighlighter: () => this.refreshHighlighter(),
             activateSidebarView: () => this.activateSidebarView(),
+            exportCurrentArticleVocabulary: () => this.exportCurrentArticleVocabulary(),
             addOrEditWord: (word, sentence) => this.addOrEditWord(word, sentence),
             importLegacyCanvasBooks: () => this.importLegacyCanvasBooks(),
             auditLegacyDuplicateWords: () => this.auditLegacyDuplicateWords()
@@ -265,6 +275,129 @@ export default class HiWordsPlugin extends Plugin {
         if (leaf) {
             workspace.revealLeaf(leaf);
         }
+    }
+
+    public async getCurrentArticleVocabularySnapshot(
+        file?: TFile,
+        preferredLeaf?: WorkspaceLeaf | null
+    ): Promise<ArticleVocabularySnapshot> {
+        const activeFile = file ?? this.app.workspace.getActiveFile()
+        if (!activeFile || (activeFile.extension !== 'md' && activeFile.extension !== 'pdf')) {
+            return {
+                filePath: activeFile?.path ?? '',
+                fileName: activeFile?.basename ?? '',
+                words: [],
+                status: 'failed',
+                diagnostics: t('notices.export_missing_supported_file', 'Open a Markdown document or PDF before exporting vocabulary.')
+            }
+        }
+
+        return buildArticleVocabularySnapshot({
+            app: this.app,
+            file: activeFile,
+            leaf: this.resolveArticleLeaf(activeFile, preferredLeaf),
+            vocabularyManager: this.vocabularyManager
+        })
+    }
+
+    public async exportCurrentArticleVocabulary(): Promise<void> {
+        if (this.migrationRequired) {
+            this.showMigrationRequiredNotice()
+            return
+        }
+
+        const activeFile = this.app.workspace.getActiveFile()
+        if (!activeFile || (activeFile.extension !== 'md' && activeFile.extension !== 'pdf')) {
+            new Notice(t('notices.export_missing_supported_file', 'Open a Markdown document or PDF before exporting vocabulary.'))
+            return
+        }
+
+        const snapshot = await this.getCurrentArticleVocabularySnapshot(activeFile, this.app.workspace.activeLeaf)
+        if (snapshot.status !== 'ready') {
+            this.showArticleVocabularyExportSnapshotNotice(snapshot)
+            return
+        }
+
+        new ExportVocabularyModal({
+            app: this.app,
+            plugin: this,
+            snapshot,
+            onSubmit: async (config) => {
+                await this.writeArticleVocabularyExport(snapshot, config)
+            }
+        }).open()
+    }
+
+    private async writeArticleVocabularyExport(
+        snapshot: ArticleVocabularySnapshot,
+        config: ArticleVocabularyExportConfig
+    ): Promise<void> {
+        try {
+            await ensureFolderExists(
+                (path) => this.app.vault.createFolder(path),
+                (path) => this.app.vault.getFolderByPath(path) !== null,
+                config.folderPath
+            )
+
+            const rows = buildArticleVocabularyExportRows(snapshot, this.settings, config.order)
+            const csv = serializeArticleVocabularyRowsToCsv(config.fields, rows)
+            const exportPath = buildArticleVocabularyExportFilePath(config.folderPath, snapshot.fileName)
+            await this.app.vault.create(exportPath, csv)
+            new Notice((t('notices.export_success', 'Vocabulary exported to {0}')).replace('{0}', exportPath))
+        } catch (error) {
+            console.error('[HiWords] 导出当前文章词汇失败:', error)
+            new Notice(t('notices.export_failed', 'Failed to export vocabulary. Please check the console for details.'))
+            throw error
+        }
+    }
+
+    private showArticleVocabularyExportSnapshotNotice(snapshot: ArticleVocabularySnapshot): void {
+        if (snapshot.status === 'empty') {
+            if (snapshot.diagnostics) {
+                console.info('[HiWords] 当前文章词汇导出为空:', snapshot.diagnostics)
+            }
+            new Notice(snapshot.diagnostics || t('notices.export_snapshot_empty', 'No vocabulary words were found in the current article.'))
+            return
+        }
+
+        if (snapshot.status === 'not-ready') {
+            if (snapshot.diagnostics) {
+                console.warn('[HiWords] 当前文章词汇导出尚未就绪:', snapshot.diagnostics)
+            }
+            new Notice(snapshot.diagnostics || t('notices.export_snapshot_not_ready', 'The current PDF is still loading text. Please wait a moment and retry.'))
+            return
+        }
+
+        if (snapshot.diagnostics) {
+            console.error('[HiWords] 当前文章词汇导出快照失败:', snapshot.diagnostics)
+        }
+        new Notice(snapshot.diagnostics || t('notices.export_snapshot_failed', 'Failed to prepare the current article vocabulary for export.'))
+    }
+
+    private resolveArticleLeaf(file: TFile, preferredLeaf?: WorkspaceLeaf | null): WorkspaceLeaf | null {
+        const candidates = [
+            preferredLeaf ?? null,
+            this.app.workspace.activeLeaf,
+            this.app.workspace.getMostRecentLeaf(),
+            ...this.app.workspace.getLeavesOfType(file.extension === 'pdf' ? 'pdf' : 'markdown')
+        ]
+
+        for (const candidate of candidates) {
+            if (this.leafMatchesFile(candidate, file)) {
+                return candidate
+            }
+        }
+
+        return null
+    }
+
+    private leafMatchesFile(leaf: WorkspaceLeaf | null | undefined, file: TFile): boolean {
+        if (!leaf) {
+            return false
+        }
+
+        const view = leaf.view as { file?: TFile | null }
+        return view.file?.path === file.path
     }
 
     /**

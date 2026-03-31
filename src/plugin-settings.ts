@@ -1,5 +1,10 @@
-import type { HiWordsSettings, VocabularyBook } from './utils'
+import type { HiWordsSettings, VocabularyBook } from './utils/types'
 import { DEFAULT_LANGUAGE_POLICY, normalizeLanguagePolicy } from './core/morphology-language-resolver'
+import {
+    DEFAULT_ARTICLE_VOCABULARY_EXPORT_FIELDS,
+    sanitizeExportFields,
+    sanitizeExportOrder
+} from './utils/vocabulary-export'
 
 export const DEFAULT_SETTINGS: HiWordsSettings = {
     vocabularyBooks: [],
@@ -22,7 +27,9 @@ export const DEFAULT_SETTINGS: HiWordsSettings = {
     highlightPaths: '',
     fileNodeParseMode: 'filename-with-content',
     morphologyEngineMode: 'hybrid',
-    morphologyFallbackMode: 'conservative'
+    morphologyFallbackMode: 'conservative',
+    exportOrder: 'document',
+    exportFields: [...DEFAULT_ARTICLE_VOCABULARY_EXPORT_FIELDS]
 }
 
 const LEGACY_CANVAS_LAYOUT_SETTING_KEYS = [
@@ -47,13 +54,24 @@ export function buildNormalizedSettings(rawSettings: unknown): {
 } {
     const { sanitized, removed } = stripLegacyCanvasLayoutSettings(rawSettings)
     const { books, changed: booksChanged } = normalizeVocabularyBooks(sanitized.vocabularyBooks)
+    const normalizedExportOrder = sanitizeExportOrder(sanitized.exportOrder as HiWordsSettings['exportOrder'])
+    const normalizedExportFields = sanitizeExportFields(
+        sanitized.exportFields as HiWordsSettings['exportFields'],
+        DEFAULT_ARTICLE_VOCABULARY_EXPORT_FIELDS
+    )
+    const exportChanged =
+        normalizedExportOrder !== sanitized.exportOrder
+        || !sameStringArray(normalizedExportFields, sanitized.exportFields)
+
     const settings = Object.assign({}, DEFAULT_SETTINGS, sanitized, {
-        vocabularyBooks: books
+        vocabularyBooks: books,
+        exportOrder: normalizedExportOrder,
+        exportFields: normalizedExportFields
     })
 
     return {
         settings,
-        changed: removed || booksChanged
+        changed: removed || booksChanged || exportChanged
     }
 }
 
@@ -122,4 +140,16 @@ function stripLegacyCanvasLayoutSettings(data: unknown): {
     }
 
     return { sanitized, removed }
+}
+
+function sameStringArray(left: unknown, right: unknown): boolean {
+    if (!Array.isArray(left) || !Array.isArray(right)) {
+        return false
+    }
+
+    if (left.length !== right.length) {
+        return false
+    }
+
+    return left.every((value, index) => value === right[index])
 }

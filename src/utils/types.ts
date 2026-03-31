@@ -40,6 +40,37 @@ export interface DuplicateWordAuditEntry {
     nodeId: string;
 }
 
+export type ArticleVocabularySnapshotStatus = 'ready' | 'empty' | 'not-ready' | 'failed'
+
+export interface ArticleVocabularySnapshot {
+    filePath: string;
+    fileName: string;
+    words: WordDefinition[];
+    status: ArticleVocabularySnapshotStatus;
+    diagnostics?: string;
+}
+
+export type ArticleVocabularyExportOrder = 'document' | 'alphabetical'
+
+export type ArticleVocabularyExportField =
+    | 'orderInDocument'
+    | 'word'
+    | 'definition'
+    | 'pronunciation'
+    | 'etymology'
+    | 'sourceBookName'
+    | 'sourcePath'
+    | 'nodeId'
+    | 'color'
+    | 'mastered'
+    | 'documentName'
+
+export interface ArticleVocabularyExportConfig {
+    fields: ArticleVocabularyExportField[];
+    order: ArticleVocabularyExportOrder;
+    folderPath: string;
+}
+
 export type WordEntryIntent =
     | { kind: 'add'; normalizedWord: string }
     | {
@@ -127,6 +158,10 @@ export interface HiWordsSettings {
     morphologyEngineMode?: MorphologyEngineMode;
     // 形态学兜底策略（conservative: 仅必要时启用活用生成，aggressive: 始终启用）
     morphologyFallbackMode?: MorphologyFallbackMode;
+    // 当前文章词汇导出默认排序
+    exportOrder?: ArticleVocabularyExportOrder;
+    // 当前文章词汇导出默认字段
+    exportFields?: ArticleVocabularyExportField[];
 }
 
 // 词汇匹配信息

@@ -7,3 +7,4 @@ export { DefinitionPopover } from './definition-popover';
 export { AddWordModal } from './add-word-modal';
 export { HiWordsSettingTab } from './settings-tab';
 export { HighlightSpanBuilder } from './highlight-span-builder';
+export { ExportVocabularyModal } from './export-vocabulary-modal';

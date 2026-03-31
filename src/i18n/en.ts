@@ -90,6 +90,25 @@ export default {
         morphology_asset_status_downloading: "Downloading...",
         morphology_asset_download: "Download",
         morphology_asset_delete: "Delete",
+        export_settings: "Article vocabulary export",
+        export_settings_desc: "Set default export fields and ordering for current-article vocabulary CSV exports",
+        export_order_default: "Default export order",
+        export_order_default_desc: "Pre-fill the export modal with the selected order",
+        export_fields_default: "Default export fields",
+        export_fields_default_desc: "Pre-fill the export modal with these columns",
+        export_order_document: "Document order",
+        export_order_alphabetical: "Alphabetical",
+        export_field_order_in_document: "Order in document",
+        export_field_word: "Word",
+        export_field_definition: "Definition",
+        export_field_pronunciation: "Pronunciation",
+        export_field_etymology: "Etymology",
+        export_field_source_book_name: "Source book",
+        export_field_source_path: "Source path",
+        export_field_node_id: "Node ID",
+        export_field_color: "Color",
+        export_field_mastered: "Mastered",
+        export_field_document_name: "Document name",
     },
     
     // Sidebar
@@ -104,6 +123,7 @@ export default {
         mastered: "Mastered",
         no_learning_words: "No words to learn",
         no_mastered_words: "No mastered words",
+        export_button: "Export",
     },
     
     // Commands
@@ -114,6 +134,7 @@ export default {
         show_sidebar: "Show HiWords sidebar",
         add_selected_word: "Add selected word",
         audit_legacy_duplicate_words: "Audit legacy duplicate words",
+        export_current_article_vocabulary: "Export current article vocabulary",
     },
 
     // Notices
@@ -168,6 +189,14 @@ export default {
         morphology_asset_downloaded: "{0} morphology resource downloaded",
         morphology_asset_deleted: "{0} morphology resource deleted",
         morphology_asset_operation_failed: "Failed to manage {0} morphology resource",
+        export_missing_supported_file: "Open a Markdown document or PDF before exporting vocabulary.",
+        export_snapshot_empty: "No vocabulary words were found in the current article.",
+        export_snapshot_not_ready: "The current PDF is still loading text. Please wait a moment and retry.",
+        export_snapshot_failed: "Failed to prepare the current article vocabulary for export.",
+        export_fields_required: "Select at least one export field.",
+        export_folder_required: "Select a vault folder before exporting.",
+        export_success: "Vocabulary exported to {0}",
+        export_failed: "Failed to export vocabulary. Please check the console for details.",
     },
     
     // Modals
@@ -205,6 +234,20 @@ export default {
         cancel_button: "Cancel",
         select_canvas_file: "Select vocabulary book file",
         delete_confirmation: "Are you sure you want to delete the word \"{0}\"?\nThis action cannot be undone.",
+        export_vocabulary_title: "Export current article vocabulary",
+        export_vocabulary_helper: "Choose the columns, order, and vault folder for this CSV export.",
+        export_document_label: "Document",
+        export_word_count_label: "Words",
+        export_order_label: "Order",
+        export_fields_label: "Fields",
+        export_folder_label: "Target folder",
+        export_select_folder: "Choose folder",
+        export_folder_placeholder: "Select a vault folder",
+        export_submit_button: "Export CSV",
+        export_pick_folder_title: "Choose export folder",
+        export_folder_picker_empty_state: "No folders found",
+        export_folder_picker_navigate: "Navigate",
+        export_folder_picker_choose: "Choose folder",
     },
     // Common action labels
     actions: {
@@ -213,5 +256,6 @@ export default {
         mark_mastered: "Mark mastered",
         unmark_mastered: "Unmark mastered",
         restore: "Restore",
+        export: "Export",
     },
 }

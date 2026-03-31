@@ -1,7 +1,19 @@
 import { App, ButtonComponent, Notice, PluginSettingTab, Setting } from 'obsidian'
 import HiWordsPlugin from '../../main'
-import { FileNodeParseMode, HighlightStyle, MasteredDetectionMode } from '../utils'
-import type { MorphologyEngineMode, MorphologyFallbackMode } from '../utils'
+import {
+    ARTICLE_VOCABULARY_EXPORT_FIELDS,
+    ARTICLE_VOCABULARY_EXPORT_FIELD_LABEL_KEYS,
+    ARTICLE_VOCABULARY_EXPORT_ORDER_LABEL_KEYS,
+    FileNodeParseMode,
+    HighlightStyle,
+    MasteredDetectionMode,
+    sanitizeExportFields
+} from '../utils'
+import type {
+    ArticleVocabularyExportField,
+    MorphologyEngineMode,
+    MorphologyFallbackMode
+} from '../utils'
 import type { MorphologyAssetLanguage } from '../core'
 import { t } from '../i18n'
 import { renderVocabularyBooksSection } from './settings-vocabulary-books'
@@ -27,6 +39,7 @@ export class HiWordsSettingTab extends PluginSettingTab {
         this.addFileNodeParseModeSettings()
         this.addHighlightingSection()
         this.addMorphologyAssetSection()
+        this.addExportSettingsSection()
         this.addLearningFeaturesSection()
     }
 
@@ -276,6 +289,67 @@ export class HiWordsSettingTab extends PluginSettingTab {
                     this.plugin.settings.fileNodeParseMode = value as FileNodeParseMode
                     await this.plugin.saveSettings()
                 }))
+    }
+
+    private addExportSettingsSection(): void {
+        const { containerEl } = this
+
+        new Setting(containerEl)
+            .setName(t('settings.export_settings') || 'Article vocabulary export')
+            .setDesc(t('settings.export_settings_desc') || 'Configure default fields and order for current-article vocabulary CSV exports')
+            .setHeading()
+
+        new Setting(containerEl)
+            .setName(t('settings.export_order_default') || 'Default export order')
+            .setDesc(t('settings.export_order_default_desc') || 'Pre-fill the export modal with the selected order')
+            .addDropdown((dropdown) => dropdown
+                .addOption('document', t(ARTICLE_VOCABULARY_EXPORT_ORDER_LABEL_KEYS.document) || 'Document order')
+                .addOption('alphabetical', t(ARTICLE_VOCABULARY_EXPORT_ORDER_LABEL_KEYS.alphabetical) || 'Alphabetical')
+                .setValue(this.plugin.settings.exportOrder || 'document')
+                .onChange(async (value) => {
+                    this.plugin.settings.exportOrder = value as 'document' | 'alphabetical'
+                    await this.plugin.saveSettings()
+                }))
+
+        const fieldsSetting = new Setting(containerEl)
+            .setName(t('settings.export_fields_default') || 'Default export fields')
+            .setDesc(t('settings.export_fields_default_desc') || 'Pre-fill the export modal with these columns')
+        fieldsSetting.setClass('hiwords-export-default-fields-setting')
+
+        const selectedFields = new Set(sanitizeExportFields(this.plugin.settings.exportFields))
+        const fieldsGrid = fieldsSetting.controlEl.createDiv({ cls: 'hiwords-export-fields-grid' })
+        ARTICLE_VOCABULARY_EXPORT_FIELDS.forEach((field) => {
+            const label = fieldsGrid.createEl('label', { cls: 'hiwords-export-field-option' })
+            const checkbox = label.createEl('input', { attr: { type: 'checkbox' } })
+            checkbox.checked = selectedFields.has(field)
+            checkbox.addEventListener('change', () => {
+                void this.handleExportFieldToggle(field, checkbox.checked, checkbox, selectedFields)
+            })
+            label.createEl('span', {
+                text: t(ARTICLE_VOCABULARY_EXPORT_FIELD_LABEL_KEYS[field]) || field
+            })
+        })
+    }
+
+    private async handleExportFieldToggle(
+        field: ArticleVocabularyExportField,
+        checked: boolean,
+        checkbox: HTMLInputElement,
+        selectedFields: Set<ArticleVocabularyExportField>
+    ): Promise<void> {
+        if (checked) {
+            selectedFields.add(field)
+        } else {
+            if (selectedFields.size === 1) {
+                checkbox.checked = true
+                new Notice(t('notices.export_fields_required') || 'Select at least one export field.')
+                return
+            }
+            selectedFields.delete(field)
+        }
+
+        this.plugin.settings.exportFields = ARTICLE_VOCABULARY_EXPORT_FIELDS.filter((item) => selectedFields.has(item))
+        await this.plugin.saveSettings()
     }
 
     private addLearningFeaturesSection(): void {

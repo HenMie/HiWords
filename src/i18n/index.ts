@@ -84,6 +84,25 @@ export interface LanguagePack {
         morphology_fallback_desc?: string;
         morphology_fallback_conservative?: string;
         morphology_fallback_aggressive?: string;
+        export_settings?: string;
+        export_settings_desc?: string;
+        export_order_default?: string;
+        export_order_default_desc?: string;
+        export_fields_default?: string;
+        export_fields_default_desc?: string;
+        export_order_document?: string;
+        export_order_alphabetical?: string;
+        export_field_order_in_document?: string;
+        export_field_word?: string;
+        export_field_definition?: string;
+        export_field_pronunciation?: string;
+        export_field_etymology?: string;
+        export_field_source_book_name?: string;
+        export_field_source_path?: string;
+        export_field_node_id?: string;
+        export_field_color?: string;
+        export_field_mastered?: string;
+        export_field_document_name?: string;
     };
     sidebar: {
         title: string;
@@ -91,6 +110,7 @@ export interface LanguagePack {
         source_prefix: string;
         found: string;
         words: string;
+        export_button?: string;
     };
     commands: {
         add_word: string;
@@ -99,6 +119,7 @@ export interface LanguagePack {
         refresh_vocabulary: string;
         show_sidebar: string;
         audit_legacy_duplicate_words?: string;
+        export_current_article_vocabulary?: string;
     };
     notices: {
         vocabulary_refreshed: string;
@@ -139,6 +160,14 @@ export interface LanguagePack {
         morphology_asset_downloaded?: string;
         morphology_asset_deleted?: string;
         morphology_asset_operation_failed?: string;
+        export_missing_supported_file?: string;
+        export_snapshot_empty?: string;
+        export_snapshot_not_ready?: string;
+        export_snapshot_failed?: string;
+        export_fields_required?: string;
+        export_folder_required?: string;
+        export_success?: string;
+        export_failed?: string;
     };
     modals: {
         add_word_title: string;
@@ -168,6 +197,20 @@ export interface LanguagePack {
         cancel_button: string;
         select_canvas_file: string;
         delete_confirmation?: string;
+        export_vocabulary_title?: string;
+        export_vocabulary_helper?: string;
+        export_document_label?: string;
+        export_word_count_label?: string;
+        export_order_label?: string;
+        export_fields_label?: string;
+        export_folder_label?: string;
+        export_select_folder?: string;
+        export_folder_placeholder?: string;
+        export_submit_button?: string;
+        export_pick_folder_title?: string;
+        export_folder_picker_empty_state?: string;
+        export_folder_picker_navigate?: string;
+        export_folder_picker_choose?: string;
     };
     // Common action labels used in UI
     actions?: {
@@ -176,6 +219,7 @@ export interface LanguagePack {
         mark_mastered: string; // 已掌握
         unmark_mastered: string; // 忘记了（取消已掌握）
         restore?: string;
+        export?: string;
     };
 }
 

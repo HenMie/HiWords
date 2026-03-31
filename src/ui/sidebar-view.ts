@@ -2,23 +2,20 @@ import type { EventRef } from 'obsidian';
 import { ItemView, WorkspaceLeaf, TFile, MarkdownView, MarkdownRenderer, setIcon } from 'obsidian';
 import HiWordsPlugin from '../../main';
 import { 
+    buildBookNameResolver,
     WordDefinition, 
     mapCanvasColorToCSSVar, 
     getColorWithOpacity, 
     playWordTTS, 
     MarkdownLinkBinder, 
     Debouncer, 
-    removeOverlappingMatches, 
     WordActionUtils,
     COLLAPSIBLE,
     SIDEBAR_UPDATE_DELAY,
     MESSAGE_AUTO_HIDE,
-    PDF_TEXT_EXTRACT_DELAY,
-    DOCUMENT_POSITION,
     WORD_CARD_HIGHLIGHT_DURATION
 } from '../utils';
 import { t } from '../i18n';
-import { WordMatcherService } from '../core/word-matcher-service';
 
 export const SIDEBAR_VIEW_TYPE = 'hi-words-sidebar';
 
@@ -40,7 +37,6 @@ export class HiWordsSidebarView extends ItemView {
     private delegatedBound = false; // 是否已绑定根级事件委托
     private linkBinder: MarkdownLinkBinder; // Markdown 链接绑定器
     private wordActionUtils: WordActionUtils; // 单词操作工具类
-    private wordMatcherService: WordMatcherService; // 单词匹配服务
     // 排序缓存优化
     private sortedWordsCache: WordDefinition[] = [];
     private cacheInvalidated = true;
@@ -50,7 +46,6 @@ export class HiWordsSidebarView extends ItemView {
         this.plugin = plugin;
         this.linkBinder = new MarkdownLinkBinder(plugin.app);
         this.wordActionUtils = new WordActionUtils(plugin.app, plugin);
-        this.wordMatcherService = new WordMatcherService(plugin.vocabularyManager);
         this.updateDebouncer = new Debouncer(() => {
             void this.updateView();
         }, 0); // 初始延迟为 0，后续通过 scheduleUpdate 指定
@@ -169,8 +164,6 @@ export class HiWordsSidebarView extends ItemView {
     }
 
     async onClose() {
-        // 清理资源
-        this.wordMatcherService.destroy();
     }
 
     /**
@@ -188,11 +181,6 @@ export class HiWordsSidebarView extends ItemView {
         const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
         if (activeView) {
             this.lastActiveMarkdownView = activeView;
-        }
-
-        if (activeFile === this.currentFile && this.currentWords.length > 0) {
-            // 文件未变化且已有数据，不需要重新扫描
-            return;
         }
 
         // 记录是否为切换到新文件
@@ -231,77 +219,33 @@ export class HiWordsSidebarView extends ItemView {
 
         try {
             const startTime = Date.now();
-            let content: string;
-            
-            // 根据文件类型提取内容
-            if (this.currentFile.extension === 'pdf') {
-                content = await this.extractPDFText();
-            } else {
-                content = await this.app.vault.read(this.currentFile);
-            }
-
-            // 重建 Trie 以确保使用最新的词汇数据（包含所有单词，包括已掌握的）
-            this.wordMatcherService.buildTrie(true);
-
-            // 使用 WordMatcherService 查找所有匹配（包括变形）
-            const matches = this.wordMatcherService.findMatches(content);
-
-            // 使用与文章高亮相同的重叠处理逻辑，优先保留更长的匹配
-            const filteredMatches = removeOverlappingMatches(matches);
-
-            // 改进的位置计算：创建一个 Map 来存储每个单词的所有出现位置
-            const wordAllPositionsMap = new Map<string, { wordDef: WordDefinition, positions: number[] }>();
-
-            // 遍历过滤后的匹配，记录每个单词的所有出现位置
-            for (const match of filteredMatches) {
-                const definition = match.payload;
-                if (definition && definition.nodeId) {
-                    if (!wordAllPositionsMap.has(definition.nodeId)) {
-                        wordAllPositionsMap.set(definition.nodeId, {
-                            wordDef: definition,
-                            positions: []
-                        });
-                    }
-                    const positionGroup = wordAllPositionsMap.get(definition.nodeId);
-                    if (positionGroup) {
-                        positionGroup.positions.push(match.from);
-                    }
-                }
-            }
-
-            // 对每个单词的位置进行排序，并选择最佳代表位置
-            const wordPositionMap = new Map<string, { wordDef: WordDefinition, position: number }>();
-            const contentLength = content.length;
-            
-            for (const [nodeId, { wordDef, positions }] of wordAllPositionsMap.entries()) {
-                // 对位置进行排序
-                positions.sort((a, b) => a - b);
-                
-                // 使用改进的位置选择策略
-                const bestPosition = this.selectBestPosition(positions, contentLength);
-                
-                wordPositionMap.set(nodeId, {
-                    wordDef,
-                    position: bestPosition
-                });
-            }
-
-            // 按照单词在文档中首次出现的位置排序
-            const foundWordsWithPosition = Array.from(wordPositionMap.values());
-            foundWordsWithPosition.sort((a, b) => a.position - b.position);
-            this.currentWords = foundWordsWithPosition.map(item => item.wordDef);
-
-            // 存储单词位置信息用于鼠标位置映射
-            // 注意：这里我们保留位置信息，但不再用于文档滚动同步
-            
-            // 标记缓存失效
+            const snapshot = await this.plugin.getCurrentArticleVocabularySnapshot(this.currentFile, this.leaf);
+            this.currentWords = snapshot.words;
             this.cacheInvalidated = true;
 
             const elapsed = Date.now() - startTime;
-            console.log(`[HiWords] 文档扫描完成，耗时 ${elapsed}ms，找到 ${this.currentWords.length} 个生词`);
+            if (snapshot.status === 'ready') {
+                console.log(`[HiWords] 文档扫描完成，耗时 ${elapsed}ms，找到 ${this.currentWords.length} 个生词`);
+                this.showSuccessMessage(`文档扫描完成，找到 ${this.currentWords.length} 个生词`);
+                return;
+            }
 
-            // 显示成功状态
-            this.showSuccessMessage(`文档扫描完成，找到 ${this.currentWords.length} 个生词`);
+            if (snapshot.status === 'empty') {
+                console.log(`[HiWords] 文档扫描完成，耗时 ${elapsed}ms，未找到生词`);
+                return;
+            }
+
+            if (snapshot.diagnostics) {
+                const logPrefix = snapshot.status === 'not-ready'
+                    ? '[HiWords] 文档扫描尚未就绪:'
+                    : '[HiWords] 文档扫描失败:'
+                console[snapshot.status === 'not-ready' ? 'warn' : 'error'](logPrefix, snapshot.diagnostics)
+            }
+
+            this.showErrorMessage(
+                snapshot.diagnostics ? new Error(snapshot.diagnostics) : undefined,
+                snapshot.status === 'not-ready' ? '文档尚未就绪' : '文档扫描失败'
+            );
         } catch (error) {
             console.error('Failed to scan document:', error);
             this.currentWords = [];
@@ -310,54 +254,6 @@ export class HiWordsSidebarView extends ItemView {
         } finally {
             this.hideLoadingIndicator();
         }
-    }
-
-    /**
-     * 从单词的所有出现位置中选择最佳代表位置
-     * 改进版本：更平衡的位置选择策略，确保文档各部分都有合适的代表
-     * @param positions 单词的所有出现位置（已排序）
-     * @param contentLength 文档总长度
-     * @returns 最佳代表位置
-     */
-    private selectBestPosition(positions: number[], contentLength: number): number {
-        if (positions.length === 1) {
-            return positions[0];
-        }
-
-        // 将文档分为三个部分：前1/3、中1/3、后1/3（使用常量配置）
-        const firstThirdThreshold = contentLength * DOCUMENT_POSITION.FIRST_THIRD_RATIO;
-        const secondThirdThreshold = contentLength * DOCUMENT_POSITION.SECOND_THIRD_RATIO;
-
-        // 策略1：优先选择在文档前1/3部分的首次出现
-        const earlyPosition = positions.find(pos => pos <= firstThirdThreshold);
-        if (earlyPosition !== undefined) {
-            return earlyPosition;
-        }
-
-        // 策略2：如果没有在前1/3部分出现，选择在中1/3部分的首次出现
-        const middlePosition = positions.find(pos => pos > firstThirdThreshold && pos <= secondThirdThreshold);
-        if (middlePosition !== undefined) {
-            return middlePosition;
-        }
-
-        // 策略3：如果只出现在后1/3部分，选择该部分的首次出现
-        // 但确保不会太集中在文档末尾
-        const latePosition = positions.find(pos => pos > secondThirdThreshold);
-        if (latePosition !== undefined) {
-            // 如果位置太接近文档末尾，稍微向前调整
-            const endThreshold = contentLength * DOCUMENT_POSITION.END_RATIO;
-            if (latePosition > endThreshold && positions.length > 1) {
-                // 尝试选择一个稍微靠前的位置
-                const adjustedPosition = positions.find(pos => pos <= endThreshold);
-                if (adjustedPosition !== undefined) {
-                    return adjustedPosition;
-                }
-            }
-            return latePosition;
-        }
-
-        // 策略4：如果以上都不满足，选择首次出现
-        return positions[0];
     }
 
     /**
@@ -440,6 +336,8 @@ export class HiWordsSidebarView extends ItemView {
                 userFriendlyMessage = `${context}：权限不足`;
             } else if (error.message.includes('parse') || error.message.includes('JSON')) {
                 userFriendlyMessage = `${context}：文件格式错误`;
+            } else if (error.message.trim()) {
+                userFriendlyMessage = `${context}：${error.message}`;
             } else {
                 userFriendlyMessage = `${context}：未知错误`;
             }
@@ -457,7 +355,9 @@ export class HiWordsSidebarView extends ItemView {
             }
         }, MESSAGE_AUTO_HIDE.ERROR);
 
-        console.error(`[HiWords] ${context}:`, error);
+        if (error !== undefined) {
+            console.error(`[HiWords] ${context}:`, error);
+        }
     }
 
     /**
@@ -538,6 +438,20 @@ export class HiWordsSidebarView extends ItemView {
         learningTab.addEventListener('click', () => {
             this.switchTab('learning');
         });
+
+        const exportButton = tabNav.createEl('button', {
+            cls: 'hi-words-export-button',
+            attr: {
+                type: 'button',
+                'aria-label': t('sidebar.export_button') || t('actions.export') || 'Export'
+            }
+        });
+        setIcon(exportButton, 'download');
+        exportButton.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            void this.plugin.exportCurrentArticleVocabulary();
+        });
     }
     
     /**
@@ -577,41 +491,6 @@ export class HiWordsSidebarView extends ItemView {
      */
     private createWordList(container: HTMLElement, words: WordDefinition[], isMastered: boolean) {
         const wordList = container.createEl('div', { cls: 'hi-words-word-list' });
-        
-        words.forEach(wordDef => {
-            this.createWordCard(wordList, wordDef, isMastered);
-        });
-    }
-
-    /**
-     * 创建单词分组区域
-     * @param container 容器元素
-     * @param title 分组标题
-     * @param words 单词列表
-     * @param icon 图标名称
-     * @param isMastered 是否为已掌握分组
-     */
-    private createWordSection(container: HTMLElement, title: string, words: WordDefinition[], icon: string, isMastered: boolean) {
-        // 创建分组容器
-        const section = container.createEl('div', { 
-            cls: isMastered ? 'hi-words-mastered-section' : 'hi-words-section'
-        });
-        
-        // 创建分组标题
-        const sectionTitle = section.createEl('div', { cls: 'hi-words-section-title' });
-        
-        // 添加图标
-        const iconEl = sectionTitle.createEl('span', { cls: 'hi-words-section-icon' });
-        setIcon(iconEl, icon);
-        
-        // 添加标题文本
-        sectionTitle.createEl('span', { 
-            text: `${title} (${words.length})`,
-            cls: 'hi-words-section-text'
-        });
-        
-        // 创建单词列表
-        const wordList = section.createEl('div', { cls: 'hi-words-word-list' });
         
         words.forEach(wordDef => {
             this.createWordCard(wordList, wordDef, isMastered);
@@ -831,104 +710,14 @@ export class HiWordsSidebarView extends ItemView {
     }
 
     /**
-     * 从路径获取生词本名称
-     */
-    private getBookNameFromPath(path: string): string {
-        const book = this.plugin.settings.vocabularyBooks.find(b => b.path === path);
-        return book ? book.name : path.split('/').pop()?.replace(/\.(canvas|jsonl)$/i, '') || '未知';
-    }
-
-    /**
-     * 截断文本
-     */
-    private truncateText(text: string, maxLength: number): string {
-        if (text.length <= maxLength) return text;
-        return text.substring(0, maxLength).trim();
-    }
-
-    /**
-     * 转义正则表达式特殊字符
-     */
-    private escapeRegExp(string: string): string {
-        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    }
-
-    /**
-     * 从 PDF 文件中提取文本内容
-     */
-    private async extractPDFText(): Promise<string> {
-        try {
-            // 等待 PDF 视图加载并获取文本层内容
-            await new Promise(resolve => setTimeout(resolve, PDF_TEXT_EXTRACT_DELAY));
-            
-            // 查找所有 PDF 文本层
-            const textLayers = document.querySelectorAll('.textLayer');
-            let extractedText = '';
-            
-            textLayers.forEach((textLayer: Element) => {
-                // 检查是否在当前活动的 PDF 视图中
-                const pdfContainer = textLayer.closest('.pdf-container, .mod-pdf');
-                if (pdfContainer) {
-                    // 获取文本层中的所有文本内容
-                    const textSpans = textLayer.querySelectorAll('span[role="presentation"]');
-                    textSpans.forEach((span: Element) => {
-                        const text = span.textContent || '';
-                        if (text.trim()) {
-                            extractedText += text + ' ';
-                        }
-                    });
-                    extractedText += '\n'; // 每个文本层后添加换行
-                }
-            });
-            
-            // 如果没有找到文本层，尝试从 PDF 视图中提取
-            if (!extractedText.trim()) {
-                const pdfViews = document.querySelectorAll('.pdf-container, .mod-pdf');
-                pdfViews.forEach((pdfView: Element) => {
-                    const allText = pdfView.textContent || '';
-                    if (allText.trim()) {
-                        extractedText += allText + '\n';
-                    }
-                });
-            }
-            
-            return extractedText.trim();
-        } catch (error) {
-            console.error('PDF 文本提取失败:', error);
-            return '';
-        }
-    }
-
-    /**
-     * 构建用于扫描文档的正则。
-     * - 对仅包含拉丁字符的词：使用 \b 边界避免误匹配，如 "art" 不匹配 "start"。
-     * - 对包含日语/CJK/韩语的词：不使用 \b（因为 CJK 文本常无空格），并使用 Unicode 标志。
-     */
-    private buildSearchRegex(term: string): RegExp {
-        const escaped = this.escapeRegExp(term);
-        // 检测是否包含 CJK、日语或韩语脚本
-        const hasCJK = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u.test(term);
-        const pattern = hasCJK ? `${escaped}` : `\\b${escaped}\\b`;
-        const flags = hasCJK ? 'giu' : 'gi';
-
-        return new RegExp(pattern, flags);
-    }
-
-    /**
      * 为侧边栏渲染内容绑定内部链接与标签交互（使用统一的 MarkdownLinkBinder）
      */
     private bindInternalLinksAndTags(root: HTMLElement, sourcePath: string, hoverParent: HTMLElement) {
         this.linkBinder.bindInternalLinksAndTags(root, sourcePath, hoverParent);
     }
 
-    /**
-     * 打开生词本文件
-     */
-    private async openVocabularyBook(wordDef: WordDefinition) {
-        const file = this.app.vault.getAbstractFileByPath(wordDef.source);
-        if (file instanceof TFile) {
-            await this.app.workspace.openLinkText(file.path, '');
-        }
+    private getBookNameFromPath(path: string): string {
+        return buildBookNameResolver(this.plugin.settings)(path)
     }
 
     /**
@@ -936,7 +725,6 @@ export class HiWordsSidebarView extends ItemView {
      */
     public refresh() {
         this.currentFile = null; // 强制重新扫描
-        this.wordMatcherService.buildTrie(true); // 重建 Trie（包含所有单词）
         this.scheduleUpdate(0);
     }
 

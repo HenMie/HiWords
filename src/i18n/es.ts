@@ -79,6 +79,25 @@ export default {
         morphology_asset_status_downloading: "Descargando...",
         morphology_asset_download: "Descargar",
         morphology_asset_delete: "Eliminar",
+        export_settings: "Exportación de vocabulario del artículo",
+        export_settings_desc: "Configura los campos y el orden por defecto para exportar el vocabulario del artículo actual en CSV",
+        export_order_default: "Orden predeterminado de exportación",
+        export_order_default_desc: "Preselecciona este orden al abrir el cuadro de exportación",
+        export_fields_default: "Campos predeterminados de exportación",
+        export_fields_default_desc: "Preselecciona estas columnas al abrir el cuadro de exportación",
+        export_order_document: "Orden del documento",
+        export_order_alphabetical: "Orden alfabético",
+        export_field_order_in_document: "Orden en el documento",
+        export_field_word: "Palabra",
+        export_field_definition: "Definición",
+        export_field_pronunciation: "Pronunciación",
+        export_field_etymology: "Etimología",
+        export_field_source_book_name: "Libro de origen",
+        export_field_source_path: "Ruta de origen",
+        export_field_node_id: "ID del nodo",
+        export_field_color: "Color",
+        export_field_mastered: "Dominada",
+        export_field_document_name: "Nombre del documento",
     },
 
     // Sidebar
@@ -93,6 +112,7 @@ export default {
         mastered: "Dominadas",
         no_learning_words: "No hay palabras para aprender",
         no_mastered_words: "No hay palabras dominadas",
+        export_button: "Exportar",
     },
 
     // Commands
@@ -102,6 +122,7 @@ export default {
         edit_word: "HiWords: Editar palabra",
         show_sidebar: "Mostrar barra lateral de HiWords",
         audit_legacy_duplicate_words: "Auditar duplicados heredados",
+        export_current_article_vocabulary: "Exportar vocabulario del artículo actual",
     },
 
     // Notices
@@ -155,6 +176,14 @@ export default {
         morphology_asset_downloaded: "Recurso morfológico de {0} descargado",
         morphology_asset_deleted: "Recurso morfológico de {0} eliminado",
         morphology_asset_operation_failed: "No se pudo gestionar el recurso morfológico de {0}",
+        export_missing_supported_file: "Abre un documento Markdown o PDF antes de exportar vocabulario.",
+        export_snapshot_empty: "No se encontraron palabras de vocabulario en el artículo actual.",
+        export_snapshot_not_ready: "El texto del PDF aún se está cargando. Espera un momento y vuelve a intentarlo.",
+        export_snapshot_failed: "No se pudo preparar el vocabulario del artículo actual para exportar.",
+        export_fields_required: "Selecciona al menos un campo para exportar.",
+        export_folder_required: "Selecciona una carpeta del vault antes de exportar.",
+        export_success: "Vocabulario exportado a {0}",
+        export_failed: "No se pudo exportar el vocabulario. Revisa la consola para más detalles.",
     },
 
     // Modals
@@ -192,6 +221,20 @@ export default {
         cancel_button: "Cancelar",
         select_canvas_file: "Seleccionar archivo del libro",
         delete_confirmation: "¿Seguro que deseas eliminar la palabra \"{0}\"?\nEsta acción no se puede deshacer.",
+        export_vocabulary_title: "Exportar vocabulario del artículo actual",
+        export_vocabulary_helper: "Elige las columnas, el orden y la carpeta del vault para esta exportación CSV.",
+        export_document_label: "Documento",
+        export_word_count_label: "Palabras",
+        export_order_label: "Orden",
+        export_fields_label: "Campos",
+        export_folder_label: "Carpeta de destino",
+        export_select_folder: "Elegir carpeta",
+        export_folder_placeholder: "Selecciona una carpeta del vault",
+        export_submit_button: "Exportar CSV",
+        export_pick_folder_title: "Elegir carpeta de exportación",
+        export_folder_picker_empty_state: "No se encontraron carpetas",
+        export_folder_picker_navigate: "Navegar",
+        export_folder_picker_choose: "Elegir carpeta",
     },
     // Etiquetas comunes de acciones
     actions: {
@@ -200,5 +243,6 @@ export default {
         mark_mastered: "Marcar como dominado",
         unmark_mastered: "Desmarcar dominado",
         restore: "Restaurar",
+        export: "Exportar",
     },
 }
