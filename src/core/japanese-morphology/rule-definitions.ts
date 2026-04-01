@@ -12,6 +12,7 @@ import {
     isAuxiliaryVerb,
     isSuruVerbStem,
     isSuruConjugation,
+    areTokensAdjacent,
     buildCompoundWordResult,
     calculateConfidence
 } from './token-normalizer';
@@ -19,6 +20,18 @@ import {
 export interface RulePipelines {
     wordRules: TokenAnalysisRule[];
     documentRules: TokenAnalysisRule[];
+}
+
+function isSuruPrefixTokenPart(token: Parameters<typeof isSuruVerbStem>[0]): boolean {
+    if (!token) {
+        return false;
+    }
+
+    if (isSuruVerbStem(token)) {
+        return true;
+    }
+
+    return token.partOfSpeech === '副詞' || token.partOfSpeech === '名詞';
 }
 
 /**
@@ -213,10 +226,16 @@ function createSuruVerbRule(): TokenAnalysisRule {
                 return null;
             }
 
-            // 检查是否为「サ変接続名詞 + する的活用形」
-            if (isSuruVerbStem(current) && isSuruConjugation(next)) {
-                const baseForm = `${current.surface}する`;
-                
+            if (!areTokensAdjacent(current, next)) {
+                return null;
+            }
+
+            // 检查是否为「サ変接続名詞/词干前缀 + する的活用形」
+            if (isSuruPrefixTokenPart(current) && isSuruConjugation(next)) {
+                const prefix = current.baseForm || current.surface;
+                const baseForm = `${prefix}する`;
+                const confidence = isSuruVerbStem(current) ? 0.95 : 0.9;
+
                 context.debugLog?.(`[suru-verb] ${current.surface}${next.surface} → ${baseForm}`);
 
                 if (context.scope === 'word') {
@@ -225,7 +244,7 @@ function createSuruVerbRule(): TokenAnalysisRule {
                             surface: context.originalText,
                             baseForm,
                             partOfSpeech: '動詞-サ変',
-                            confidence: 0.95
+                            confidence
                         },
                         consumedTokenIndices: [0, 1]
                     };
@@ -237,7 +256,7 @@ function createSuruVerbRule(): TokenAnalysisRule {
                     context.index,
                     baseForm,
                     '動詞-サ変',
-                    0.95,
+                    confidence,
                     context.processedTokens,
                     true,
                     context.debugLog
@@ -268,6 +287,10 @@ function createCompoundVerbRule(): TokenAnalysisRule {
             const next = context.tokens[context.index + 1];
             
             if (!current || !next) {
+                return null;
+            }
+
+            if (!areTokensAdjacent(current, next)) {
                 return null;
             }
 
@@ -341,6 +364,9 @@ function createAuxiliaryVerbRule(): TokenAnalysisRule {
             // 检查是否为动词/形容词 + 助动词
             const isInflectable = isVerb(current.partOfSpeech) || isIAdjective(current.partOfSpeech);
             if (!isInflectable || !isAuxiliaryVerb(next.partOfSpeech)) {
+                return null;
+            }
+            if (!areTokensAdjacent(current, next)) {
                 return null;
             }
 

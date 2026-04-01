@@ -51,6 +51,8 @@ function normalizeToken(token: Token, debugLog?: DebugLog): NormalizedToken | nu
     let conjugationForm: string | undefined;
     let reading: string | undefined;
     let pronunciation: string | undefined;
+    let byteStart: number | undefined;
+    let byteEnd: number | undefined;
 
     // 处理 Map 类型的 token（某些版本的 lindera 可能返回 Map）
     if (isTokenMap(token as unknown)) {
@@ -59,6 +61,10 @@ function normalizeToken(token: Token, debugLog?: DebugLog): NormalizedToken | nu
         const details = mapToken.get('details');
 
         surface = typeof text === 'string' ? text : '';
+        const mapByteStart = mapToken.get('byteStart');
+        byteStart = typeof mapByteStart === 'number' ? mapByteStart : undefined;
+        const mapByteEnd = mapToken.get('byteEnd');
+        byteEnd = typeof mapByteEnd === 'number' ? mapByteEnd : undefined;
         if (Array.isArray(details)) {
             partOfSpeech = getFeatureValue(details, IPADIC_FEATURE_INDEX.POS);
             posDetail1 = getFeatureValue(details, IPADIC_FEATURE_INDEX.POS_DETAIL_1) || undefined;
@@ -125,6 +131,8 @@ function normalizeToken(token: Token, debugLog?: DebugLog): NormalizedToken | nu
             pronunciation = typeof tokenObj.pronunciation === 'string' && tokenObj.pronunciation !== '*'
                 ? tokenObj.pronunciation
                 : undefined;
+            byteStart = getOptionalObjectNumber(tokenObj, ['byteStart']);
+            byteEnd = getOptionalObjectNumber(tokenObj, ['byteEnd']);
         }
     }
 
@@ -148,6 +156,8 @@ function normalizeToken(token: Token, debugLog?: DebugLog): NormalizedToken | nu
         conjugationForm,
         reading,
         pronunciation,
+        byteStart,
+        byteEnd,
         rawToken: token
     };
 
@@ -183,6 +193,19 @@ function getOptionalObjectString(
     for (const key of keys) {
         const value = token[key];
         if (typeof value === 'string' && value !== '*') {
+            return value;
+        }
+    }
+    return undefined;
+}
+
+function getOptionalObjectNumber(
+    token: Record<string, unknown>,
+    keys: readonly string[]
+): number | undefined {
+    for (const key of keys) {
+        const value = token[key];
+        if (typeof value === 'number' && Number.isFinite(value)) {
             return value;
         }
     }
@@ -336,6 +359,21 @@ export function calculateConfidence(token: Token): number {
 /**
  * 检查是否为可并入活用链的接续助词
  */
+export function areTokensAdjacent(
+    left: NormalizedToken | null | undefined,
+    right: NormalizedToken | null | undefined
+): boolean {
+    if (!left || !right) {
+        return false;
+    }
+
+    if (typeof left.byteEnd === 'number' && typeof right.byteStart === 'number') {
+        return left.byteEnd === right.byteStart;
+    }
+
+    return true;
+}
+
 export function isLinkingParticle(token: NormalizedToken | null | undefined): boolean {
     if (!token || !isParticle(token.partOfSpeech)) {
         return false;
@@ -390,7 +428,11 @@ export function mergeSubsequentInflectionChain(
 
     for (let j = startIndex; j < tokens.length && j < startIndex + maxLookAhead; j++) {
         const token = tokens[j];
+        const previousToken = j > 0 ? tokens[j - 1] : null;
         if (!canMergeInflectionChainToken(token, allowNonIndependentVerb)) {
+            break;
+        }
+        if (previousToken && !areTokensAdjacent(previousToken, token)) {
             break;
         }
 

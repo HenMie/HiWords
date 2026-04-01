@@ -216,7 +216,8 @@ export class JapaneseMorphologyService {
                     return this.fallbackAnalyze(word);
                 }
 
-                const { surface, baseForm, partOfSpeech } = analysisResult;
+                const surface = analysisResult.surface || word.trim();
+                const { baseForm, partOfSpeech } = analysisResult;
 
                 this.debugLog('提取的属性:', { surface, baseForm, partOfSpeech });
 
@@ -253,8 +254,10 @@ export class JapaneseMorphologyService {
 
         this.ensureRulePipelines();
 
+        const wordContextTokens = this.createWordContextTokens(tokens);
+
         const context: TokenRuleContext = {
-            tokens,
+            tokens: wordContextTokens,
             index: 0,
             scope: 'word',
             originalText: originalWord,
@@ -290,6 +293,24 @@ export class JapaneseMorphologyService {
         }
 
         return null;
+    }
+
+    private createWordContextTokens(tokens: NormalizedToken[]): NormalizedToken[] {
+        if (tokens.length <= 1) {
+            return tokens;
+        }
+
+        let cursor = 0;
+        return tokens.map((token) => {
+            const tokenLength = token.surface.length;
+            const normalizedToken: NormalizedToken = {
+                ...token,
+                byteStart: cursor,
+                byteEnd: cursor + tokenLength
+            };
+            cursor += tokenLength;
+            return normalizedToken;
+        });
     }
 
     /**

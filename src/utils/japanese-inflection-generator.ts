@@ -63,6 +63,11 @@ function getVerbType(baseWord: string): VerbType {
         return 'kuru';
     }
 
+    const lastChar = baseWord.slice(-1);
+    if (lastChar && lastChar !== 'る') {
+        return GODAN_CONJUGATIONS[lastChar] ? 'godan' : 'unknown';
+    }
+
     // 检查是否以「る」结尾
     if (!baseWord.endsWith('る')) {
         return 'unknown';
@@ -261,4 +266,3 @@ export function generateJapaneseInflections(baseWord: string): string[] {
     // 其他情况不生成活用形
     return [];
 }
-

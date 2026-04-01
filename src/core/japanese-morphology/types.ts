@@ -57,6 +57,8 @@ export interface Token {
     feature: string[];       // 特征数组
     partOfSpeech?: string;   // 词性
     baseForm?: string;       // 基本形
+    byteStart?: number;      // 在原文中的起始字节偏移
+    byteEnd?: number;        // 在原文中的结束字节偏移
     [key: string]: unknown;
 }
 
@@ -82,6 +84,8 @@ export interface NormalizedToken {
     conjugationForm?: string;     // 活用形式
     reading?: string;             // 读音（片假名）
     pronunciation?: string;       // 发音
+    byteStart?: number;           // 在原文中的起始字节偏移
+    byteEnd?: number;             // 在原文中的结束字节偏移
     rawToken: Token;              // 原始 token
 }
 
