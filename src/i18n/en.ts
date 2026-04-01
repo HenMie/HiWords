@@ -73,6 +73,7 @@ export default {
         morphology_none: "Disable morphology",
         morphology_korean: "Korean (Strong binding)",
         morphology_japanese: "Japanese (Strong binding)",
+        morphology_english: "English (Strong binding)",
         morphology_auto: "Auto detect (Single language)",
         morphology_engine: "Morphology Engine",
         morphology_engine_desc: "Hybrid uses inverse analysis as primary path; Legacy keeps aggressive generated inflections.",

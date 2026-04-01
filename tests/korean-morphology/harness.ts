@@ -19,7 +19,7 @@ export interface KoreanBehaviorMatrixCase {
     id: string
     surface: string
     entrypoint: MatrixEntrypoint
-    languagePolicy: 'korean' | 'auto' | 'none' | 'japanese'
+    languagePolicy: 'korean' | 'auto' | 'none' | 'japanese' | 'english'
     serviceState: MatrixServiceState
     generatedFallbackAllowed: boolean
     expected: {
@@ -139,7 +139,7 @@ export function verifyLanguagePolicyContracts(): VerificationResult {
     requireMatch(source, /return normalizeLanguagePolicy\(book\?\.languagePolicy\)/, 'book language policy must stay runtime truth source')
     requireMatch(source, /const languagePolicy = normalizeLanguagePolicy\(options\?\.languagePolicy \?\? language, language\)/, 'target language must prioritize runtime languagePolicy')
     requireMatch(source, /if \(languagePolicy === 'none'\) \{\s*return 'unknown'/s, 'languagePolicy none must disable morphology')
-    requireMatch(source, /if \(languagePolicy === 'korean' \|\| languagePolicy === 'japanese'\) \{\s*return languagePolicy/s, 'explicit korean or japanese policy must short-circuit detection')
+    requireMatch(source, /if \(languagePolicy === 'korean' \|\| languagePolicy === 'japanese' \|\| languagePolicy === 'english'\) \{\s*return languagePolicy/s, 'explicit korean, japanese, or english policy must short-circuit detection')
     requireMatch(source, /return detectMorphologyLanguage\(text, options\)/, 'auto path must delegate to detectMorphologyLanguage')
     requireMatch(source, /if \(!languagePolicy \|\| languagePolicy === 'auto'\) \{\s*return 'unknown'/s, 'auto preference must remain unknown sentinel')
     requireMatch(source, /if \(languagePolicy === 'none'\) \{\s*return 'none'/s, 'none preference must remain none sentinel')
@@ -180,11 +180,12 @@ export function verifyGeneratedFallbackContracts(): VerificationResult {
     requireMatch(source, /if \(fallbackMode === 'aggressive'\) \{\s*return true/s, 'aggressive fallback must force generated inflections')
     requireMatch(source, /if \(morphologyLang === 'korean'\) \{\s*return !this\.unifiedMorphologyService\.isKoreanLoaded\(\)/s, 'korean generated fallback must stay availability-based when not forced')
     requireMatch(source, /if \(morphologyLang === 'japanese'\) \{\s*return !this\.unifiedMorphologyService\.isJapaneseLoaded\(\)/s, 'japanese generated fallback must stay availability-based when not forced')
+    requireMatch(source, /if \(morphologyLang === 'english'\) \{\s*return true;\s*\}/s, 'english generated fallback must remain explicit-policy-only and always enabled in v1')
 
     return {
         name: 'generated-fallback-contract',
         passed: true,
-        details: 'generated inflections remain limited to legacy/aggressive/availability fallback contract'
+        details: 'generated inflections keep KR/JP availability guardrails while explicit English stays always-on in v1'
     }
 }
 

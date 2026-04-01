@@ -1,6 +1,6 @@
 import type { MorphologyLanguage } from '../utils/types';
 
-export type MorphologyDetectionLanguage = 'korean' | 'japanese' | 'unknown';
+export type MorphologyDetectionLanguage = 'korean' | 'japanese' | 'english' | 'unknown';
 export type MorphologyCandidateSource =
     | 'tokenizer'
     | 'reconstructed-tokenizer'

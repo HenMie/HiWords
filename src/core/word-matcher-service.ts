@@ -1,6 +1,7 @@
 import {
     Trie,
     generateCommonInflections,
+    generateEnglishInflections,
     generateJapaneseInflections,
     containsKana,
     katakanaToHiragana,
@@ -168,6 +169,10 @@ export class WordMatcherService {
 
         if (morphologyLang === 'japanese') {
             return generateJapaneseInflections(baseWord);
+        }
+
+        if (morphologyLang === 'english') {
+            return generateEnglishInflections(baseWord);
         }
 
         // auto 模式：根据文本特征自动检测语言
@@ -359,6 +364,10 @@ export class WordMatcherService {
 
         if (morphologyLang === 'japanese') {
             return !this.unifiedMorphologyService.isJapaneseLoaded();
+        }
+
+        if (morphologyLang === 'english') {
+            return true;
         }
 
         if (morphologyLang === 'auto') {

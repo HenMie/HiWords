@@ -73,6 +73,7 @@ export default {
         morphology_none: "禁用形态学",
         morphology_korean: "韩语（强绑定）",
         morphology_japanese: "日语（强绑定）",
+        morphology_english: "英语（强绑定）",
         morphology_auto: "自动检测（单语言）",
         morphology_engine: "形态学引擎",
         morphology_engine_desc: "Hybrid 以逆向分析为主路径；Legacy 保持激进的活用生成策略。",

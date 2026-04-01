@@ -95,7 +95,7 @@ export type RenameConflictCheckResult =
     | { kind: 'legacy-duplicate-state'; conflictingEntries: DuplicateWordAuditEntry[] };
 
 // 形态学语言类型
-export type MorphologyLanguage = 'none' | 'korean' | 'japanese' | 'auto';
+export type MorphologyLanguage = 'none' | 'korean' | 'japanese' | 'english' | 'auto';
 
 // 形态学引擎模式
 export type MorphologyEngineMode = 'hybrid' | 'legacy';

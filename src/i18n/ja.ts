@@ -62,6 +62,7 @@ export default {
         morphology_none: "形態素解析を無効化",
         morphology_korean: "韓国語（強制固定）",
         morphology_japanese: "日本語（強制固定）",
+        morphology_english: "英語（強制固定）",
         morphology_auto: "自動検出（単一言語）",
         morphology_engine: "形態素エンジン",
         morphology_engine_desc: "Hybrid は逆解析を主経路として使用し、Legacy は活用生成を積極的に維持します。",

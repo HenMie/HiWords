@@ -10,6 +10,7 @@ const MORPHOLOGY_LANGUAGE_VALUES: readonly MorphologyLanguage[] = [
     'none',
     'korean',
     'japanese',
+    'english',
     'auto'
 ]
 
@@ -77,7 +78,7 @@ export function resolveMorphologyTargetLanguage(
         return 'unknown'
     }
 
-    if (languagePolicy === 'korean' || languagePolicy === 'japanese') {
+    if (languagePolicy === 'korean' || languagePolicy === 'japanese' || languagePolicy === 'english') {
         return languagePolicy
     }
 

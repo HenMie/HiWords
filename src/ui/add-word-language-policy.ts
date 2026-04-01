@@ -1,4 +1,4 @@
-import type { VocabularyBook } from '../utils'
+import type { MorphologyLanguage, VocabularyBook } from '../utils'
 
 export function selectInitialBookPath(
     enabledBooks: VocabularyBook[],
@@ -22,7 +22,7 @@ export function selectInitialBookPath(
 }
 
 export function getPronunciationPlaceholderKey(
-    languagePolicy: string,
+    languagePolicy: MorphologyLanguage,
     text: string,
     isJapaneseText: (value: string) => boolean
 ): 'modals.pronunciation_placeholder_japanese' | 'modals.pronunciation_placeholder' | 'modals.pronunciation_placeholder_english' {
@@ -30,7 +30,7 @@ export function getPronunciationPlaceholderKey(
         return 'modals.pronunciation_placeholder_japanese'
     }
 
-    if (/^[A-Za-z][A-Za-z' -]*$/.test(text.trim())) {
+    if (languagePolicy === 'english' || /^[A-Za-z][A-Za-z' -]*$/.test(text.trim())) {
         return 'modals.pronunciation_placeholder_english'
     }
 

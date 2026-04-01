@@ -68,6 +68,11 @@ export interface LanguagePack {
         mode_filename?: string;
         mode_content?: string;
         book_language_policy?: string;
+        morphology_none?: string;
+        morphology_korean?: string;
+        morphology_japanese?: string;
+        morphology_english?: string;
+        morphology_auto?: string;
         morphology_assets?: string;
         morphology_assets_desc?: string;
         morphology_asset_status_loading?: string;

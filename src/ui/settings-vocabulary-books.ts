@@ -122,6 +122,7 @@ function renderVocabularyBooksList(context: VocabularyBooksSectionContext): void
             .addOption('none', t('settings.morphology_none') || '禁用形态学')
             .addOption('korean', t('settings.morphology_korean') || '韩语（强绑定）')
             .addOption('japanese', t('settings.morphology_japanese') || '日语（强绑定）')
+            .addOption('english', t('settings.morphology_english') || '英语（强绑定）')
             .addOption('auto', t('settings.morphology_auto') || '自动检测（单语言）')
             .setValue(book.languagePolicy || DEFAULT_LANGUAGE_POLICY)
             .onChange(async (value) => {

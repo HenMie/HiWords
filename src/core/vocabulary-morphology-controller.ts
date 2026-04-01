@@ -153,7 +153,7 @@ export class VocabularyMorphologyController {
     public async queueMorphologyAnalysis(
         word: string,
         visited: Set<string>,
-        language: 'korean' | 'japanese' | 'unknown' = 'unknown'
+        language: 'korean' | 'japanese' | 'english' | 'unknown' = 'unknown'
     ): Promise<void> {
         const morphologyLang = language === 'unknown' ? 'auto' : language
         const baseForm = await this.analyzeWordToBaseForm(word, morphologyLang)

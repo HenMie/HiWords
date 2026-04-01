@@ -62,6 +62,7 @@ export default {
         morphology_none: "Désactiver la morphologie",
         morphology_korean: "Coréen (liaison forte)",
         morphology_japanese: "Japonais (liaison forte)",
+        morphology_english: "Anglais (liaison forte)",
         morphology_auto: "Détection automatique (langue unique)",
         morphology_engine: "Moteur morphologique",
         morphology_engine_desc: "Hybrid utilise l'analyse inverse comme chemin principal ; Legacy conserve une génération agressive des flexions.",

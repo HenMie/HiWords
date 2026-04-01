@@ -5,6 +5,7 @@
  */
 
 import type { MorphologyLanguage, VocabularyBook } from '../utils/types';
+import { analyzeEnglishWord, isLikelyEnglishWord } from '../utils/english-inflection-generator';
 import { getScriptStatistics } from '../utils/japanese-text-utils';
 import { MorphologyLoader } from './morphology-loader';
 import type { KoreanMorphologyService } from './korean-morphology-service';
@@ -326,6 +327,8 @@ export class UnifiedMorphologyService {
                         });
                     }
                 }
+            } else if (targetLanguage === 'english') {
+                // v1: English document morphology index is intentionally deferred.
             }
         } catch (error) {
             console.error(`[UnifiedMorphology] 分析文档失败 (${targetLanguage}):`, error);
@@ -420,6 +423,20 @@ export class UnifiedMorphologyService {
                 return null;
             }
             return await service.analyzeWord(word);
+        }
+
+        if (targetLanguage === 'english') {
+            const result = analyzeEnglishWord(word);
+            return result
+                ? {
+                    surface: result.surface,
+                    baseForm: result.baseForm,
+                    partOfSpeech: result.partOfSpeech,
+                    confidence: result.confidence,
+                    analysisSource: result.analysisSource,
+                    rejectionHint: result.rejectionHint
+                }
+                : null;
         }
 
         return null;
@@ -566,6 +583,7 @@ export class UnifiedMorphologyService {
             partOfSpeech.startsWith('VA') ||
             partOfSpeech.startsWith('動詞') ||
             partOfSpeech.startsWith('形容詞') ||
+            partOfSpeech.startsWith('ENGLISH-') ||
             partOfSpeech.includes('HADA') ||
             partOfSpeech.includes('XSA') ||
             partOfSpeech.includes('XSV')
@@ -593,6 +611,10 @@ export class UnifiedMorphologyService {
 
         if (language === 'japanese' && (scriptStats.kana > 0 || scriptStats.cjk > 0)) {
             return 0.12;
+        }
+
+        if (language === 'english' && isLikelyEnglishWord(surface)) {
+            return 0.08;
         }
 
         return 0;
