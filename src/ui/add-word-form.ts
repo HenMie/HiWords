@@ -19,6 +19,7 @@ interface AddWordFormOptions {
     etymologyValue: string
     pronunciationValue: string
     colorValue?: number
+    showColorField: boolean
     enabledBooks: VocabularyBook[]
     selectedBookPath: string | null
     sourceBookPath?: string | null
@@ -62,6 +63,7 @@ export function renderAddWordForm(options: AddWordFormOptions): AddWordFormRefs 
         etymologyValue,
         pronunciationValue,
         colorValue,
+        showColorField,
         enabledBooks,
         selectedBookPath,
         sourceBookPath,
@@ -283,32 +285,35 @@ export function renderAddWordForm(options: AddWordFormOptions): AddWordFormRefs 
         return enabledBooks.find((book) => book.path === bookPath)
     }
 
-    const colorSelectContainer = metadataSection.createDiv({ cls: 'hiwords-form-item' })
-    colorSelectContainer.createEl('label', {
-        text: t('modals.color_label'),
-        cls: 'hiwords-form-item-label'
-    })
-    const colorSelect = colorSelectContainer.createEl('select', {
-        cls: 'dropdown setting-item-select'
-    })
-    colorSelect.createEl('option', { text: t('modals.color_gray'), value: '' })
-    const colorOptions = [
-        { name: t('modals.color_red'), value: '1' },
-        { name: t('modals.color_orange'), value: '2' },
-        { name: t('modals.color_yellow'), value: '3' },
-        { name: t('modals.color_green'), value: '4' },
-        { name: t('modals.color_blue'), value: '5' },
-        { name: t('modals.color_purple'), value: '6' }
-    ]
-    colorOptions.forEach((color: { name: string; value: string }) => {
-        colorSelect.createEl('option', { text: color.name, value: color.value })
-    })
-    if (colorValue !== undefined) {
-        colorSelect.value = colorValue.toString()
+    let colorSelect: HTMLSelectElement | null = null
+    if (showColorField) {
+        const colorSelectContainer = metadataSection.createDiv({ cls: 'hiwords-form-item' })
+        colorSelectContainer.createEl('label', {
+            text: t('modals.color_label'),
+            cls: 'hiwords-form-item-label'
+        })
+        colorSelect = colorSelectContainer.createEl('select', {
+            cls: 'dropdown setting-item-select'
+        })
+        colorSelect.createEl('option', { text: t('modals.color_gray'), value: '' })
+        const colorOptions = [
+            { name: t('modals.color_red'), value: '1' },
+            { name: t('modals.color_orange'), value: '2' },
+            { name: t('modals.color_yellow'), value: '3' },
+            { name: t('modals.color_green'), value: '4' },
+            { name: t('modals.color_blue'), value: '5' },
+            { name: t('modals.color_purple'), value: '6' }
+        ]
+        colorOptions.forEach((color: { name: string; value: string }) => {
+            colorSelect?.createEl('option', { text: color.name, value: color.value })
+        })
+        if (colorValue !== undefined) {
+            colorSelect.value = colorValue.toString()
+        }
+        colorSelect.addEventListener('change', () => {
+            onColorChange(colorSelect?.value ? parseInt(colorSelect.value, 10) : undefined)
+        })
     }
-    colorSelect.addEventListener('change', () => {
-        onColorChange(colorSelect.value ? parseInt(colorSelect.value, 10) : undefined)
-    })
 
     const etymologyContainer = metadataSection.createDiv({ cls: 'hiwords-form-item' })
     etymologyContainer.createEl('label', {
@@ -390,7 +395,7 @@ export function renderAddWordForm(options: AddWordFormOptions): AddWordFormRefs 
     })
     actionButton.onclick = async () => {
         const selectedBook = bookSelect.value
-        const colorValue = colorSelect.value ? parseInt(colorSelect.value, 10) : undefined
+        const colorValue = showColorField && colorSelect?.value ? parseInt(colorSelect.value, 10) : undefined
         const etymology = etymologyInput.value.trim() || undefined
         const pronunciation = pronunciationInput.value.trim() || undefined
         const finalWord = (wordInput?.value.trim() || currentWord).trim()

@@ -11,6 +11,7 @@ import { DictionaryService } from '../services/dictionary-service'
 import { getBookLanguagePolicy } from '../core/morphology-language-resolver'
 import { selectInitialBookPath } from './add-word-language-policy'
 import { renderAddWordForm } from './add-word-form'
+import { shouldShowColorField } from './add-word-form-visibility'
 
 interface AddWordDraftState {
     definition: string
@@ -105,6 +106,10 @@ export class AddWordModal extends Modal {
             etymologyValue: this.draft.etymology,
             pronunciationValue: this.draft.pronunciation,
             colorValue: this.draft.colorValue,
+            showColorField: shouldShowColorField(
+                this.isEditMode,
+                this.plugin.settings.masteredDetection ?? 'group'
+            ),
             enabledBooks: this.getEnabledBooks(),
             selectedBookPath: this.selectedBookPath,
             sourceBookPath: this.definition?.source ?? null,
