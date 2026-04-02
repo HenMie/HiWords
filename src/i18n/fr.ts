@@ -73,7 +73,7 @@ export default {
         morphology_fallback_conservative: "Conservative (Recommandé)",
         morphology_fallback_aggressive: "Aggressive",
         morphology_assets: "Ressources morphologiques",
-        morphology_assets_desc: "Téléchargez ou supprimez à la demande les ressources morphologiques coréennes/japonaises pour réduire la taille du plugin",
+        morphology_assets_desc: "Téléchargez ou supprimez à la demande les ressources morphologiques coréennes/japonaises/anglaises pour réduire la taille du plugin",
         morphology_asset_status_loading: "Vérification de l'état des ressources...",
         morphology_asset_status_downloaded: "Téléchargé ({0})",
         morphology_asset_status_missing: "Non téléchargé",

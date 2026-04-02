@@ -11,7 +11,7 @@ import {
     logAndFormatError
 } from '../utils'
 import type { KoreanMorphologyService } from './korean-morphology-service'
-import type { MorphologyAssetProvider } from './morphology-asset-manager'
+import type { MorphologyAssetLanguage, MorphologyAssetProvider } from './morphology-asset-manager'
 import { MorphologyIndexManager } from './morphology-index-manager'
 import { UnifiedMorphologyService } from './unified-morphology-service'
 import { JsonlVocabularyService } from './jsonl-vocabulary-service'
@@ -457,6 +457,12 @@ export class VocabularyManager {
         contextText?: string
     ): Promise<string | null> {
         return await this.morphologyController.analyzeWordToBaseForm(word, language, contextText)
+    }
+
+    async handleMorphologyAssetChange(language: MorphologyAssetLanguage): Promise<void> {
+        await this.unifiedMorphologyService.updateServices(this.settings.vocabularyBooks)
+        this.clearMorphologyDecisionCache()
+        this.invalidateMatcherSnapshot(`morphology-asset:${language}`)
     }
 
     async reindexAllFiles(): Promise<void> {

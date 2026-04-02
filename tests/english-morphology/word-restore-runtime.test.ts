@@ -1,6 +1,10 @@
 import * as assert from 'node:assert/strict'
 
-import { analyzeEnglishWord, generateEnglishInflections } from '../../src/utils/english-inflection-generator'
+import {
+    analyzeEnglishWord,
+    generateEnglishInflections,
+    setEnglishMorphologyAssetData
+} from '../../src/utils/english-inflection-generator'
 
 const generationPairs = new Map<string, string>([
     ['study', 'studies'],
@@ -32,10 +36,37 @@ for (const [surface, baseForm] of restorePairs.entries()) {
     assert.equal(result?.baseForm, baseForm, `${surface} should restore to ${baseForm}`)
 }
 
+setEnglishMorphologyAssetData({
+    schemaVersion: 1,
+    verbs: {},
+    nouns: {
+        child: ['children'],
+        mouse: ['mice']
+    },
+    adjectives: {
+        good: ['better', 'best']
+    }
+})
+
+for (const [surface, baseForm] of new Map<string, string>([
+    ['children', 'child'],
+    ['mice', 'mouse']
+]).entries()) {
+    const result = analyzeEnglishWord(surface)
+    assert.equal(result?.baseForm, baseForm, `${surface} should restore to ${baseForm} via external asset`)
+    assert.equal(result?.analysisSource, 'external-resource', `${surface} should be tagged as external-resource`)
+}
+
 for (const rejected of ['saw', 'left', 'axes']) {
     const result = analyzeEnglishWord(rejected)
     assert.equal(result?.analysisSource, 'fallback', `${rejected} should remain conservative fallback`)
     assert.equal(result?.baseForm, rejected, `${rejected} should not be silently rewritten`) 
+}
+
+for (const rejected of ['better', 'best']) {
+    const result = analyzeEnglishWord(rejected)
+    assert.equal(result?.analysisSource, 'fallback', `${rejected} should remain conservative fallback`)
+    assert.equal(result?.baseForm, rejected, `${rejected} should not be silently rewritten via external asset`)
 }
 
 console.log('PASS english-word-restore-runtime')

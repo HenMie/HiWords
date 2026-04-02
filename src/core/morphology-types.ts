@@ -5,7 +5,8 @@ export type MorphologyCandidateSource =
     | 'tokenizer'
     | 'reconstructed-tokenizer'
     | 'reverse-rule'
-    | 'fallback';
+    | 'fallback'
+    | 'external-resource';
 export type MorphologyDecisionReason =
     | 'accepted-high-confidence'
     | 'accepted-single-candidate'

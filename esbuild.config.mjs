@@ -2,6 +2,7 @@ import esbuild from "esbuild";
 import process from "process";
 import builtins from "builtin-modules";
 import { readFileSync } from "node:fs";
+import { execSync } from "node:child_process";
 
 const banner =
 `/*
@@ -21,6 +22,16 @@ const loadPackageVersion = (packageName) => {
 };
 const linderaKoVersion = loadPackageVersion("lindera-wasm-ko-dic");
 const linderaJaVersion = loadPackageVersion("lindera-wasm-ipadic");
+const resolveGitCommit = () => {
+	try {
+		const commit = execSync("git rev-parse HEAD", { encoding: "utf8" }).trim();
+		if (!commit) throw new Error("empty git commit");
+		return commit;
+	} catch (error) {
+		throw new Error(`[build] Cannot resolve git commit for immutable morphology asset URL: ${error instanceof Error ? error.message : String(error)}`);
+	}
+};
+const hiwordsGitCommit = resolveGitCommit();
 
 const context = await esbuild.context({
 	banner: {
@@ -50,7 +61,8 @@ const context = await esbuild.context({
 	treeShaking: true,
 	define: {
 		__LINDERA_WASM_KO_VERSION__: JSON.stringify(linderaKoVersion),
-		__LINDERA_WASM_JA_VERSION__: JSON.stringify(linderaJaVersion)
+		__LINDERA_WASM_JA_VERSION__: JSON.stringify(linderaJaVersion),
+		__HIWORDS_GIT_COMMIT__: JSON.stringify(hiwordsGitCommit)
 	},
 	outfile: "main.js",
 	minify: prod,

@@ -1,0 +1,3869 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "package": "en-inflectors",
+    "version": "1.0.12",
+    "extractedAt": "2026-04-01T16:22:30.842Z"
+  },
+  "counts": {
+    "verbs": 548,
+    "nouns": 327,
+    "adjectives": 9
+  },
+  "verbs": {
+    "abhor": [
+      "abhorred",
+      "abhorring",
+      "abhors"
+    ],
+    "abide": [
+      "abides",
+      "abiding",
+      "abode"
+    ],
+    "acquit": [
+      "acquits",
+      "acquitted",
+      "acquitting"
+    ],
+    "admit": [
+      "admits",
+      "admitted",
+      "admitting"
+    ],
+    "affix": [
+      "affixed",
+      "affixes",
+      "affixing"
+    ],
+    "apparel": [
+      "apparelled",
+      "apparelling",
+      "apparels"
+    ],
+    "arise": [
+      "arisen",
+      "arises",
+      "arising",
+      "arose"
+    ],
+    "aver": [
+      "averred",
+      "averring",
+      "avers"
+    ],
+    "awake": [
+      "awakes",
+      "awaking",
+      "awoke",
+      "awoken"
+    ],
+    "babysit": [
+      "babysat",
+      "babysits",
+      "babysitting"
+    ],
+    "backbite": [
+      "backbit",
+      "backbites",
+      "backbiting"
+    ],
+    "backslide": [
+      "backslid",
+      "backslides",
+      "backsliding"
+    ],
+    "bat": [
+      "bats",
+      "batted",
+      "batting"
+    ],
+    "be": [
+      "am",
+      "are",
+      "been",
+      "being",
+      "is",
+      "was",
+      "were"
+    ],
+    "bear": [
+      "bearing",
+      "bears",
+      "bore",
+      "born",
+      "borne"
+    ],
+    "beat": [
+      "beaten",
+      "beating",
+      "beats"
+    ],
+    "beckon": [
+      "beckoned",
+      "beckoning",
+      "beckons"
+    ],
+    "become": [
+      "became",
+      "becomes",
+      "becoming"
+    ],
+    "bedim": [
+      "bedimmed",
+      "bedimming",
+      "bedims"
+    ],
+    "befall": [
+      "befallen",
+      "befalling",
+      "befalls",
+      "befell"
+    ],
+    "begin": [
+      "began",
+      "beginning",
+      "begins",
+      "begun"
+    ],
+    "behold": [
+      "beheld",
+      "beholding",
+      "beholds"
+    ],
+    "belch": [
+      "belched",
+      "belches",
+      "belching"
+    ],
+    "bend": [
+      "bending",
+      "bends",
+      "bent"
+    ],
+    "benefit": [
+      "benefited",
+      "benefiting",
+      "benefits"
+    ],
+    "bereave": [
+      "bereaves",
+      "bereaving",
+      "bereft"
+    ],
+    "beseech": [
+      "beseeches",
+      "beseeching",
+      "besought"
+    ],
+    "bet": [
+      "bets",
+      "betting"
+    ],
+    "bias": [
+      "biased",
+      "biases",
+      "biasing"
+    ],
+    "bib": [
+      "bibbed",
+      "bibbing",
+      "bibs"
+    ],
+    "bid": [
+      "bade",
+      "bidden",
+      "bidding",
+      "bids"
+    ],
+    "billet": [
+      "billets",
+      "billetted",
+      "billetting"
+    ],
+    "bind": [
+      "binding",
+      "binds",
+      "bound"
+    ],
+    "bite": [
+      "bit",
+      "bites",
+      "biting",
+      "bitten"
+    ],
+    "blazon": [
+      "blazoned",
+      "blazoning",
+      "blazons"
+    ],
+    "bleed": [
+      "bled",
+      "bleeding",
+      "bleeds"
+    ],
+    "blow": [
+      "blew",
+      "blowing",
+      "blown",
+      "blows"
+    ],
+    "blur": [
+      "blurred",
+      "blurring",
+      "blurs"
+    ],
+    "bobsled": [
+      "bobsledded",
+      "bobsledding",
+      "bobsleds"
+    ],
+    "bollix": [
+      "bollixed",
+      "bollixes",
+      "bollixing"
+    ],
+    "box": [
+      "boxed",
+      "boxes",
+      "boxing"
+    ],
+    "break": [
+      "breaking",
+      "breaks",
+      "broke",
+      "broken"
+    ],
+    "breastfeed": [
+      "breastfed",
+      "breastfeeding",
+      "breastfeeds"
+    ],
+    "breed": [
+      "bred",
+      "breeding",
+      "breeds"
+    ],
+    "bring": [
+      "bringing",
+      "brings",
+      "brought"
+    ],
+    "broadcast": [
+      "broadcasting",
+      "broadcasts"
+    ],
+    "browbeat": [
+      "browbeating",
+      "browbeats"
+    ],
+    "buffet": [
+      "buffeted",
+      "buffeting",
+      "buffets"
+    ],
+    "build": [
+      "building",
+      "builds",
+      "built"
+    ],
+    "burn": [
+      "burning",
+      "burns",
+      "burnt"
+    ],
+    "burst": [
+      "bursting",
+      "bursts"
+    ],
+    "buss": [
+      "bussed",
+      "busses",
+      "bussing"
+    ],
+    "bust": [
+      "busting",
+      "busts"
+    ],
+    "buy": [
+      "bought",
+      "buying",
+      "buys"
+    ],
+    "callous": [
+      "calloused",
+      "callouses",
+      "callousing"
+    ],
+    "can": [
+      "could"
+    ],
+    "canal": [
+      "canaled",
+      "canaling",
+      "canals"
+    ],
+    "cancel": [
+      "cancelled",
+      "cancelling",
+      "cancels"
+    ],
+    "caparison": [
+      "caparisoned",
+      "caparisoning",
+      "caparisons"
+    ],
+    "cast": [
+      "casting",
+      "casts"
+    ],
+    "catalog": [
+      "cataloged",
+      "cataloging",
+      "catalogs"
+    ],
+    "catch": [
+      "catches",
+      "catching",
+      "caught"
+    ],
+    "cavil": [
+      "cavilled",
+      "cavilling",
+      "cavils"
+    ],
+    "chagrin": [
+      "chagrined",
+      "chagrining",
+      "chagrins"
+    ],
+    "chairman": [
+      "chairmaned",
+      "chairmaning",
+      "chairmans"
+    ],
+    "channel": [
+      "channelled",
+      "channelling",
+      "channels"
+    ],
+    "char": [
+      "chared",
+      "charing",
+      "chars"
+    ],
+    "chide": [
+      "chid",
+      "chidden",
+      "chides",
+      "chiding"
+    ],
+    "chirrup": [
+      "chirrupped",
+      "chirrupping",
+      "chirrups"
+    ],
+    "chisel": [
+      "chiselled",
+      "chiselling",
+      "chisels"
+    ],
+    "choir": [
+      "choirred",
+      "choirring",
+      "choirs"
+    ],
+    "choose": [
+      "chooses",
+      "choosing",
+      "chose",
+      "chosen"
+    ],
+    "chorus": [
+      "chorused",
+      "choruses",
+      "chorusing"
+    ],
+    "cleave": [
+      "cleaves",
+      "cleaving",
+      "cleft",
+      "clove",
+      "cloven"
+    ],
+    "climax": [
+      "climaxed",
+      "climaxes",
+      "climaxing"
+    ],
+    "cling": [
+      "clinging",
+      "clings",
+      "clung"
+    ],
+    "clothe": [
+      "clad",
+      "clothes",
+      "clothing"
+    ],
+    "clutch": [
+      "clutched",
+      "clutches",
+      "clutching"
+    ],
+    "coax": [
+      "coaxed",
+      "coaxes",
+      "coaxing"
+    ],
+    "coif": [
+      "coiffed",
+      "coiffing",
+      "coifs"
+    ],
+    "combat": [
+      "combats",
+      "combatted",
+      "combatting"
+    ],
+    "come": [
+      "came",
+      "comes",
+      "coming"
+    ],
+    "comfit": [
+      "comfited",
+      "comfiting",
+      "comfits"
+    ],
+    "commix": [
+      "commixed",
+      "commixes",
+      "commixing"
+    ],
+    "confer": [
+      "conferred",
+      "conferring",
+      "confers"
+    ],
+    "cope": [
+      "coped",
+      "copes",
+      "coping"
+    ],
+    "cosset": [
+      "cossets",
+      "cossetted",
+      "cossetting"
+    ],
+    "cost": [
+      "costing",
+      "costs"
+    ],
+    "counsel": [
+      "counselled",
+      "counselling",
+      "counsels"
+    ],
+    "creep": [
+      "creeping",
+      "creeps",
+      "crept"
+    ],
+    "crib": [
+      "cribbed",
+      "cribbing",
+      "cribs"
+    ],
+    "crochet": [
+      "crochets",
+      "crochetted",
+      "crochetting"
+    ],
+    "crossbreed": [
+      "crossbred",
+      "crossbreeding",
+      "crossbreeds"
+    ],
+    "cuss": [
+      "cussed",
+      "cusses",
+      "cussing"
+    ],
+    "custom-make": [
+      "custom-made",
+      "custom-makes",
+      "custom-making"
+    ],
+    "cut": [
+      "cuts",
+      "cutting"
+    ],
+    "daydream": [
+      "daydreaming",
+      "daydreams",
+      "daydreamt"
+    ],
+    "deal": [
+      "dealing",
+      "deals",
+      "dealt"
+    ],
+    "debar": [
+      "debarred",
+      "debarring",
+      "debars"
+    ],
+    "defer": [
+      "deferred",
+      "deferring",
+      "defers"
+    ],
+    "demur": [
+      "demurred",
+      "demurring",
+      "demurs"
+    ],
+    "desex": [
+      "desexed",
+      "desexes",
+      "desexing"
+    ],
+    "deter": [
+      "deterred",
+      "deterring",
+      "deters"
+    ],
+    "develop": [
+      "developed",
+      "developing",
+      "develops"
+    ],
+    "devil": [
+      "devilled",
+      "devilling",
+      "devils"
+    ],
+    "dig": [
+      "digging",
+      "digs",
+      "dug"
+    ],
+    "dim": [
+      "dimmed",
+      "dimming",
+      "dims"
+    ],
+    "dip": [
+      "dipped",
+      "dipping",
+      "dips"
+    ],
+    "discomfit": [
+      "discomfited",
+      "discomfiting",
+      "discomfits"
+    ],
+    "discuss": [
+      "discussed",
+      "discusses",
+      "discussing"
+    ],
+    "disembowel": [
+      "disembowelled",
+      "disembowelling",
+      "disembowels"
+    ],
+    "dishevel": [
+      "dishevelled",
+      "dishevelling",
+      "dishevels"
+    ],
+    "disprove": [
+      "disproved",
+      "disproven",
+      "disproves",
+      "disproving"
+    ],
+    "do": [
+      "did",
+      "does",
+      "doing",
+      "done"
+    ],
+    "dog": [
+      "dogged",
+      "dogging",
+      "dogs"
+    ],
+    "draw": [
+      "drawing",
+      "drawn",
+      "draws",
+      "drew"
+    ],
+    "dream": [
+      "dreaming",
+      "dreams",
+      "dreamt"
+    ],
+    "drink": [
+      "drank",
+      "drinking",
+      "drinks",
+      "drunk"
+    ],
+    "drive": [
+      "driven",
+      "drives",
+      "driving",
+      "drove"
+    ],
+    "drivel": [
+      "drivelled",
+      "drivelling",
+      "drivels"
+    ],
+    "dun": [
+      "dunned",
+      "dunning",
+      "duns"
+    ],
+    "dwell": [
+      "dwelling",
+      "dwells",
+      "dwelt"
+    ],
+    "dye": [
+      "dyed",
+      "dyeing",
+      "dyes"
+    ],
+    "eat": [
+      "ate",
+      "eaten",
+      "eating",
+      "eats"
+    ],
+    "emblazon": [
+      "emblazoned",
+      "emblazonning",
+      "emblazons"
+    ],
+    "emit": [
+      "emited",
+      "emiting",
+      "emits"
+    ],
+    "empanel": [
+      "empanelled",
+      "empanelling",
+      "empanels"
+    ],
+    "endanger": [
+      "endangered",
+      "endangers",
+      "entangling"
+    ],
+    "envenom": [
+      "envenommed",
+      "envenomming",
+      "envenoms"
+    ],
+    "equip": [
+      "equipped",
+      "equipping",
+      "equips"
+    ],
+    "ex": [
+      "exed",
+      "exes",
+      "exing"
+    ],
+    "extol": [
+      "extolled",
+      "extolling",
+      "extols"
+    ],
+    "eye": [
+      "eyed",
+      "eyeing",
+      "eyes"
+    ],
+    "fall": [
+      "fallen",
+      "falling",
+      "falls",
+      "fell"
+    ],
+    "fathom": [
+      "fathommed",
+      "fathomming",
+      "fathoms"
+    ],
+    "fax": [
+      "faxed",
+      "faxes",
+      "faxing"
+    ],
+    "feed": [
+      "fed",
+      "feeding",
+      "feeds"
+    ],
+    "feel": [
+      "feeling",
+      "feels",
+      "felt"
+    ],
+    "fight": [
+      "fighting",
+      "fights",
+      "fought"
+    ],
+    "filch": [
+      "filched",
+      "filches",
+      "filching"
+    ],
+    "filet": [
+      "filets",
+      "filetted",
+      "filetting"
+    ],
+    "fillet": [
+      "fillets",
+      "filletted",
+      "filletting"
+    ],
+    "find": [
+      "finding",
+      "finds",
+      "found"
+    ],
+    "fit": [
+      "fits",
+      "fitting"
+    ],
+    "fix": [
+      "fixed",
+      "fixes",
+      "fixing"
+    ],
+    "flee": [
+      "fled",
+      "fleeing",
+      "flees"
+    ],
+    "flex": [
+      "flexed",
+      "flexes",
+      "flexing"
+    ],
+    "fling": [
+      "flinging",
+      "flings",
+      "flung"
+    ],
+    "flit": [
+      "flits",
+      "flitted",
+      "flitting"
+    ],
+    "flummox": [
+      "flummoxed",
+      "flummoxes",
+      "flummoxing"
+    ],
+    "flux": [
+      "fluxed",
+      "fluxes",
+      "fluxing"
+    ],
+    "fly": [
+      "flew",
+      "flies",
+      "flown",
+      "flying"
+    ],
+    "focus": [
+      "focused",
+      "focuses",
+      "focusing"
+    ],
+    "forbid": [
+      "forbade",
+      "forbidden",
+      "forbidding",
+      "forbids"
+    ],
+    "forecast": [
+      "forecasting",
+      "forecasts"
+    ],
+    "foreknow": [
+      "foreknew",
+      "foreknowing",
+      "foreknows"
+    ],
+    "foresee": [
+      "foresaw",
+      "foreseeing",
+      "foreseen",
+      "foresees"
+    ],
+    "foretell": [
+      "foretelling",
+      "foretells",
+      "foretold"
+    ],
+    "forget": [
+      "forgets",
+      "forgetting",
+      "forgot",
+      "forgotten"
+    ],
+    "forgive": [
+      "forgave",
+      "forgiven",
+      "forgives",
+      "forgiving"
+    ],
+    "forgo": [
+      "forgoing",
+      "forgos",
+      "forwent"
+    ],
+    "forsake": [
+      "forsaken",
+      "forsakes",
+      "forsaking",
+      "forsook"
+    ],
+    "forswear": [
+      "forswearing",
+      "forswears",
+      "forsworn"
+    ],
+    "fox": [
+      "foxed",
+      "foxes",
+      "foxing"
+    ],
+    "freeze": [
+      "freezes",
+      "freezing",
+      "froze",
+      "frozen"
+    ],
+    "fret": [
+      "frets",
+      "fretted",
+      "fretting"
+    ],
+    "frostbite": [
+      "frostbit",
+      "frostbites",
+      "frostbiting",
+      "frostbitten"
+    ],
+    "fuss": [
+      "fussed",
+      "fusses",
+      "fussing"
+    ],
+    "gainsay": [
+      "gainsaid",
+      "gainsaying",
+      "gainsays"
+    ],
+    "gas": [
+      "gased",
+      "gases",
+      "gasing",
+      "gassed",
+      "gassing"
+    ],
+    "get": [
+      "gets",
+      "getting",
+      "got"
+    ],
+    "gibbet": [
+      "gibbets",
+      "gibbetted",
+      "gibbetting"
+    ],
+    "give": [
+      "gave",
+      "given",
+      "gives",
+      "giving"
+    ],
+    "glom": [
+      "glommed",
+      "glomming",
+      "gloms"
+    ],
+    "go": [
+      "goes",
+      "going",
+      "gone",
+      "went"
+    ],
+    "gravel": [
+      "gravelled",
+      "gravelling",
+      "gravels"
+    ],
+    "grind": [
+      "grinding",
+      "grinds",
+      "ground"
+    ],
+    "grok": [
+      "grokked",
+      "grokking",
+      "groks"
+    ],
+    "grovel": [
+      "grovelled",
+      "grovelling",
+      "grovels"
+    ],
+    "grow": [
+      "grew",
+      "growing",
+      "grown",
+      "grows"
+    ],
+    "hand-feed": [
+      "hand-fed",
+      "hand-feeding",
+      "hand-feeds"
+    ],
+    "handwrite": [
+      "handwrites",
+      "handwriting",
+      "handwritten",
+      "handwrote"
+    ],
+    "hang": [
+      "hanging",
+      "hangs",
+      "hung"
+    ],
+    "have": [
+      "had",
+      "has",
+      "having"
+    ],
+    "hear": [
+      "heard",
+      "hearing",
+      "hears"
+    ],
+    "heave": [
+      "heaves",
+      "heaving",
+      "hove"
+    ],
+    "hew": [
+      "hewed",
+      "hewing",
+      "hewn",
+      "hews"
+    ],
+    "hex": [
+      "hexed",
+      "hexes",
+      "hexing"
+    ],
+    "hide": [
+      "hid",
+      "hidden",
+      "hides",
+      "hiding"
+    ],
+    "hit": [
+      "hits",
+      "hitting"
+    ],
+    "hoax": [
+      "hoaxed",
+      "hoaxes",
+      "hoaxing"
+    ],
+    "hold": [
+      "held",
+      "holding",
+      "holds"
+    ],
+    "hurt": [
+      "hurting",
+      "hurts"
+    ],
+    "immix": [
+      "immixed",
+      "immixes",
+      "immixing"
+    ],
+    "impanel": [
+      "impanelled",
+      "impanelling",
+      "impanels"
+    ],
+    "imperil": [
+      "imperiled",
+      "imperiling",
+      "imperils"
+    ],
+    "imprison": [
+      "imprisoned",
+      "imprisoning",
+      "imprisons"
+    ],
+    "inbreed": [
+      "inbred",
+      "inbreeding",
+      "inbreeds"
+    ],
+    "infer": [
+      "inferred",
+      "inferring",
+      "infers"
+    ],
+    "infix": [
+      "infixed",
+      "infixes",
+      "infixing"
+    ],
+    "inlay": [
+      "inlaid",
+      "inlaying",
+      "inlays"
+    ],
+    "input": [
+      "inputs",
+      "inputting"
+    ],
+    "interbreed": [
+      "interbred",
+      "interbreeding",
+      "interbreeds"
+    ],
+    "intermix": [
+      "intermixed",
+      "intermixes",
+      "intermixing"
+    ],
+    "interpret": [
+      "interprets",
+      "interpretted",
+      "interpretting"
+    ],
+    "interweave": [
+      "interweaves",
+      "interweaving",
+      "interwove",
+      "interwoven"
+    ],
+    "interwind": [
+      "interwinding",
+      "interwinds",
+      "interwound"
+    ],
+    "intromit": [
+      "intromited",
+      "intromiting",
+      "intromits"
+    ],
+    "iron": [
+      "ironed",
+      "ironing",
+      "irons"
+    ],
+    "jar": [
+      "jared",
+      "jaring",
+      "jars"
+    ],
+    "jerry-build": [
+      "jerry-building",
+      "jerry-builds",
+      "jerry-built"
+    ],
+    "jet": [
+      "jets",
+      "jetted",
+      "jetting"
+    ],
+    "jewel": [
+      "jewelled",
+      "jewelling",
+      "jewels"
+    ],
+    "jinx": [
+      "jinxed",
+      "jinxes",
+      "jinxing"
+    ],
+    "junket": [
+      "junkets",
+      "junketted",
+      "junketting"
+    ],
+    "keep": [
+      "keeping",
+      "keeps",
+      "kept"
+    ],
+    "kid": [
+      "kidded",
+      "kidding",
+      "kids"
+    ],
+    "kneel": [
+      "kneeling",
+      "kneels",
+      "knelt"
+    ],
+    "knit": [
+      "knits",
+      "knitting"
+    ],
+    "know": [
+      "knew",
+      "knowing",
+      "known",
+      "knows"
+    ],
+    "label": [
+      "labelled",
+      "labelling",
+      "labels"
+    ],
+    "lade": [
+      "laded",
+      "laden",
+      "lades",
+      "lading"
+    ],
+    "larrup": [
+      "larrupped",
+      "larrupping",
+      "larrups"
+    ],
+    "lay": [
+      "laid",
+      "laying",
+      "lays"
+    ],
+    "lead": [
+      "leading",
+      "leads",
+      "led"
+    ],
+    "lean": [
+      "leaning",
+      "leans",
+      "leant"
+    ],
+    "leap": [
+      "leaping",
+      "leaps",
+      "leapt"
+    ],
+    "learn": [
+      "learning",
+      "learns",
+      "learnt"
+    ],
+    "leave": [
+      "leaves",
+      "leaving",
+      "left"
+    ],
+    "lend": [
+      "lending",
+      "lends",
+      "lent"
+    ],
+    "let": [
+      "lets",
+      "letting"
+    ],
+    "level": [
+      "levelled",
+      "levelling",
+      "levels"
+    ],
+    "lie": [
+      "lain",
+      "lay",
+      "laying",
+      "lies",
+      "lying"
+    ],
+    "light": [
+      "lighting",
+      "lights",
+      "lit"
+    ],
+    "lip-read": [
+      "lip-reading",
+      "lip-reads"
+    ],
+    "lose": [
+      "loses",
+      "losing",
+      "lost"
+    ],
+    "make": [
+      "made",
+      "makes",
+      "making"
+    ],
+    "manumit": [
+      "manumited",
+      "manumiting",
+      "manumits"
+    ],
+    "mar": [
+      "marred",
+      "marring",
+      "mars"
+    ],
+    "market": [
+      "markets",
+      "marketted",
+      "marketting"
+    ],
+    "marvel": [
+      "marvelled",
+      "marvelling",
+      "marvels"
+    ],
+    "may": [
+      "might"
+    ],
+    "mean": [
+      "meaning",
+      "means",
+      "meant"
+    ],
+    "meet": [
+      "meeting",
+      "meets",
+      "met"
+    ],
+    "miscast": [
+      "miscasting",
+      "miscasts"
+    ],
+    "misdeal": [
+      "misdealing",
+      "misdeals",
+      "misdealt"
+    ],
+    "misdo": [
+      "misdid",
+      "misdoes",
+      "misdoing",
+      "misdone"
+    ],
+    "mishear": [
+      "misheard",
+      "mishearing",
+      "mishears"
+    ],
+    "misinterpret": [
+      "misinterprets",
+      "misinterpretted",
+      "misinterpretting"
+    ],
+    "mislay": [
+      "mislaid",
+      "mislaying",
+      "mislays"
+    ],
+    "mislead": [
+      "misleading",
+      "misleads",
+      "misled"
+    ],
+    "mislearn": [
+      "mislearning",
+      "mislearns",
+      "mislearnt"
+    ],
+    "misread": [
+      "misreading",
+      "misreads"
+    ],
+    "misset": [
+      "missets",
+      "missetting"
+    ],
+    "misspeak": [
+      "misspeaking",
+      "misspeaks",
+      "misspoke",
+      "misspoken"
+    ],
+    "misspell": [
+      "misspelling",
+      "misspells",
+      "misspelt"
+    ],
+    "misspend": [
+      "misspending",
+      "misspends",
+      "misspent"
+    ],
+    "mistake": [
+      "mistaken",
+      "mistakes",
+      "mistaking",
+      "mistook"
+    ],
+    "misteach": [
+      "mistaught",
+      "misteaches",
+      "misteaching"
+    ],
+    "misunderstand": [
+      "misunderstanding",
+      "misunderstands",
+      "misunderstood"
+    ],
+    "miswrite": [
+      "miswrites",
+      "miswriting",
+      "miswritten",
+      "miswrote"
+    ],
+    "mix": [
+      "mixed",
+      "mixes",
+      "mixing"
+    ],
+    "mow": [
+      "mowed",
+      "mowing",
+      "mown",
+      "mows"
+    ],
+    "muss": [
+      "mussed",
+      "musses",
+      "mussing"
+    ],
+    "net": [
+      "neting",
+      "nets",
+      "netted",
+      "netting"
+    ],
+    "nix": [
+      "nixed",
+      "nixes",
+      "nixing"
+    ],
+    "nonplus": [
+      "nonplused",
+      "nonpluses",
+      "nonplusing"
+    ],
+    "offset": [
+      "offsets",
+      "offsetting"
+    ],
+    "outbid": [
+      "outbidding",
+      "outbids"
+    ],
+    "outdo": [
+      "outdid",
+      "outdoes",
+      "outdoing",
+      "outdone"
+    ],
+    "outdraw": [
+      "outdrawing",
+      "outdrawn",
+      "outdraws",
+      "outdrew"
+    ],
+    "outfight": [
+      "outfighting",
+      "outfights",
+      "outfought"
+    ],
+    "outfox": [
+      "outfoxed",
+      "outfoxes",
+      "outfoxing"
+    ],
+    "outgrow": [
+      "outgrew",
+      "outgrowing",
+      "outgrown",
+      "outgrows"
+    ],
+    "output": [
+      "outputs",
+      "outputting"
+    ],
+    "outrun": [
+      "outran",
+      "outrunning"
+    ],
+    "outsell": [
+      "outselling",
+      "outsells",
+      "outsold"
+    ],
+    "outshine": [
+      "outshines",
+      "outshining",
+      "outshone"
+    ],
+    "outspend": [
+      "outspending",
+      "outspends",
+      "outspent"
+    ],
+    "outwit": [
+      "outwits",
+      "outwitted",
+      "outwitting"
+    ],
+    "overbid": [
+      "overbidding",
+      "overbids"
+    ],
+    "overbuild": [
+      "overbuilding",
+      "overbuilds",
+      "overbuilt"
+    ],
+    "overbuy": [
+      "overbought",
+      "overbuying",
+      "overbuys"
+    ],
+    "overcome": [
+      "overcame",
+      "overcomes",
+      "overcoming"
+    ],
+    "overdo": [
+      "overdid",
+      "overdoes",
+      "overdoing",
+      "overdone"
+    ],
+    "overdraw": [
+      "overdrawing",
+      "overdrawn",
+      "overdraws",
+      "overdrew"
+    ],
+    "overdrive": [
+      "overdrives",
+      "overdriving",
+      "overdrove"
+    ],
+    "overeat": [
+      "overate",
+      "overeaten",
+      "overeating",
+      "overeats"
+    ],
+    "overfeed": [
+      "overfed",
+      "overfeeding",
+      "overfeeds"
+    ],
+    "overhang": [
+      "overhanging",
+      "overhangs",
+      "overhung"
+    ],
+    "overhear": [
+      "overheard",
+      "overhearing",
+      "overhears"
+    ],
+    "overlay": [
+      "overlaid",
+      "overlaying",
+      "overlays"
+    ],
+    "overlie": [
+      "overlaid",
+      "overlies",
+      "overlying"
+    ],
+    "overpay": [
+      "overpaid",
+      "overpaying",
+      "overpays"
+    ],
+    "override": [
+      "overridden",
+      "overrides",
+      "overriding",
+      "overrode"
+    ],
+    "overrun": [
+      "overran",
+      "overrunning",
+      "overruns"
+    ],
+    "oversee": [
+      "oversaw",
+      "overseeing",
+      "overseen",
+      "oversees"
+    ],
+    "oversell": [
+      "overselling",
+      "oversells",
+      "oversold"
+    ],
+    "overshoot": [
+      "overshooting",
+      "overshot",
+      "overshots"
+    ],
+    "oversleep": [
+      "oversleeping",
+      "oversleeps",
+      "overslept"
+    ],
+    "overspeak": [
+      "overspeaking",
+      "overspeaks",
+      "overspoke",
+      "overspoken"
+    ],
+    "overspend": [
+      "overspending",
+      "overspends",
+      "overspent"
+    ],
+    "overspill": [
+      "overspilling",
+      "overspills",
+      "overspilt"
+    ],
+    "overspread": [
+      "overspreading",
+      "overspreads"
+    ],
+    "overstep": [
+      "oversteped",
+      "oversteping",
+      "oversteps"
+    ],
+    "overtake": [
+      "overtaken",
+      "overtakes",
+      "overtaking",
+      "overtook"
+    ],
+    "overthink": [
+      "overthinking",
+      "overthinks",
+      "overthought"
+    ],
+    "overthrow": [
+      "overthrew",
+      "overthrowing",
+      "overthrown",
+      "overthrows"
+    ],
+    "overwind": [
+      "overwinding",
+      "overwound"
+    ],
+    "overwrite": [
+      "overwriting",
+      "overwritten",
+      "overwrote"
+    ],
+    "panel": [
+      "panelled",
+      "panelling",
+      "panels"
+    ],
+    "parallel": [
+      "parallelled",
+      "parallelling",
+      "parallels"
+    ],
+    "partake": [
+      "partaken",
+      "partakes",
+      "partaking",
+      "partook"
+    ],
+    "pay": [
+      "paid",
+      "paying",
+      "pays"
+    ],
+    "peril": [
+      "periled",
+      "periling",
+      "perils"
+    ],
+    "permit": [
+      "permits",
+      "permitted",
+      "permitting"
+    ],
+    "perplex": [
+      "perplexed",
+      "perplexes",
+      "perplexing"
+    ],
+    "pilot": [
+      "piloted",
+      "piloting",
+      "pilots"
+    ],
+    "pit": [
+      "pits",
+      "pitted",
+      "pitting"
+    ],
+    "pivot": [
+      "pivoted",
+      "pivoting",
+      "pivots"
+    ],
+    "plead": [
+      "pleading",
+      "pleads",
+      "pled"
+    ],
+    "plummet": [
+      "plummeted",
+      "plummeting",
+      "plummets"
+    ],
+    "pocket": [
+      "pockets",
+      "pocketted",
+      "pocketting"
+    ],
+    "poison": [
+      "poisoned",
+      "poisoning",
+      "poisons"
+    ],
+    "pommel": [
+      "pommelled",
+      "pommelling",
+      "pommels"
+    ],
+    "prebuild": [
+      "prebuilding",
+      "prebuils",
+      "prebuilt"
+    ],
+    "prefer": [
+      "preferred",
+      "preferring",
+      "prefers"
+    ],
+    "preset": [
+      "presets",
+      "presetting"
+    ],
+    "preshrink": [
+      "preshrank",
+      "preshrinking",
+      "preshrinks",
+      "preshrunk"
+    ],
+    "profit": [
+      "profited",
+      "profiting",
+      "profits",
+      "profitting"
+    ],
+    "proofread": [
+      "proofreading",
+      "proofreads"
+    ],
+    "pummel": [
+      "pummelled",
+      "pummelling",
+      "pummels"
+    ],
+    "put": [
+      "puts",
+      "putting"
+    ],
+    "quarrel": [
+      "quarrelled",
+      "quarrelling",
+      "quarrels"
+    ],
+    "quick-freeze": [
+      "quick-freezes",
+      "quick-freezing",
+      "quick-froze",
+      "quick-frozen"
+    ],
+    "quit": [
+      "quits",
+      "quitting"
+    ],
+    "racket": [
+      "rackets",
+      "racketted",
+      "racketting"
+    ],
+    "ransom": [
+      "ransommed",
+      "ransomming",
+      "ransoms"
+    ],
+    "ravel": [
+      "ravelled",
+      "ravelling",
+      "ravels"
+    ],
+    "read": [
+      "reading",
+      "reads"
+    ],
+    "reason": [
+      "reasoned",
+      "reasoning",
+      "reasons"
+    ],
+    "rebel": [
+      "rebelled",
+      "rebelling",
+      "rebels"
+    ],
+    "rebid": [
+      "rebidding",
+      "rebids"
+    ],
+    "rebind": [
+      "rebinding",
+      "rebinds",
+      "rebound"
+    ],
+    "rebuild": [
+      "rebuilding",
+      "rebuilds",
+      "rebuilt"
+    ],
+    "recast": [
+      "recasting",
+      "recasts"
+    ],
+    "redo": [
+      "redid",
+      "redoes",
+      "redoing",
+      "redone"
+    ],
+    "redraw": [
+      "redrawing",
+      "redrawn",
+      "redraws",
+      "redrew"
+    ],
+    "refer": [
+      "referred",
+      "referring",
+      "refers"
+    ],
+    "regret": [
+      "regrets",
+      "regretted",
+      "regretting"
+    ],
+    "regrind": [
+      "regrinding",
+      "regrinds",
+      "reground"
+    ],
+    "regrow": [
+      "regrew",
+      "regrowing",
+      "regrown",
+      "regrows"
+    ],
+    "rehang": [
+      "rehanging",
+      "rehangs",
+      "rehung"
+    ],
+    "rehear": [
+      "reheard",
+      "rehearing",
+      "rehears"
+    ],
+    "reknit": [
+      "reknits",
+      "reknitting"
+    ],
+    "relax": [
+      "relaxed",
+      "relaxes",
+      "relaxing"
+    ],
+    "relay": [
+      "relaid",
+      "relaying",
+      "relays"
+    ],
+    "remake": [
+      "remade",
+      "remakes",
+      "remaking"
+    ],
+    "remit": [
+      "remited",
+      "remiting",
+      "remits"
+    ],
+    "rend": [
+      "rending",
+      "rends",
+      "rent"
+    ],
+    "repay": [
+      "repaid",
+      "repaying",
+      "repays"
+    ],
+    "reread": [
+      "rereading",
+      "rereads"
+    ],
+    "rerun": [
+      "reran",
+      "rerunning",
+      "reruns"
+    ],
+    "resell": [
+      "reselling",
+      "resells",
+      "resold"
+    ],
+    "resend": [
+      "resending",
+      "resends",
+      "resent"
+    ],
+    "reset": [
+      "resets",
+      "resetting"
+    ],
+    "retake": [
+      "retaken",
+      "retakes",
+      "retaking",
+      "retook"
+    ],
+    "reteach": [
+      "retaught",
+      "reteaches",
+      "reteaching"
+    ],
+    "retell": [
+      "retelling",
+      "retells",
+      "retold"
+    ],
+    "rethink": [
+      "rethinking",
+      "rethinks",
+      "rethought"
+    ],
+    "retread": [
+      "retreading",
+      "retreads"
+    ],
+    "retreat": [
+      "retreating",
+      "retreats"
+    ],
+    "retrofit": [
+      "retrofits",
+      "retrofitting"
+    ],
+    "retroflex": [
+      "retroflexed",
+      "retroflexes",
+      "retroflexing"
+    ],
+    "revel": [
+      "revelled",
+      "revelling",
+      "revels"
+    ],
+    "rewind": [
+      "rewinding",
+      "rewinds",
+      "rewound"
+    ],
+    "rib": [
+      "ribbed",
+      "ribbing",
+      "ribs"
+    ],
+    "ricochet": [
+      "ricochets",
+      "ricochetted",
+      "ricochetting"
+    ],
+    "rid": [
+      "ridding",
+      "rids"
+    ],
+    "ride": [
+      "ridden",
+      "rides",
+      "riding",
+      "rode"
+    ],
+    "ring": [
+      "rang",
+      "ringing",
+      "rings",
+      "rung"
+    ],
+    "rise": [
+      "risen",
+      "rises",
+      "rising",
+      "rose"
+    ],
+    "rival": [
+      "rivalled",
+      "rivalling",
+      "rivals"
+    ],
+    "rivet": [
+      "rivets",
+      "rivetted",
+      "rivetting"
+    ],
+    "rocket": [
+      "rockets",
+      "rocketted",
+      "rocketting"
+    ],
+    "run": [
+      "ran",
+      "running",
+      "runs"
+    ],
+    "sand-cast": [
+      "sand-casting",
+      "sand-casts"
+    ],
+    "saw": [
+      "sawed",
+      "sawing",
+      "sawn",
+      "saws"
+    ],
+    "say": [
+      "said",
+      "saying",
+      "says"
+    ],
+    "scar": [
+      "scarred",
+      "scarring",
+      "scars"
+    ],
+    "see": [
+      "saw",
+      "seeing",
+      "seen",
+      "sees"
+    ],
+    "seek": [
+      "seeking",
+      "seeks",
+      "sought"
+    ],
+    "sell": [
+      "selling",
+      "sells",
+      "sold"
+    ],
+    "send": [
+      "sending",
+      "sends",
+      "sent"
+    ],
+    "set": [
+      "sets",
+      "setting"
+    ],
+    "sew": [
+      "sewed",
+      "sewing",
+      "sewn",
+      "sews"
+    ],
+    "sex": [
+      "sexed",
+      "sexes",
+      "sexing"
+    ],
+    "shake": [
+      "shaken",
+      "shakes",
+      "shaking",
+      "shook"
+    ],
+    "shall": [
+      "should"
+    ],
+    "shave": [
+      "shaven",
+      "shaves",
+      "shaving",
+      "shove"
+    ],
+    "shear": [
+      "shearing",
+      "shears",
+      "shore",
+      "shorn"
+    ],
+    "shed": [
+      "shedding",
+      "sheds"
+    ],
+    "shine": [
+      "shines",
+      "shining",
+      "shone"
+    ],
+    "shit": [
+      "shits",
+      "shitting"
+    ],
+    "shoe": [
+      "shod",
+      "shoeing",
+      "shoes"
+    ],
+    "shoot": [
+      "shooting",
+      "shoots",
+      "shot"
+    ],
+    "show": [
+      "showed",
+      "showing",
+      "shown",
+      "shows"
+    ],
+    "shrink": [
+      "shrank",
+      "shrinking",
+      "shrinks",
+      "shrunk"
+    ],
+    "shrivel": [
+      "shrivelled",
+      "shrivelling",
+      "shrivels"
+    ],
+    "shut": [
+      "shuts",
+      "shutting"
+    ],
+    "sidestep": [
+      "sidesteped",
+      "sidesteping",
+      "sidesteps"
+    ],
+    "signal": [
+      "signaled",
+      "signaling",
+      "signals"
+    ],
+    "sing": [
+      "sang",
+      "singing",
+      "sings",
+      "sung"
+    ],
+    "sink": [
+      "sank",
+      "sinking",
+      "sinks",
+      "sunk"
+    ],
+    "sit": [
+      "sat",
+      "sits",
+      "sitting"
+    ],
+    "skid": [
+      "skidded",
+      "skidding",
+      "skids"
+    ],
+    "slay": [
+      "slain",
+      "slaying",
+      "slays",
+      "slew"
+    ],
+    "sleep": [
+      "sleeping",
+      "sleeps",
+      "slept"
+    ],
+    "slide": [
+      "slid",
+      "slides",
+      "sliding"
+    ],
+    "sling": [
+      "slinging",
+      "slings",
+      "slung"
+    ],
+    "slink": [
+      "slinking",
+      "slinks",
+      "slunk"
+    ],
+    "slit": [
+      "slits",
+      "slitting"
+    ],
+    "slur": [
+      "slurred",
+      "slurring",
+      "slurs"
+    ],
+    "smell": [
+      "smelling",
+      "smells",
+      "smelt"
+    ],
+    "smite": [
+      "smites",
+      "smiting",
+      "smitten",
+      "smote"
+    ],
+    "sneak": [
+      "sneaking",
+      "sneaks",
+      "snuck"
+    ],
+    "speak": [
+      "speaking",
+      "speaks",
+      "spoke",
+      "spoken"
+    ],
+    "speed": [
+      "sped",
+      "speeding",
+      "speeds"
+    ],
+    "spell": [
+      "spelling",
+      "spells",
+      "spelt"
+    ],
+    "spend": [
+      "spending",
+      "spends",
+      "spent"
+    ],
+    "spill": [
+      "spilling",
+      "spills",
+      "spilt"
+    ],
+    "spin": [
+      "span",
+      "spinning",
+      "spins",
+      "spun"
+    ],
+    "spiral": [
+      "spiraled",
+      "spiraling",
+      "spirals"
+    ],
+    "spit": [
+      "spat",
+      "spits",
+      "spitting"
+    ],
+    "split": [
+      "splits",
+      "splitting"
+    ],
+    "spoil": [
+      "spoiling",
+      "spoils",
+      "spoilt"
+    ],
+    "spread": [
+      "spreading",
+      "spreads"
+    ],
+    "spring": [
+      "sprang",
+      "springing",
+      "springs",
+      "sprung"
+    ],
+    "spur": [
+      "spurred",
+      "spurring",
+      "spurs"
+    ],
+    "squat": [
+      "squats",
+      "squatted",
+      "squatting"
+    ],
+    "stand": [
+      "standing",
+      "stands",
+      "stood"
+    ],
+    "steal": [
+      "stealing",
+      "steals",
+      "stole",
+      "stolen"
+    ],
+    "stem": [
+      "stemmed",
+      "stemming",
+      "stems"
+    ],
+    "stick": [
+      "sticking",
+      "sticks",
+      "stuck"
+    ],
+    "sting": [
+      "stinging",
+      "stings",
+      "stung"
+    ],
+    "stink": [
+      "stank",
+      "stinking",
+      "stinks",
+      "stunk"
+    ],
+    "stop": [
+      "stopped",
+      "stopping",
+      "stops"
+    ],
+    "strew": [
+      "strewed",
+      "strewing",
+      "strewn",
+      "strews"
+    ],
+    "stride": [
+      "stridden",
+      "strides",
+      "striding",
+      "strode"
+    ],
+    "strike": [
+      "stricken",
+      "strikes",
+      "striking",
+      "struck"
+    ],
+    "string": [
+      "stringing",
+      "strings",
+      "strung"
+    ],
+    "strive": [
+      "striven",
+      "strives",
+      "striving",
+      "strove"
+    ],
+    "stymie": [
+      "stymied",
+      "stymieing",
+      "stymies"
+    ],
+    "stymy": [
+      "stymied",
+      "stymieing",
+      "stymies"
+    ],
+    "sublet": [
+      "sublets",
+      "subletting"
+    ],
+    "submit": [
+      "submits",
+      "submitted",
+      "submitting"
+    ],
+    "suds": [
+      "sudsed",
+      "sudses",
+      "sudsing"
+    ],
+    "summon": [
+      "summoned",
+      "summoning",
+      "summons"
+    ],
+    "swear": [
+      "swearing",
+      "swears",
+      "swore",
+      "sworn"
+    ],
+    "sweat": [
+      "sweating",
+      "sweats"
+    ],
+    "sweep": [
+      "sweeping",
+      "sweeps",
+      "swept"
+    ],
+    "swell": [
+      "swelled",
+      "swelling",
+      "swells",
+      "swollen"
+    ],
+    "swim": [
+      "swam",
+      "swimming",
+      "swims",
+      "swum"
+    ],
+    "swing": [
+      "swinging",
+      "swings",
+      "swung"
+    ],
+    "tag": [
+      "tagged",
+      "tagging",
+      "tags"
+    ],
+    "tailor-make": [
+      "tailor-made",
+      "tailor-makes",
+      "tailor-making"
+    ],
+    "take": [
+      "taken",
+      "takes",
+      "taking",
+      "took"
+    ],
+    "tan": [
+      "tanned",
+      "tanning",
+      "tans"
+    ],
+    "tap": [
+      "tapped",
+      "tapping",
+      "taps"
+    ],
+    "target": [
+      "targets",
+      "targetted",
+      "targetting"
+    ],
+    "tat": [
+      "tats",
+      "tatted",
+      "tatting"
+    ],
+    "tax": [
+      "taxed",
+      "taxes",
+      "taxing"
+    ],
+    "teach": [
+      "taught",
+      "teaches",
+      "teaching"
+    ],
+    "tear": [
+      "tearing",
+      "tears",
+      "tore",
+      "torn"
+    ],
+    "telefax": [
+      "telefaxed",
+      "telefaxes",
+      "telefaxing"
+    ],
+    "tell": [
+      "telling",
+      "tells",
+      "told"
+    ],
+    "test-drive": [
+      "test-driven",
+      "test-drives",
+      "test-driving",
+      "test-drove"
+    ],
+    "test-fly": [
+      "test-flew",
+      "test-flies",
+      "test-flown",
+      "test-flying"
+    ],
+    "think": [
+      "thinking",
+      "thinks",
+      "thought"
+    ],
+    "thrive": [
+      "thriven",
+      "thrives",
+      "thriving",
+      "throve"
+    ],
+    "throw": [
+      "threw",
+      "throwing",
+      "thrown",
+      "throws"
+    ],
+    "thrust": [
+      "thrusting",
+      "thrusts"
+    ],
+    "ticket": [
+      "tickets",
+      "ticketted",
+      "ticketting"
+    ],
+    "tip": [
+      "tipped",
+      "tipping",
+      "tips"
+    ],
+    "toe": [
+      "toed",
+      "toeing",
+      "toes"
+    ],
+    "tog": [
+      "togged",
+      "toging",
+      "togs"
+    ],
+    "trammel": [
+      "trammelled",
+      "trammelling",
+      "trammels"
+    ],
+    "transfer": [
+      "transferred",
+      "transferring",
+      "transfers"
+    ],
+    "transfix": [
+      "transfixed",
+      "transfixes",
+      "transfixing"
+    ],
+    "travel": [
+      "travelled",
+      "travelling",
+      "travels"
+    ],
+    "tread": [
+      "treading",
+      "treads",
+      "trod",
+      "trodden"
+    ],
+    "tug": [
+      "tuged",
+      "tuging",
+      "tugs"
+    ],
+    "tunnel": [
+      "tunnelled",
+      "tunnelling",
+      "tunnels"
+    ],
+    "twit": [
+      "twits",
+      "twitted",
+      "twitting"
+    ],
+    "typecast": [
+      "typecasting",
+      "typecasts"
+    ],
+    "typeset": [
+      "typesets",
+      "typesetting"
+    ],
+    "typewrite": [
+      "typewrites",
+      "typewriting",
+      "typewritten",
+      "typewrote"
+    ],
+    "unbend": [
+      "unbending",
+      "unbends",
+      "unbent"
+    ],
+    "unbind": [
+      "unbinding",
+      "unbinds",
+      "unbound"
+    ],
+    "unbosom": [
+      "unbosommed",
+      "unbosomming",
+      "unbosoms"
+    ],
+    "unclothe": [
+      "unclad",
+      "unclothes",
+      "unclothing"
+    ],
+    "underbid": [
+      "underbidding",
+      "underbids"
+    ],
+    "undercut": [
+      "undercuts",
+      "undercutting"
+    ],
+    "underfeed": [
+      "underfed",
+      "underfeeding",
+      "underfeeds"
+    ],
+    "undergo": [
+      "undergoes",
+      "undergoing",
+      "undergone",
+      "underwent"
+    ],
+    "underlie": [
+      "underlain",
+      "underlay",
+      "underlaying",
+      "underlies"
+    ],
+    "undersell": [
+      "underselling",
+      "undersells",
+      "undersold"
+    ],
+    "understand": [
+      "understanding",
+      "understands",
+      "understood"
+    ],
+    "undertake": [
+      "undertaken",
+      "undertakes",
+      "undertaking",
+      "undertook"
+    ],
+    "underwrite": [
+      "underwrites",
+      "underwriting",
+      "underwritten",
+      "underwrote"
+    ],
+    "undo": [
+      "undid",
+      "undoes",
+      "undoing",
+      "undone"
+    ],
+    "unfit": [
+      "unfited",
+      "unfiting",
+      "unfits"
+    ],
+    "unfreeze": [
+      "unfreezes",
+      "unfreezing",
+      "unfroze",
+      "unfrozen"
+    ],
+    "unknit": [
+      "unknits",
+      "unknitting"
+    ],
+    "unlax": [
+      "unlaxed",
+      "unlaxes",
+      "unlaxing"
+    ],
+    "unmake": [
+      "unmade",
+      "unmakes",
+      "unmaking"
+    ],
+    "unravel": [
+      "unravelled",
+      "unravelling",
+      "unravels"
+    ],
+    "unsay": [
+      "unsaid",
+      "unsaying",
+      "unsays"
+    ],
+    "unsex": [
+      "unsexed",
+      "unsexes",
+      "unsexing"
+    ],
+    "unwind": [
+      "unwinding",
+      "unwinds",
+      "unwound"
+    ],
+    "uphold": [
+      "upheld",
+      "upholding",
+      "upholds"
+    ],
+    "upset": [
+      "upsets",
+      "upsetting"
+    ],
+    "vex": [
+      "vexed",
+      "vexes",
+      "vexing"
+    ],
+    "wake": [
+      "wakes",
+      "waking",
+      "woke",
+      "woken"
+    ],
+    "wallop": [
+      "walloped",
+      "walloping",
+      "wallops"
+    ],
+    "wax": [
+      "waxed",
+      "waxes",
+      "waxing"
+    ],
+    "waylay": [
+      "waylaid",
+      "waylaying",
+      "waylays"
+    ],
+    "wear": [
+      "wearing",
+      "wears",
+      "wore",
+      "worn"
+    ],
+    "weave": [
+      "weaves",
+      "weaving",
+      "wove",
+      "woven"
+    ],
+    "web": [
+      "webbed",
+      "webbing",
+      "webs"
+    ],
+    "wed": [
+      "wedding",
+      "weds"
+    ],
+    "weep": [
+      "weeping",
+      "weeps",
+      "wept"
+    ],
+    "wend": [
+      "wending",
+      "wends",
+      "went"
+    ],
+    "wet": [
+      "wets",
+      "wetting"
+    ],
+    "whet": [
+      "whets",
+      "whetted",
+      "whetting"
+    ],
+    "will": [
+      "willing",
+      "would"
+    ],
+    "win": [
+      "winning",
+      "wins",
+      "won"
+    ],
+    "wind": [
+      "winding",
+      "winds",
+      "wound"
+    ],
+    "withdraw": [
+      "withdrawing",
+      "withdrawn",
+      "withdraws",
+      "withdrew"
+    ],
+    "withhold": [
+      "withheld",
+      "withholding",
+      "withholds"
+    ],
+    "withstand": [
+      "withstanding",
+      "withstands",
+      "withstood"
+    ],
+    "worship": [
+      "worshiped",
+      "worshiping",
+      "worships"
+    ],
+    "wring": [
+      "wringing",
+      "wrings",
+      "wrung"
+    ],
+    "write": [
+      "writes",
+      "writing",
+      "written",
+      "wrote"
+    ],
+    "xerox": [
+      "xeroxed",
+      "xeroxes",
+      "xeroxing"
+    ],
+    "yak": [
+      "yakked",
+      "yakking",
+      "yaks"
+    ],
+    "yen": [
+      "yenned",
+      "yenning",
+      "yens"
+    ],
+    "zinc": [
+      "zincked",
+      "zincking",
+      "zincs"
+    ]
+  },
+  "nouns": {
+    "abacus": [
+      "abacuses"
+    ],
+    "abyss": [
+      "abysses"
+    ],
+    "addendum": [
+      "addenda"
+    ],
+    "agenda": [
+      "agendas"
+    ],
+    "agendum": [
+      "agenda"
+    ],
+    "agent-provocateur": [
+      "agents-provocateurs"
+    ],
+    "aide-de-camp": [
+      "aides-de-camp"
+    ],
+    "albino": [
+      "albinos"
+    ],
+    "album": [
+      "albums"
+    ],
+    "alfalfa": [
+      "alfalfas"
+    ],
+    "alga": [
+      "algae"
+    ],
+    "alumna": [
+      "alumnae"
+    ],
+    "alumnus": [
+      "alumni"
+    ],
+    "amoeba": [
+      "amoebae"
+    ],
+    "analysis": [
+      "analyses"
+    ],
+    "anathema": [
+      "anathemata"
+    ],
+    "annex": [
+      "annexes"
+    ],
+    "antenna": [
+      "antennas"
+    ],
+    "antithesis": [
+      "antitheses"
+    ],
+    "apex": [
+      "apexes",
+      "apices"
+    ],
+    "apparatus": [
+      "apparatuses"
+    ],
+    "appendix": [
+      "appendices",
+      "appendixes"
+    ],
+    "apple": [
+      "apples"
+    ],
+    "aquarium": [
+      "aquaria",
+      "aquariums"
+    ],
+    "arch": [
+      "arches"
+    ],
+    "armadillo": [
+      "armadillos"
+    ],
+    "ass": [
+      "asses"
+    ],
+    "atlas": [
+      "atlases"
+    ],
+    "attorne-general": [
+      "attorneys-general"
+    ],
+    "aurora": [
+      "auroras"
+    ],
+    "auto": [
+      "autos"
+    ],
+    "axe": [
+      "axes"
+    ],
+    "axis": [
+      "axes"
+    ],
+    "baby": [
+      "babies"
+    ],
+    "bacillus": [
+      "bacilli"
+    ],
+    "bacterium": [
+      "bacteria"
+    ],
+    "balloon": [
+      "balloons"
+    ],
+    "banana": [
+      "bananas"
+    ],
+    "barracuda": [
+      "barracudas"
+    ],
+    "basis": [
+      "bases"
+    ],
+    "batch": [
+      "batches"
+    ],
+    "beach": [
+      "beaches"
+    ],
+    "beau": [
+      "beaux"
+    ],
+    "beau-geste": [
+      "beaux-gestes"
+    ],
+    "bel-homme": [
+      "beaux-hommes"
+    ],
+    "belief": [
+      "beliefs"
+    ],
+    "belle-epoque": [
+      "belle-epoques",
+      "belles-epoques"
+    ],
+    "bikini": [
+      "bikinis"
+    ],
+    "bildungsroman": [
+      "bildungsromane"
+    ],
+    "bill-of-attainder": [
+      "bills-of-attainder"
+    ],
+    "biscotto": [
+      "biscotti"
+    ],
+    "bon-mot": [
+      "bons-mots"
+    ],
+    "bon-vivant": [
+      "bons-vivants"
+    ],
+    "book": [
+      "books"
+    ],
+    "box": [
+      "boxes"
+    ],
+    "brother": [
+      "brothers"
+    ],
+    "brush": [
+      "brushes"
+    ],
+    "buffalo": [
+      "buffaloes",
+      "buffalos"
+    ],
+    "bureau": [
+      "bureaus",
+      "bureaux"
+    ],
+    "bus": [
+      "buses",
+      "busses"
+    ],
+    "cactus": [
+      "cacti"
+    ],
+    "calf": [
+      "calves"
+    ],
+    "cameo": [
+      "cameos"
+    ],
+    "candelabrum": [
+      "candelabra"
+    ],
+    "canto": [
+      "cantos"
+    ],
+    "carton": [
+      "cartons"
+    ],
+    "cello": [
+      "cellos"
+    ],
+    "chateau": [
+      "chateaus",
+      "chateaux"
+    ],
+    "cherry": [
+      "cherries"
+    ],
+    "chick": [
+      "chicks"
+    ],
+    "chicken": [
+      "chickens"
+    ],
+    "chief": [
+      "chiefs"
+    ],
+    "child": [
+      "children"
+    ],
+    "church": [
+      "churches"
+    ],
+    "circus": [
+      "circuses"
+    ],
+    "city": [
+      "cities"
+    ],
+    "cod": [
+      "cods"
+    ],
+    "codex": [
+      "codices"
+    ],
+    "combo": [
+      "combos"
+    ],
+    "complex": [
+      "complexes"
+    ],
+    "concerto": [
+      "concerti",
+      "concertos"
+    ],
+    "copy": [
+      "copies"
+    ],
+    "cornea": [
+      "corneas"
+    ],
+    "corpus": [
+      "corpora",
+      "corpuses"
+    ],
+    "court-martial": [
+      "courts-martial"
+    ],
+    "crisis": [
+      "crises"
+    ],
+    "criterion": [
+      "criteria"
+    ],
+    "crocus": [
+      "crocuses"
+    ],
+    "curriculum": [
+      "curricula"
+    ],
+    "daisy": [
+      "daisies"
+    ],
+    "datum": [
+      "data"
+    ],
+    "des": [
+      "deses"
+    ],
+    "diagnosis": [
+      "diagnoses"
+    ],
+    "dictionary": [
+      "dictionaries"
+    ],
+    "die": [
+      "dice"
+    ],
+    "director-general": [
+      "directors-general"
+    ],
+    "dogma": [
+      "dogmata"
+    ],
+    "domino": [
+      "dominoes"
+    ],
+    "dukhobor": [
+      "dukhobortsy"
+    ],
+    "duo": [
+      "duos"
+    ],
+    "duplex": [
+      "duplexes"
+    ],
+    "dwarf": [
+      "dwarfs",
+      "dwarves"
+    ],
+    "echo": [
+      "echoes"
+    ],
+    "ego": [
+      "egos"
+    ],
+    "elf": [
+      "elves"
+    ],
+    "ellipsis": [
+      "ellipses"
+    ],
+    "embargo": [
+      "embargoes"
+    ],
+    "emphasis": [
+      "emphases"
+    ],
+    "entente-cordiale": [
+      "ententes-cordiales"
+    ],
+    "erratum": [
+      "errata"
+    ],
+    "fait-accompli": [
+      "faits-accomplis"
+    ],
+    "family": [
+      "families"
+    ],
+    "fax": [
+      "faxes"
+    ],
+    "fez": [
+      "fezes",
+      "fezzes"
+    ],
+    "fireman": [
+      "firemen"
+    ],
+    "fish": [
+      "fishes"
+    ],
+    "flush": [
+      "flushes"
+    ],
+    "fly": [
+      "flies"
+    ],
+    "focus": [
+      "foci",
+      "focuses"
+    ],
+    "folio": [
+      "folios"
+    ],
+    "foot": [
+      "feet"
+    ],
+    "formula": [
+      "formulae",
+      "formulas"
+    ],
+    "fungus": [
+      "fungi",
+      "funguses"
+    ],
+    "gas": [
+      "gases"
+    ],
+    "gens": [
+      "gentes"
+    ],
+    "genu": [
+      "genua"
+    ],
+    "genus": [
+      "genera"
+    ],
+    "goose": [
+      "geese"
+    ],
+    "governor-general": [
+      "governors-general"
+    ],
+    "graffito": [
+      "graffiti"
+    ],
+    "grief": [
+      "griefs"
+    ],
+    "grouse": [
+      "grouses"
+    ],
+    "gulf": [
+      "gulfs"
+    ],
+    "guru": [
+      "gurus"
+    ],
+    "half": [
+      "halves"
+    ],
+    "hallux": [
+      "halluces"
+    ],
+    "halo": [
+      "halos"
+    ],
+    "handkerchief": [
+      "handkerchiefs"
+    ],
+    "hero": [
+      "heroes"
+    ],
+    "hetero": [
+      "heteros"
+    ],
+    "hex": [
+      "hexes"
+    ],
+    "hippopotamus": [
+      "hippopotami",
+      "hippopotamuses"
+    ],
+    "hoax": [
+      "hoaxes"
+    ],
+    "holluschik": [
+      "holluschikie"
+    ],
+    "hoof": [
+      "hooves"
+    ],
+    "hypothesis": [
+      "hypotheses"
+    ],
+    "idee-fixe": [
+      "idees-fixes"
+    ],
+    "index": [
+      "indeces",
+      "indexes",
+      "indices"
+    ],
+    "inferno": [
+      "infernos"
+    ],
+    "insigne": [
+      "insignia"
+    ],
+    "iris": [
+      "irises"
+    ],
+    "iter": [
+      "itinera"
+    ],
+    "jack-in-the-box": [
+      "jack-in-the-boxes",
+      "jacks-in-the-box"
+    ],
+    "jack-in-the-pulpit": [
+      "jack-in-the-pulpits",
+      "jacks-in-the-pulpit"
+    ],
+    "jack-o'-lantern": [
+      "jack-o'-lanterns"
+    ],
+    "kerchief": [
+      "kerchiefs"
+    ],
+    "kimono": [
+      "kimonos"
+    ],
+    "kiss": [
+      "kisses"
+    ],
+    "knife": [
+      "knives"
+    ],
+    "krone": [
+      "kroner"
+    ],
+    "lady": [
+      "ladies"
+    ],
+    "larva": [
+      "larvae"
+    ],
+    "lasso": [
+      "lassos"
+    ],
+    "leaf": [
+      "leaves"
+    ],
+    "lemma": [
+      "lemmas",
+      "lemmata"
+    ],
+    "libretto": [
+      "libretti",
+      "librettos"
+    ],
+    "life": [
+      "lives"
+    ],
+    "loaf": [
+      "loaves"
+    ],
+    "locus": [
+      "loci"
+    ],
+    "louse": [
+      "lice"
+    ],
+    "man": [
+      "men"
+    ],
+    "man-about-town": [
+      "men-about-town"
+    ],
+    "man-child": [
+      "men-children"
+    ],
+    "man-of-war": [
+      "men-of-war"
+    ],
+    "mango": [
+      "mangoes"
+    ],
+    "manservant": [
+      "menservants"
+    ],
+    "martini": [
+      "martinis"
+    ],
+    "matrix": [
+      "matrices",
+      "matrixes"
+    ],
+    "matzo": [
+      "matzoth"
+    ],
+    "medium": [
+      "media"
+    ],
+    "memento": [
+      "mementos"
+    ],
+    "memo": [
+      "memos"
+    ],
+    "memorandum": [
+      "memoranda"
+    ],
+    "menu": [
+      "menus"
+    ],
+    "mess": [
+      "messes"
+    ],
+    "millennium": [
+      "millennia",
+      "millenniums"
+    ],
+    "minister-president": [
+      "ministers-president"
+    ],
+    "minutia": [
+      "minutiae"
+    ],
+    "mischief": [
+      "mischiefs"
+    ],
+    "mosquito": [
+      "mosquitoes"
+    ],
+    "motto": [
+      "mottoes"
+    ],
+    "mouse": [
+      "mice"
+    ],
+    "muff": [
+      "muffs"
+    ],
+    "mussolini": [
+      "mussolinis"
+    ],
+    "nanny": [
+      "nannies"
+    ],
+    "nebula": [
+      "nebulae",
+      "nebulas"
+    ],
+    "neurosis": [
+      "neuroses"
+    ],
+    "never-was": [
+      "never-weres"
+    ],
+    "nova": [
+      "novas"
+    ],
+    "nucleus": [
+      "nuclei"
+    ],
+    "oaf": [
+      "oafs"
+    ],
+    "oasis": [
+      "oases"
+    ],
+    "octopus": [
+      "octopi",
+      "octopodes",
+      "octopuses"
+    ],
+    "opus": [
+      "opera",
+      "operas"
+    ],
+    "ornis": [
+      "ornithes"
+    ],
+    "ovum": [
+      "ova"
+    ],
+    "ox": [
+      "oxen"
+    ],
+    "page": [
+      "pages"
+    ],
+    "pakistani": [
+      "pakistanis"
+    ],
+    "panino": [
+      "panini"
+    ],
+    "paparazzo": [
+      "paparazzi"
+    ],
+    "paralysis": [
+      "paralyses"
+    ],
+    "parenthesis": [
+      "parentheses"
+    ],
+    "party": [
+      "parties"
+    ],
+    "pass": [
+      "passes"
+    ],
+    "passerby": [
+      "passersby"
+    ],
+    "penny": [
+      "pennies"
+    ],
+    "person": [
+      "people"
+    ],
+    "phenomenon": [
+      "phenomena"
+    ],
+    "phobia": [
+      "phobias"
+    ],
+    "photo": [
+      "photos"
+    ],
+    "phylum": [
+      "phyla"
+    ],
+    "piano": [
+      "pianos"
+    ],
+    "pitch": [
+      "pitches"
+    ],
+    "plateau": [
+      "plateaus",
+      "plateaux"
+    ],
+    "poppy": [
+      "poppies"
+    ],
+    "portfolio": [
+      "portfolios"
+    ],
+    "portico": [
+      "porticos"
+    ],
+    "potato": [
+      "potatoes"
+    ],
+    "pro": [
+      "pros"
+    ],
+    "procurator-fiscal": [
+      "procurators-fiscal"
+    ],
+    "prognosis": [
+      "prognoses"
+    ],
+    "proof": [
+      "proofs"
+    ],
+    "pupa": [
+      "pupae"
+    ],
+    "quadrans": [
+      "quadrantes"
+    ],
+    "quarto": [
+      "quartos"
+    ],
+    "quiz": [
+      "quizzes"
+    ],
+    "radius": [
+      "radii"
+    ],
+    "referendum": [
+      "referenda",
+      "referendums"
+    ],
+    "reflex": [
+      "reflexes"
+    ],
+    "rhombus": [
+      "rhombuses"
+    ],
+    "roof": [
+      "roofs"
+    ],
+    "rubai": [
+      "rubaiyat"
+    ],
+    "runner-up": [
+      "runners-up"
+    ],
+    "safe": [
+      "safes"
+    ],
+    "salmon": [
+      "salmons"
+    ],
+    "scarf": [
+      "scarfs",
+      "scarves"
+    ],
+    "schema": [
+      "schemas",
+      "schemata"
+    ],
+    "schoolchild": [
+      "schoolchildren"
+    ],
+    "scratch": [
+      "scratches"
+    ],
+    "scrotum": [
+      "scrota",
+      "scrotums"
+    ],
+    "self": [
+      "selves"
+    ],
+    "seraph": [
+      "seraphim"
+    ],
+    "sheaf": [
+      "sheaves"
+    ],
+    "shelf": [
+      "shelves"
+    ],
+    "shrimp": [
+      "shrimps"
+    ],
+    "shtetl": [
+      "shtetlach"
+    ],
+    "silo": [
+      "silos"
+    ],
+    "snafu": [
+      "snafus"
+    ],
+    "solo": [
+      "solos"
+    ],
+    "son-in-law": [
+      "sons-in-law"
+    ],
+    "spaghetto": [
+      "spaghetti",
+      "spaghettis"
+    ],
+    "splash": [
+      "splashes"
+    ],
+    "spy": [
+      "spies"
+    ],
+    "stadium": [
+      "stadiums"
+    ],
+    "stereo": [
+      "stereos"
+    ],
+    "stigma": [
+      "stigmas",
+      "stigmata"
+    ],
+    "stimulus": [
+      "stimuli"
+    ],
+    "stitch": [
+      "stitches"
+    ],
+    "stoma": [
+      "stomas",
+      "stomata"
+    ],
+    "story": [
+      "stories"
+    ],
+    "stratum": [
+      "strata"
+    ],
+    "studio": [
+      "studios"
+    ],
+    "syllabus": [
+      "syllabi",
+      "syllabuses"
+    ],
+    "symposium": [
+      "symposia",
+      "symposiums"
+    ],
+    "synopsis": [
+      "synopses"
+    ],
+    "synthesis": [
+      "syntheses"
+    ],
+    "tableau": [
+      "tableaus",
+      "tableaux"
+    ],
+    "taco": [
+      "tacos"
+    ],
+    "tattoo": [
+      "tattoos"
+    ],
+    "tax": [
+      "taxes"
+    ],
+    "tete-a-tete": [
+      "tete-a-tetes"
+    ],
+    "that": [
+      "those"
+    ],
+    "thesis": [
+      "theses"
+    ],
+    "thief": [
+      "thieves"
+    ],
+    "this": [
+      "these"
+    ],
+    "tomato": [
+      "tomatoes"
+    ],
+    "tooth": [
+      "teeth"
+    ],
+    "tornado": [
+      "tornadoes"
+    ],
+    "torpedo": [
+      "torpedoes"
+    ],
+    "torte": [
+      "torten"
+    ],
+    "tour-de-force": [
+      "tours-de-force"
+    ],
+    "trout": [
+      "trouts"
+    ],
+    "try": [
+      "tries"
+    ],
+    "tuna": [
+      "tunas"
+    ],
+    "turf": [
+      "turfs"
+    ],
+    "tuxedo": [
+      "tuxedos"
+    ],
+    "typo": [
+      "typos"
+    ],
+    "ushabti": [
+      "ushabtiu"
+    ],
+    "vas": [
+      "vasa"
+    ],
+    "vertebra": [
+      "vertebrae"
+    ],
+    "vertex": [
+      "vertexes",
+      "vertices"
+    ],
+    "veto": [
+      "vetoes"
+    ],
+    "video": [
+      "videos"
+    ],
+    "vita": [
+      "vitae"
+    ],
+    "volcano": [
+      "volcanoes"
+    ],
+    "vortex": [
+      "vortexes",
+      "vortices"
+    ],
+    "walrus": [
+      "walruses"
+    ],
+    "waltz": [
+      "waltzes"
+    ],
+    "wash": [
+      "washes"
+    ],
+    "watch": [
+      "watches"
+    ],
+    "wharf": [
+      "wharves"
+    ],
+    "wife": [
+      "wives"
+    ],
+    "will-o'-the-wisp": [
+      "will-o'-the-wisps"
+    ],
+    "wish": [
+      "wishes"
+    ],
+    "wolf": [
+      "wolves"
+    ],
+    "woman": [
+      "women"
+    ],
+    "woman-doctor": [
+      "women-doctors"
+    ],
+    "word": [
+      "words"
+    ],
+    "workman": [
+      "workmen"
+    ],
+    "wunderkind": [
+      "wunderkinder"
+    ],
+    "yemeni": [
+      "yemenis"
+    ],
+    "yeshiva": [
+      "yeshivoth"
+    ],
+    "yo": [
+      "yos"
+    ],
+    "zecchino": [
+      "zecchini"
+    ],
+    "zero": [
+      "zeroes",
+      "zeros"
+    ],
+    "zoo": [
+      "zoos"
+    ]
+  },
+  "adjectives": {
+    "bad": [
+      "worse",
+      "worst"
+    ],
+    "far": [
+      "further",
+      "furthest"
+    ],
+    "good": [
+      "best",
+      "better"
+    ],
+    "late": [
+      "later",
+      "latest"
+    ],
+    "little": [
+      "least",
+      "less"
+    ],
+    "many": [
+      "more",
+      "most"
+    ],
+    "much": [
+      "more",
+      "most"
+    ],
+    "some": [
+      "more",
+      "most"
+    ],
+    "old": [
+      "older",
+      "oldest"
+    ]
+  }
+}

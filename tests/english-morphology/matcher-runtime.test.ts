@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 
 import { WordMatcherService } from '../../src/core/word-matcher-service'
-import type { UnifiedMorphologyService } from '../../src/core/unified-morphology-service'
+import { setEnglishMorphologyAssetData } from '../../src/utils/english-inflection-generator'
 import type { HiWordsSettings, MorphologyLanguage, VocabularyBook, WordDefinition } from '../../src/utils/types'
 
 type MatcherProbe = {
@@ -16,8 +16,20 @@ const EXPLICIT_ENGLISH_MATCHER_PROBES: MatcherProbe[] = [
     { baseForm: 'watch', surface: 'watches' },
     { baseForm: 'stop', surface: 'stopped' },
     { baseForm: 'go', surface: 'went' },
-    { baseForm: 'run', surface: 'running' }
+    { baseForm: 'run', surface: 'running' },
+    { baseForm: 'child', surface: 'children' },
+    { baseForm: 'mouse', surface: 'mice' }
 ]
+
+setEnglishMorphologyAssetData({
+    schemaVersion: 1,
+    verbs: {},
+    nouns: {
+        child: ['children'],
+        mouse: ['mice']
+    },
+    adjectives: {}
+})
 
 const explicitEnglishMatcher = createMatcher(
     EXPLICIT_ENGLISH_MATCHER_PROBES.map((probe) => probe.baseForm),
@@ -64,8 +76,9 @@ function createMatcher(baseWords: string[], languagePolicy: MorphologyLanguage):
     const fakeUnifiedMorphologyService = {
         detectLanguage: () => 'unknown',
         isKoreanLoaded: () => false,
-        isJapaneseLoaded: () => false
-    } as unknown as UnifiedMorphologyService
+        isJapaneseLoaded: () => false,
+        getLoader: () => ({})
+    }
 
     const vocabularyManager = {
         getUnifiedMorphologyService: () => fakeUnifiedMorphologyService,

@@ -73,7 +73,7 @@ export default {
         morphology_fallback_conservative: "Conservative（推奨）",
         morphology_fallback_aggressive: "Aggressive",
         morphology_assets: "形態素リソース",
-        morphology_assets_desc: "プラグイン容量を抑えるため、韓国語/日本語の形態素解析リソースを必要時にダウンロードまたは削除します",
+        morphology_assets_desc: "プラグイン容量を抑えるため、韓国語/日本語/英語の形態素解析リソースを必要時にダウンロードまたは削除します",
         morphology_asset_status_loading: "リソース状態を確認中...",
         morphology_asset_status_downloaded: "ダウンロード済み（{0}）",
         morphology_asset_status_missing: "未ダウンロード",

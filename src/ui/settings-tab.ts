@@ -53,6 +53,7 @@ export class HiWordsSettingTab extends PluginSettingTab {
 
         this.addMorphologyAssetItem('korean')
         this.addMorphologyAssetItem('japanese')
+        this.addMorphologyAssetItem('english')
     }
 
     private addMorphologyAssetItem(language: MorphologyAssetLanguage): void {
@@ -133,7 +134,10 @@ export class HiWordsSettingTab extends PluginSettingTab {
         if (language === 'korean') {
             return t('settings.morphology_korean') || 'Korean'
         }
-        return t('settings.morphology_japanese') || 'Japanese'
+        if (language === 'japanese') {
+            return t('settings.morphology_japanese') || 'Japanese'
+        }
+        return t('settings.morphology_english') || 'English'
     }
 
     private formatMorphologyAssetStatus(downloaded: boolean, byteLength: number, isDownloading: boolean): string {

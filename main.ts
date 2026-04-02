@@ -431,11 +431,16 @@ export default class HiWordsPlugin extends Plugin {
     }
 
     public async downloadMorphologyAsset(language: MorphologyAssetLanguage): Promise<MorphologyAssetState> {
-        return this.morphologyAssetManager.downloadAsset(language);
+        const state = await this.morphologyAssetManager.downloadAsset(language);
+        await this.vocabularyManager.handleMorphologyAssetChange(language);
+        this.refreshHighlighter();
+        return state;
     }
 
     public async deleteMorphologyAsset(language: MorphologyAssetLanguage): Promise<void> {
         await this.morphologyAssetManager.deleteAsset(language);
+        await this.vocabularyManager.handleMorphologyAssetChange(language);
+        this.refreshHighlighter();
     }
 
     /**

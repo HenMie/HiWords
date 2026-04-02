@@ -84,7 +84,7 @@ export default {
         morphology_fallback_conservative: "Conservative (Recommended)",
         morphology_fallback_aggressive: "Aggressive",
         morphology_assets: "Morphology assets",
-        morphology_assets_desc: "Download or delete Korean/Japanese morphology resources on demand to reduce plugin footprint",
+        morphology_assets_desc: "Download or delete Korean/Japanese/English morphology resources on demand to reduce plugin footprint",
         morphology_asset_status_loading: "Checking resource status...",
         morphology_asset_status_downloaded: "Downloaded ({0})",
         morphology_asset_status_missing: "Not downloaded",

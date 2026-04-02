@@ -84,7 +84,7 @@ export default {
         morphology_fallback_conservative: "保守策略（推荐）",
         morphology_fallback_aggressive: "激进策略",
         morphology_assets: "形态学资源管理",
-        morphology_assets_desc: "按需下载或删除韩语/日语形态学分析资源，以控制插件占用空间",
+        morphology_assets_desc: "按需下载或删除韩语/日语/英语形态学分析资源，以控制插件占用空间",
         morphology_asset_status_loading: "正在检查资源状态...",
         morphology_asset_status_downloaded: "已下载（{0}）",
         morphology_asset_status_missing: "未下载",

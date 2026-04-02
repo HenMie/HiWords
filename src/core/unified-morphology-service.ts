@@ -5,7 +5,11 @@
  */
 
 import type { MorphologyLanguage, VocabularyBook } from '../utils/types';
-import { analyzeEnglishWord, isLikelyEnglishWord } from '../utils/english-inflection-generator';
+import {
+    analyzeEnglishWord,
+    isLikelyEnglishWord,
+    setEnglishMorphologyAssetData
+} from '../utils/english-inflection-generator';
 import { getScriptStatistics } from '../utils/japanese-text-utils';
 import { MorphologyLoader } from './morphology-loader';
 import type { KoreanMorphologyService } from './korean-morphology-service';
@@ -61,6 +65,7 @@ const SOURCE_WEIGHTS: Record<MorphologyCandidateSource, number> = {
     tokenizer: 0.3,
     'reconstructed-tokenizer': 0.26,
     'reverse-rule': 0.22,
+    'external-resource': 0.28,
     fallback: 0.04
 };
 
@@ -393,6 +398,11 @@ export class UnifiedMorphologyService {
         return this.loader;
     }
 
+    public async loadEnglishMorphologyAssetData(): Promise<void> {
+        const englishAssetData = await this.loader.getEnglishMorphologyAssetData()
+        setEnglishMorphologyAssetData(englishAssetData ?? null)
+    }
+
     /**
      * 清理资源
      */
@@ -426,6 +436,7 @@ export class UnifiedMorphologyService {
         }
 
         if (targetLanguage === 'english') {
+            await this.loadEnglishMorphologyAssetData()
             const result = analyzeEnglishWord(word);
             return result
                 ? {
