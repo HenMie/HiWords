@@ -3,7 +3,12 @@
  * 为日语动词/形容词生成常见活用形
  */
 
-import { isJapaneseWord, containsKana } from './japanese-text-utils';
+import {
+    isJapaneseWord,
+    containsKana,
+    containsKanji,
+    katakanaToHiragana
+} from './japanese-text-utils';
 
 /**
  * 日语动词分类
@@ -265,4 +270,87 @@ export function generateJapaneseInflections(baseWord: string): string[] {
 
     // 其他情况不生成活用形
     return [];
+}
+
+/**
+ * 根据词条表记和读音生成常见的汉字/假名混合表记活用形。
+ * 例：「気付く」+「きづく」可匹配文章中的「気づける」。
+ */
+export function generateJapaneseOrthographicInflections(baseWord: string, pronunciation: string): string[] {
+    const forms = new Set<string>();
+
+    for (const variant of generateJapaneseOrthographicVariants(baseWord, pronunciation)) {
+        forms.add(variant);
+        for (const inflection of generateJapaneseInflections(variant)) {
+            forms.add(inflection);
+        }
+    }
+
+    return Array.from(forms);
+}
+
+function generateJapaneseOrthographicVariants(baseWord: string, pronunciation: string): string[] {
+    const normalizedBaseWord = baseWord.trim();
+    const normalizedPronunciation = katakanaToHiragana(pronunciation.trim());
+
+    if (
+        !normalizedBaseWord ||
+        !normalizedPronunciation ||
+        !isJapaneseWord(normalizedBaseWord) ||
+        !containsKana(normalizedPronunciation) ||
+        !containsKanji(normalizedBaseWord)
+    ) {
+        return [];
+    }
+
+    const commonKanaSuffixLength = getCommonKanaSuffixLength(normalizedBaseWord, normalizedPronunciation);
+    if (commonKanaSuffixLength !== 1) {
+        return [];
+    }
+
+    const baseStem = normalizedBaseWord.slice(0, -commonKanaSuffixLength);
+    const pronunciationStem = normalizedPronunciation.slice(0, -commonKanaSuffixLength);
+    if (
+        !baseStem ||
+        !pronunciationStem ||
+        baseStem.length !== 2 ||
+        !containsKanji(baseStem) ||
+        pronunciationStem.length > baseStem.length + 1
+    ) {
+        return [];
+    }
+
+    const retainedPrefix = baseStem.slice(0, -1);
+    const kanaReplacement = pronunciationStem.slice(-1);
+    const suffix = normalizedBaseWord.slice(-commonKanaSuffixLength);
+    const variant = `${retainedPrefix}${kanaReplacement}${suffix}`;
+
+    if (!retainedPrefix || variant === normalizedBaseWord || !isJapaneseWord(variant)) {
+        return [];
+    }
+
+    return [variant];
+}
+
+function getCommonKanaSuffixLength(baseWord: string, pronunciation: string): number {
+    let suffixLength = 0;
+    let baseIndex = baseWord.length - 1;
+    let pronunciationIndex = pronunciation.length - 1;
+
+    while (baseIndex >= 0 && pronunciationIndex >= 0) {
+        const baseChar = baseWord[baseIndex];
+        const pronunciationChar = pronunciation[pronunciationIndex];
+        if (!baseChar || !pronunciationChar || !containsKana(baseChar)) {
+            break;
+        }
+        if (katakanaToHiragana(baseChar) !== katakanaToHiragana(pronunciationChar)) {
+            break;
+        }
+
+        suffixLength++;
+        baseIndex--;
+        pronunciationIndex--;
+    }
+
+    return suffixLength;
 }

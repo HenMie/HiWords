@@ -3,6 +3,7 @@ import {
     generateCommonInflections,
     generateEnglishInflections,
     generateJapaneseInflections,
+    generateJapaneseOrthographicInflections,
     containsKana,
     katakanaToHiragana,
     hiraganaToKatakana,
@@ -142,6 +143,10 @@ export class WordMatcherService {
             for (const inflection of generateJapaneseInflections(kanaVariant)) {
                 forms.add(inflection);
             }
+        }
+
+        for (const orthographicForm of generateJapaneseOrthographicInflections(definition.word, pronunciation)) {
+            forms.add(orthographicForm);
         }
 
         return forms;
